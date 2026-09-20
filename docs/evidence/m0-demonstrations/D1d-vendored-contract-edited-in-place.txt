@@ -1,0 +1,68 @@
+=== D1d-vendored-contract-edited-in-place ===
+repo:      yegamble/vizra-search
+baseline:  2983b1cb90f512b44236ee150acb2967fa9cae11 (feat/m0-minimal-service)
+date:      2026-09-20T17:56:44Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D1 guard: editing the vendored contract instead of re-vendoring it from
+vizra-core must fail, because that is how a two-repository drift check gets
+defeated.
+
+--- mutation applied ---
+diff --git a/api/search-internal.openapi.yaml b/api/search-internal.openapi.yaml
+index 7792eb7..da03fee 100644
+--- a/api/search-internal.openapi.yaml
++++ b/api/search-internal.openapi.yaml
+@@ -150,3 +150,3 @@ paths:
+ 
+-  /internal/v1/suggestions:
++  /internal/v1/suggest:
+     post:
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+--- FAIL: TestVendoredContractMatchesItsManifest (0.00s)
+    contract_drift_test.go:67: the vendored contract does not match its manifest.
+          manifest sha256: 5bf9dd22a2209dbfacb99f4c2d2d620ff15e0465f9b98228ec120983a3bf448a
+          file sha256:     6315b03a6800db931c34895d5b9aaf2258ae26e6198da9f353336e52a1cef076
+        This repository does not own api/search-internal.openapi.yaml. Re-vendor it from yegamble/vizra-core@b0dbeb6dc27294fe793492ea60bc18b6aed4b042 instead of editing it.
+--- FAIL: TestNoDriftFromTheCanonicalContract (0.00s)
+    contract_drift_test.go:94: contract: the implementation has drifted from the canonical contract:
+          - declared in the contract but not implemented: POST /internal/v1/suggest
+          - implemented but not declared in the contract: POST /internal/v1/suggestions
+        
+        The canonical copy lives in vizra-core. If the contract is wrong, change it there and re-vendor; do not edit ../../api/search-internal.openapi.yaml.
+--- FAIL: TestTheContractStillDeclaresTheQ001Surface (0.00s)
+    contract_drift_test.go:118: the canonical contract no longer declares POST /internal/v1/suggestions, which Q-001 requires
+--- FAIL: TestResponseBodiesSatisfyTheContractSchemas (0.00s)
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_OK (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggestions 200
+            body: {"status":"not_indexed","suggestions":[]}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Bad_Request (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggestions 400
+            body: {"error":{"code":"bad_request","message":"the request body is not a JSON object matching the contract"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Unauthorized (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggestions 401
+            body: {"error":{"code":"signature_rejected","message":"request authentication failed"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Request_Entity_Too_Large (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggestions 413
+            body: {"error":{"code":"payload_too_large","message":"the request body exceeds MAX_INTERNAL_BODY_BYTES (1024 bytes)"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Service_Unavailable (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggestions 503
+            body: {"error":{"code":"unavailable","message":"the service is draining"}}
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.286s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.432s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore (git checkout -- .) ---
+working tree is clean at 2983b1cb90f512b44236ee150acb2967fa9cae11
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.446s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.260s
+[exit code: 0]

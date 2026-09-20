@@ -1,0 +1,35 @@
+=== D3a-production-accepts-dev-key ===
+repo:      yegamble/vizra-search
+baseline:  2983b1cb90f512b44236ee150acb2967fa9cae11 (feat/m0-minimal-service)
+date:      2026-09-20T17:57:25Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D3: production boot refuses the dev HMAC key.
+Mutation: remove the refusal of the documented development key.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 1506d77..b936d3f 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -287,4 +287,3 @@ func (v *validator) hmacKey(mode Mode) []byte {
+ 
+-	if key == DevHMACKey {
+-		v.addf("%s is the documented development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
++	if false { // MUTATION: allow the documented development key in production
+ 		return []byte(key)
+
+--- RED: go test -count=1 ./internal/config/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.203s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.514s
+[exit code: 0]
+!!! DEMONSTRATION FAILED: the mutation did not turn the check red
+
+--- restore (git checkout -- .) ---
+working tree is clean at 2983b1cb90f512b44236ee150acb2967fa9cae11
+
+--- GREEN: go test -count=1 ./internal/config/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.248s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	1.266s
+[exit code: 0]

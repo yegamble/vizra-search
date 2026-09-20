@@ -1,0 +1,43 @@
+=== D1b-drift-renamed-response-field ===
+repo:      yegamble/vizra-search
+baseline:  2983b1cb90f512b44236ee150acb2967fa9cae11 (feat/m0-minimal-service)
+date:      2026-09-20T17:56:39Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D1 at the FIELD level: rename SearchResponse.results to .hits. The route is
+unchanged; only the JSON field name moves. Every contract schema sets
+additionalProperties:false, so this must be caught too.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 6c94cd8..684f0f7 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -419,3 +419,3 @@ type searchResponse struct {
+ 	Status              string     `json:"status"`
+-	Results             []struct{} `json:"results"`
++	Results             []struct{} `json:"hits"`
+ 	Total               int64      `json:"total"`
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+--- FAIL: TestResponseBodiesSatisfyTheContractSchemas (0.00s)
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_OK (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: POST /internal/v1/search 200: contract: SearchResponse: the required property "results" is missing
+            body: {"status":"not_indexed","hits":[],"total":0,"search_schema_version":null}
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.441s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.837s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore (git checkout -- .) ---
+working tree is clean at 2983b1cb90f512b44236ee150acb2967fa9cae11
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.437s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.802s
+[exit code: 0]

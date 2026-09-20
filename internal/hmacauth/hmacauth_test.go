@@ -1,8 +1,10 @@
 package hmacauth_test
 
 import (
+	"encoding/hex"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -324,5 +326,69 @@ func TestSignRequestSetsAllThreeHeaders(t *testing.T) {
 	v := &hmacauth.Verifier{Key: key, MaxSkew: 300 * time.Second}
 	if err := v.Verify(req.Method, req.URL.Path, req.Header, body); err != nil {
 		t.Fatalf("a request signed by SignRequest failed verification: %v", err)
+	}
+}
+
+// TestVerifyRejectsASignatureThatDiffersOnlyInTheLastByte exists because a
+// comparison that stops early — a prefix compare, or a hand-rolled loop with a
+// `break` — passes every test that uses an unrelated wrong key, since two
+// unrelated MACs almost always differ in the first byte. This forges a MAC that
+// shares all but the final byte with the correct one, so only a full-length
+// comparison rejects it.
+func TestVerifyRejectsASignatureThatDiffersOnlyInTheLastByte(t *testing.T) {
+	v := newVerifier()
+	_, correct := hmacauth.Sign(key, method, path, fixedNow(), testNonce, body)
+
+	mac := strings.TrimPrefix(correct, "v1=")
+	raw, err := hex.DecodeString(mac)
+	if err != nil {
+		t.Fatalf("decoding the correct MAC: %v", err)
+	}
+	raw[len(raw)-1] ^= 0x01
+	forged := "v1=" + hex.EncodeToString(raw)
+	if forged == correct {
+		t.Fatal("fixture error: the forgery equals the correct signature")
+	}
+
+	h := signedHeader(t, key, fixedNow(), method, path, body)
+	h.Set(hmacauth.HeaderSignature, forged)
+	wantReason(t, v.Verify(method, path, h, body), hmacauth.ReasonBadSignature)
+}
+
+// The mirror case: a MAC that differs only in the FIRST byte and is otherwise
+// correct must also be rejected. Together the two pin the comparison to the
+// whole value rather than to either end of it.
+func TestVerifyRejectsASignatureThatDiffersOnlyInTheFirstByte(t *testing.T) {
+	v := newVerifier()
+	_, correct := hmacauth.Sign(key, method, path, fixedNow(), testNonce, body)
+
+	raw, err := hex.DecodeString(strings.TrimPrefix(correct, "v1="))
+	if err != nil {
+		t.Fatalf("decoding the correct MAC: %v", err)
+	}
+	raw[0] ^= 0x01
+
+	h := signedHeader(t, key, fixedNow(), method, path, body)
+	h.Set(hmacauth.HeaderSignature, "v1="+hex.EncodeToString(raw))
+	wantReason(t, v.Verify(method, path, h, body), hmacauth.ReasonBadSignature)
+}
+
+// TestVerifyUsesTheDocumentedConstantTimePrimitive is a source-level guard.
+// Constant-time behaviour cannot be proved by a functional test, so what is
+// asserted here is the thing that can be: that the comparison goes through
+// crypto/hmac.Equal, the documented constant-time primitive, rather than == or
+// bytes.Equal. The two tests above cover the functional half.
+func TestVerifyUsesTheDocumentedConstantTimePrimitive(t *testing.T) {
+	source, err := os.ReadFile("hmacauth.go")
+	if err != nil {
+		t.Fatalf("reading the package source: %v", err)
+	}
+	if !strings.Contains(string(source), "hmac.Equal(provided, expected)") {
+		t.Fatal("the MAC comparison no longer goes through hmac.Equal; a non-constant-time comparison leaks how much of a forgery was correct")
+	}
+	for _, forbidden := range []string{"bytes.Equal(provided", "provided == ", "string(provided) =="} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("the source contains a non-constant-time comparison: %s", forbidden)
+		}
 	}
 }

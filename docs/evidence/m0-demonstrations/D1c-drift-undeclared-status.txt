@@ -1,0 +1,44 @@
+=== D1c-drift-undeclared-status ===
+repo:      yegamble/vizra-search
+baseline:  2983b1cb90f512b44236ee150acb2967fa9cae11 (feat/m0-minimal-service)
+date:      2026-09-20T17:56:41Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D1 at the STATUS level: claim a status code the contract never declares.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 6c94cd8..55da682 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -112,2 +112,3 @@ var routes = []Route{
+ 		Emitted: []int{
++			http.StatusTeapot,
+ 			http.StatusOK, http.StatusBadRequest, http.StatusUnauthorized,
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+--- FAIL: TestNoDriftFromTheCanonicalContract (0.00s)
+    contract_drift_test.go:94: contract: the implementation has drifted from the canonical contract:
+          - response status codes differ: POST /internal/v1/search (contract: 200,400,401,413,500,503; implementation: 418,200,400,401,413,503,500)
+        
+        The canonical copy lives in vizra-core. If the contract is wrong, change it there and re-vendor; do not edit ../../api/search-internal.openapi.yaml.
+--- FAIL: TestResponseBodiesSatisfyTheContractSchemas (0.00s)
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_I'm_a_teapot (0.00s)
+        contract_drift_test.go:150: no provoker for 418
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.856s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.376s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore (git checkout -- .) ---
+working tree is clean at 2983b1cb90f512b44236ee150acb2967fa9cae11
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.800s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.966s
+[exit code: 0]

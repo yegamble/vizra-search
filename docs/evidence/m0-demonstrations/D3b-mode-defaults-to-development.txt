@@ -1,0 +1,43 @@
+=== D3b-mode-defaults-to-development ===
+repo:      yegamble/vizra-search
+baseline:  2983b1cb90f512b44236ee150acb2967fa9cae11 (feat/m0-minimal-service)
+date:      2026-09-20T17:57:33Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D3: an env file that omits the mode still gets the production refusals.
+Mutation: default to development when the mode is not set.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 1506d77..85af941 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -185,3 +185,3 @@ func (v *validator) mode() Mode {
+ 	if !ok || strings.TrimSpace(raw) == "" {
+-		return ModeProduction
++		return ModeDevelopment // MUTATION: fail open when the mode is omitted
+ 	}
+
+--- RED: go test -count=1 ./internal/config/ ./cmd/... ---
+--- FAIL: TestLoadFromDefaultsToProductionWhenModeIsOmitted (0.00s)
+    config_test.go:45: Mode = "development", want "production"
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.209s
+--- FAIL: TestBootRefusesTheDevKeyWhenTheModeIsOmitted (10.00s)
+    main_test.go:130: the process did not exit within 10s; it should have refused to boot.
+        stdout: {"time":"2026-09-20T13:57:35.412011-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:0","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+        
+        stderr: 
+FAIL
+FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	11.256s
+FAIL
+[exit code: 1]
+
+--- restore (git checkout -- .) ---
+working tree is clean at 2983b1cb90f512b44236ee150acb2967fa9cae11
+
+--- GREEN: go test -count=1 ./internal/config/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.188s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.418s
+[exit code: 0]
