@@ -1,0 +1,54 @@
+=== F6-production-ceilings-removed ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:38Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D / security F3: remove the production ceilings, so an operator can widen the
+only replay bound the service has to an hour.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 323e271..87394cc 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -156,3 +156,3 @@ func LoadFrom(lookup Lookup) (*Config, error) {
+ 	cfg.HMACKey = v.hmacKey(cfg.Mode)
+-	v.ceilings(cfg)
++	// MUTATION: ceilings not enforced
+ 
+
+--- RED: go test -count=1 ./internal/config/ ---
+--- FAIL: TestProductionRefusesAnOverwideSkewWindow (0.00s)
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/301s (0.00s)
+        config_test.go:283: production accepted a 301s replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/10m (0.00s)
+        config_test.go:283: production accepted a 10m replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/1h (0.00s)
+        config_test.go:283: production accepted a 1h replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/8760h (0.00s)
+        config_test.go:283: production accepted a 8760h replay window
+--- FAIL: TestProductionRefusesAnOverlargeBodyCap (0.00s)
+    --- FAIL: TestProductionRefusesAnOverlargeBodyCap/8388609 (0.00s)
+        config_test.go:316: production accepted a 8388609-byte body cap
+    --- FAIL: TestProductionRefusesAnOverlargeBodyCap/10737418240 (0.00s)
+        config_test.go:316: production accepted a 10737418240-byte body cap
+    --- FAIL: TestProductionRefusesAnOverlargeBodyCap/1099511627776 (0.00s)
+        config_test.go:316: production accepted a 1099511627776-byte body cap
+--- FAIL: TestCheckEnvReportsTheCeilingRefusals (0.00s)
+    config_test.go:376: CheckEnv accepted a production env with a 24h replay window; doctor would then disagree with boot
+--- FAIL: TestCeilingRefusalsEchoNoOtherConfiguration (0.00s)
+    config_test.go:399: expected a refusal
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.287s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.936s
+[exit code: 0]

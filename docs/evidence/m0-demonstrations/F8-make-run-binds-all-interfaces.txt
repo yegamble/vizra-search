@@ -1,0 +1,40 @@
+=== F8-make-run-binds-all-interfaces ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:54Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F8: drop the loopback bind from `make run`, exposing the published dev key to
+the developer's whole network.
+
+--- mutation applied ---
+diff --git a/Makefile b/Makefile
+index 9069e30..edc44bf 100644
+--- a/Makefile
++++ b/Makefile
+@@ -100,3 +100,2 @@ run: ## Run locally in development mode, on loopback only, with the documented d
+ 	VIZRA_SEARCH_MODE=development \
+-	VIZRA_SEARCH_ADDR=127.0.0.1:8081 \
+ 	SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
+
+--- RED: go test -count=1 -run TestMakeRunBindsLoopbackOnly ./cmd/... ---
+--- FAIL: TestMakeRunBindsLoopbackOnly (0.00s)
+    main_test.go:436: `make run` does not bind loopback; the published development key would be reachable from the network:
+        
+        run: ## Run locally in development mode, on loopback only, with the documented dev key
+        	VIZRA_SEARCH_MODE=development \
+        	SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
+        	go run ./cmd/$(BINARY)
+FAIL
+FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	0.466s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 -run TestMakeRunBindsLoopbackOnly ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	0.244s
+[exit code: 0]

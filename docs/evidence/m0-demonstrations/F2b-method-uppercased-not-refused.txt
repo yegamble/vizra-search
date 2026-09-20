@@ -1,0 +1,42 @@
+=== F2b-method-uppercased-not-refused ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:43Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F2: uppercase the method instead of refusing a lowercase one.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index 64547aa..495fb42 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -330,5 +330,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	// The method is used exactly as sent and must already be uppercase.
+-	if !isUppercaseASCIIMethod(method) {
+-		return reject(ReasonMalformedMethod)
+-	}
++	method = strings.ToUpper(method) // MUTATION: normalise instead of refuse
+ 
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+--- FAIL: TestNonCanonicalFieldsAreRefusedNotRewritten (0.00s)
+    --- FAIL: TestNonCanonicalFieldsAreRefusedNotRewritten/lowercase_method (0.00s)
+        hmacauth_test.go:589: method="post" nonce="0123456789abcdef0123456789abcdef" gave hmac authentication failed: bad_signature, want "malformed_method"
+    --- FAIL: TestNonCanonicalFieldsAreRefusedNotRewritten/mixed-case_method (0.00s)
+        hmacauth_test.go:590: method="Post" nonce="0123456789abcdef0123456789abcdef" gave hmac authentication failed: bad_signature, want "malformed_method"
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.240s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	1.147s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.959s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	1.097s
+[exit code: 0]

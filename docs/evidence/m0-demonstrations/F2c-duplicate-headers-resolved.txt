@@ -1,0 +1,48 @@
+=== F2c-duplicate-headers-resolved ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:46Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F2: resolve a duplicated header to its first value instead of refusing it.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index 64547aa..6759d76 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -283,4 +283,4 @@ func (v *Verifier) now() time.Time {
+ func exactlyOnce(header http.Header, name string) (string, bool) {
+-	values := header.Values(name)
+-	if len(values) != 1 {
++	values := header.Values(name) // MUTATION: take the first value
++	if len(values) == 0 {
+ 		return "", false
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+--- FAIL: TestDuplicatedHeadersAreRefused (0.00s)
+    --- FAIL: TestDuplicatedHeadersAreRefused/X-Vizra-Timestamp (0.00s)
+        hmacauth_test.go:634: a duplicated X-Vizra-Timestamp was accepted
+    --- FAIL: TestDuplicatedHeadersAreRefused/X-Vizra-Nonce (0.00s)
+        hmacauth_test.go:634: a duplicated X-Vizra-Nonce was accepted
+    --- FAIL: TestDuplicatedHeadersAreRefused/X-Vizra-Signature (0.00s)
+        hmacauth_test.go:634: a duplicated X-Vizra-Signature was accepted
+--- FAIL: TestVerifierRefusesEveryNegativeVector (0.00s)
+    --- FAIL: TestVerifierRefusesEveryNegativeVector/timestamp-duplicated-header (0.00s)
+        testvectors_test.go:209: Verify ACCEPTED a vector the contract says must be rejected.
+              rule: a duplicated signature header is ambiguous — one implementation reads the first value and another the last; refuse rather than pick
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.897s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	1.074s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.236s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.422s
+[exit code: 0]

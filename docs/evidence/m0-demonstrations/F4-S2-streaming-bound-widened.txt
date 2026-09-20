@@ -1,0 +1,45 @@
+=== F4-S2-streaming-bound-widened ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:26Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S2: widen readBounded's limit. Every existing 413 test uses
+bytes.NewReader, which sets ContentLength, so all of them were satisfied by the
+declared-length pre-check alone and this mutation SURVIVED at 7f483ad.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..67e29db 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -260,3 +260,3 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 		}
+-		body, tooLarge, err := readBounded(req.Body, s.cfg.MaxBodyBytes)
++		body, tooLarge, err := readBounded(req.Body, 1<<62) // MUTATION
+ 		if err != nil {
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+--- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes (0.00s)
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/search (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 400 ({"error":{"code":"bad_request","message":"the request body is not a JSON object matching the contract"}}
+            ), want 413
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/suggestions (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 400 ({"error":{"code":"bad_request","message":"the request body is not a JSON object matching the contract"}}
+            ), want 413
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/events (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 400 ({"error":{"code":"bad_request","message":"the request body is not a JSON object matching the contract"}}
+            ), want 413
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.374s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.378s
+[exit code: 0]

@@ -275,6 +275,12 @@ enforces:
 
 A PR may **add** lanes to the manifest. It may not remove a floor lane.
 
+The aggregate itself picks the **latest** check-run per name, ordered by
+`started_at`, and **fails loudly** when two completed runs of one name disagree
+— it does not pick a winner. A stale `success` must never mask a current
+failure. The rules live in `scripts/ci-required-select.sh`, which also runs
+outside Actions so they can be demonstrated.
+
 `.github/CODEOWNERS` assigns `/.github/`, `/scripts/`, `/Makefile`, `/api/`,
 `internal/hmacauth`, `internal/config` and this file to the owner. **CODEOWNERS
 is advisory until a ruleset requires that review**, and applying the ruleset is

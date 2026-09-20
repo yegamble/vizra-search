@@ -50,73 +50,31 @@ jobs:
 
           # Poll the check runs on this SHA until every required one has a
           # conclusion, or the timeout expires. A check that never appears is
-          # a failure, not a pass.
+          # a failure, not a pass. The row-selection rules live in
+          # scripts/ci-required-select.sh so they can be run and demonstrated
+          # outside Actions.
           deadline=$(( $(date +%s) + 1800 ))
           while :; do
-            # Emit name, status, conclusion and started_at so the rows can be
-          # ordered. A SHA can carry more than one check-run with the same name
-          # — a re-run, or two workflows defining the same job name — and
-          # reading whichever the API happened to list first is a coin flip.
-          gh api --paginate \
+            gh api --paginate \
               "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" \
               --jq '.check_runs[] | [.name, .status, (.conclusion // "none"), (.started_at // "")] | @tsv' \
               > runs.tsv || { echo "could not read check runs"; exit 1; }
 
-            pending=0
-            failed=0
-            : > report.txt
-            while IFS= read -r check; do
-              [ -z "$check" ] && continue
-              # All rows for this name, newest first by started_at.
-              rows="$(awk -F'\t' -v n="$check" '$1==n' runs.tsv | sort -t"$(printf '\t')" -k4,4r || true)"
-              if [ -z "$rows" ]; then
-                echo "  $check: NEVER RAN" >> report.txt
-                pending=1
-                continue
-              fi
+            set +e
+            ./scripts/ci-required-select.sh "$required" < runs.tsv
+            verdict=$?
+            set -e
 
-              count="$(printf '%s\n' "$rows" | grep -c . || true)"
-              if [ "$count" -gt 1 ]; then
-                # Duplicates are only safe to collapse when they agree. If two
-                # completed runs of the same name disagree, the gate cannot
-                # pick a winner honestly — it fails loudly instead.
-                distinct="$(printf '%s\n' "$rows" | awk -F'\t' '$2=="completed" {print $3}' | sort -u | grep -c . || true)"
-                if [ "$distinct" -gt 1 ]; then
-                  echo "  $check: AMBIGUOUS — $count check-runs share this name and their conclusions disagree:" >> report.txt
-                  printf '%s\n' "$rows" | awk -F'\t' '{printf "      %s %s %s\n", $2, $3, $4}' >> report.txt
-                  failed=1
-                  continue
-                fi
-                echo "  $check: ($count runs with this name, all agreeing)" >> report.txt
-              fi
+            case "$verdict" in
+              0)
+                echo "ci-required: every required check succeeded on $HEAD_SHA"
+                exit 0
+                ;;
+              1)
+                exit 1
+                ;;
+            esac
 
-              # The newest row decides.
-              line="$(printf '%s\n' "$rows" | head -n 1)"
-              status="$(printf '%s' "$line" | cut -f2)"
-              conclusion="$(printf '%s' "$line" | cut -f3)"
-              if [ "$status" != "completed" ]; then
-                echo "  $check: $status" >> report.txt
-                pending=1
-                continue
-              fi
-              echo "  $check: $conclusion" >> report.txt
-              # Only `success` passes. skipped, cancelled, timed_out, failure,
-              # neutral and action_required all fail.
-              if [ "$conclusion" != "success" ]; then
-                failed=1
-              fi
-            done <<< "$required"
-
-            cat report.txt
-
-            if [ "$failed" = "1" ]; then
-              echo "ci-required: at least one required check did not succeed"
-              exit 1
-            fi
-            if [ "$pending" = "0" ]; then
-              echo "ci-required: every required check succeeded on $HEAD_SHA"
-              exit 0
-            fi
             if [ "$(date +%s)" -ge "$deadline" ]; then
               echo "ci-required: timed out waiting for required checks; a check that never ran is not a pass"
               exit 1

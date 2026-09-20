@@ -1,0 +1,49 @@
+=== F5-query-string-accepted ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:36Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F5: stop refusing a query string on an internal route.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..600b8a1 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -276,3 +276,3 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 		//    remembering it.
+-		if req.URL.RawQuery != "" || req.URL.ForceQuery {
++		if false { // MUTATION: accept a query string
+ 			s.log.Warn("request refused",
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+--- FAIL: TestASignedRequestWithAQueryStringIsRefused (0.00s)
+    --- FAIL: TestASignedRequestWithAQueryStringIsRefused/?x=1 (0.00s)
+        hardening_test.go:110: a signed request carrying ?x=1 = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+    --- FAIL: TestASignedRequestWithAQueryStringIsRefused/? (0.00s)
+        hardening_test.go:110: a signed request carrying ? = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+    --- FAIL: TestASignedRequestWithAQueryStringIsRefused/?a=1&b=2 (0.00s)
+        hardening_test.go:110: a signed request carrying ?a=1&b=2 = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+    --- FAIL: TestASignedRequestWithAQueryStringIsRefused/?utm_source=evil (0.00s)
+        hardening_test.go:110: a signed request carrying ?utm_source=evil = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+--- FAIL: TestTheRefusalPathNeverLogsTheRequestBody (0.00s)
+    --- FAIL: TestTheRefusalPathNeverLogsTheRequestBody/query_string (0.00s)
+        hardening_test.go:293: setup: query string was accepted
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.423s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.490s
+[exit code: 0]

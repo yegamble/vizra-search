@@ -1,0 +1,54 @@
+=== F2d-vectors-file-edited-in-place ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:48Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F2/A: editing the vendored vectors instead of re-vendoring them must fail,
+the same way editing the contract does.
+
+--- mutation applied ---
+diff --git a/api/search-hmac-testvectors.json b/api/search-hmac-testvectors.json
+index 814e124..acd67e5 100644
+--- a/api/search-hmac-testvectors.json
++++ b/api/search-hmac-testvectors.json
+@@ -94,3 +94,3 @@
+   },
+-  "negative_vectors": [
++  "negative_vectors_disabled": [
+     {
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+--- FAIL: TestTheVendoredVectorsAreUsable (0.00s)
+    contract_drift_test.go:338: the vendored vectors declare only 0 REJECT cases; the reject set is the half that catches divergence
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	1.293s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.202s
+--- FAIL: TestTheVendoredVectorsCoverTheContractsWindow (0.00s)
+    testvectors_test.go:126: the vendored vector file declares no REJECT vectors; agreeing on the accept set while disagreeing on the reject set is exactly how the two implementations diverged
+--- FAIL: TestVerifierReproducesTheSharedVectors (0.00s)
+    testvectors_test.go:143: the vendored vector file declares no REJECT vectors; agreeing on the accept set while disagreeing on the reject set is exactly how the two implementations diverged
+--- FAIL: TestVerifierRefusesEveryNegativeVector (0.00s)
+    testvectors_test.go:187: the vendored vector file declares no REJECT vectors; agreeing on the accept set while disagreeing on the reject set is exactly how the two implementations diverged
+--- FAIL: TestEveryNamedRejectClassIsCovered (0.00s)
+    testvectors_test.go:226: the vendored vector file declares no REJECT vectors; agreeing on the accept set while disagreeing on the reject set is exactly how the two implementations diverged
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.431s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	1.600s
+ok  	github.com/yegamble/vizra-search/internal/contract	1.137s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.324s
+[exit code: 0]

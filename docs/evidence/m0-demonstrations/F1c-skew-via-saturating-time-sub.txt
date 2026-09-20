@@ -1,0 +1,50 @@
+=== F1c-skew-via-saturating-time-sub ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:40Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F1: restore the EXACT arithmetic that failed open at 7f483ad — derive a time
+value from the header and fold the sign of the difference.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index 64547aa..d9ebe64 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -376,8 +376,8 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	// [1000000000, 4102444800], so the subtraction cannot overflow or saturate.
+-	skewSeconds := nowUnix - unixSeconds
+-	if skewSeconds < 0 {
+-		skewSeconds = -skewSeconds
++	// MUTATION: the saturating arithmetic from 7f483ad
++	skew := v.now().Sub(time.Unix(unixSeconds, 0))
++	if skew < 0 {
++		skew = -skew
+ 	}
+-	maxSkewSeconds := int64(v.MaxSkew / time.Second)
+-	if skewSeconds > maxSkewSeconds {
++	if skew > v.MaxSkew {
+ 		return reject(ReasonStaleTimestamp)
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+--- FAIL: TestTheSkewArithmeticCannotSaturate (0.00s)
+    hmacauth_test.go:515: the skew is no longer computed on plain int64 seconds; deriving it from a time value re-opens the saturating-subtraction hole
+    hmacauth_test.go:523: the source computes the window through "v.now().Sub("; time.Time.Sub saturates at math.MinInt64 and negating that yields itself, so the check fails open
+    hmacauth_test.go:523: the source computes the window through "Sub(time.Unix(unixSeconds"; time.Time.Sub saturates at math.MinInt64 and negating that yields itself, so the check fails open
+    hmacauth_test.go:530: could not locate the range check and the skew computation
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.244s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.431s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.200s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.377s
+[exit code: 0]

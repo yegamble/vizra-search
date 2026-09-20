@@ -1,0 +1,69 @@
+=== F4-S5-default-body-cap-widened ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:31Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S5: DefaultMaxBodyBytes 1 MiB -> 1 GiB. SURVIVED at 7f483ad.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 323e271..514ebd3 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -35,3 +35,3 @@ const (
+ 	DefaultMaxClockSkew   = 300 * time.Second
+-	DefaultMaxBodyBytes   = int64(1 << 20) // 1 MiB
++	DefaultMaxBodyBytes   = int64(1 << 30) // MUTATION
+ 	DefaultRequestTimeout = 5 * time.Second
+
+--- RED: go test -count=1 ./internal/config/ ./internal/httpapi/ ---
+--- FAIL: TestLoadFromDefaultsToProductionWhenModeIsOmitted (0.00s)
+    config_test.go:42: LoadFrom: unexpected error: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestProductionAcceptsAStrongKey (0.00s)
+    config_test.go:109: LoadFrom: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestCheckEnvValidatesACandidateEnvFileWithTheBootCode (0.00s)
+    config_test.go:186: CheckEnv rejected a valid production env: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestConfigNeverRendersTheKey (0.00s)
+    config_test.go:200: LoadFrom: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestDefaultsMatchTheCanonicalContract (0.00s)
+    config_test.go:264: DefaultMaxBodyBytes = 1073741824; the canonical contract fixes the default at 1 MiB (1048576)
+--- FAIL: TestProductionAcceptsAWindowAtOrBelowTheCeiling (0.00s)
+    config_test.go:301: production refused a 1s window, which is at or below the ceiling: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+    config_test.go:301: production refused a 60s window, which is at or below the ceiling: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+    config_test.go:301: production refused a 299s window, which is at or below the ceiling: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+    config_test.go:301: production refused a 300s window, which is at or below the ceiling: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+    config_test.go:301: production refused a 5m window, which is at or below the ceiling: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestAConfigurationInsideTheCeilingsDoesNotClaimToExceedThem (0.00s)
+    config_test.go:355: LoadFrom: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+--- FAIL: TestCheckEnvReportsTheCeilingRefusals (0.00s)
+    config_test.go:367: CheckEnv rejected a valid production env: invalid vizra-search configuration:
+          - MAX_INTERNAL_BODY_BYTES must not exceed 8388608 bytes in production mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.400s
+--- FAIL: TestTheContractsFixedNumbersMatchTheImplementation (0.00s)
+    contract_drift_test.go:296: DefaultMaxBodyBytes = 1073741824, the contract fixes 1 MiB
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.581s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/config/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.311s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.517s
+[exit code: 0]
