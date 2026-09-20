@@ -23,23 +23,39 @@ be built under emulation on this machine — and runs natively in CI.
 | `revendor-provenance.txt` | that `415a6d19cfc0acedd8ad84c1857c95db0ed63627` is the tip of core's `main`; that the previously recorded `2b9c540…` is unreachable on the remote (branch 404, `compare` → `diverged`); core's own diff between the two; and **git blob id, sha256 and byte count agreement** between `415a6d1:api/<file>` and each vendored copy |
 | `revendor-key-and-vectors.txt` | that the published-key refusal still refuses `key_utf8` read out of the **re-vendored** file, and that the new `key_utf8_warning` sibling field does not break the vector loader — all 5 ACCEPT and 24 REJECT vectors still consumed |
 | `F7-before-the-fix.txt` | the finding: `make contract-drift` is **green** with a vendored file edited in place, and green with a manifest `sha256` zeroed; `go test -list` shows the guard's name is absent from the lane's `-run` regex |
-| `F7-after-the-fix-red-green.txt` | six mutations, each **red** under `make contract-drift` specifically, green when restored: each vendored file edited in place, a zeroed `sha256`, a file dropped from the manifest, a `-run` filter put back on the lane, and a guard moved to a package the lane does not list |
+| `F7-after-the-fix-red-green.txt` | **round 1.** Six mutations red under `make contract-drift`. Its `-run` case used `-run 'Contract\|Drift\|Schema'`, whose `Contract` fragment happened to match the in-lane guard's own name, so it went red for an accidental reason. Superseded by the round-2 file below; kept because it is the transcript the verifier assessed |
+| `F7-round2-lane-guard-red-green.txt` | **round 2, verifier FINDING 1 + 3.** Ten mutations, each **red** under `make contract-drift`, every one applied *together with* a real in-place edit of a vendored file: `-run 'TestVerifier'` (the verifier's exact case), `-run` selecting nothing, `-run` via `$(TESTFLAGS)`, `GOFLAGS` in the environment, a duplicate `contract-drift:` target, an included makefile, a wrapper script, the guard step deleted, the in-place edit alone, and a zeroed `sha256` |
 | `F8-before-the-fix.txt` | the finding: `scripts/ci-required-guard.sh` is **green** with `scripts/testdata/` deleted, green with an empty `wf-*.yml` glob, and green with a single negative fixture deleted |
-| `F8-after-the-fix-red-green.txt` | five mutations, each **red** with a named failure: missing directory, empty glob, missing floor fixture, missing accept fixture, and a fixture that stopped discriminating |
+| `F8-after-the-fix-red-green.txt` | **round 1.** Five mutations red: missing directory, empty glob, missing floor fixture, missing accept fixture, and a fixture rewritten to clean YAML |
+| `F8-round2-fixture-rules-red-green.txt` | **round 2, verifier FINDING 2.** An unreadable reject fixture, an **emptied** one, one truncated to invalid YAML, one edited to trip a *different* rule than it declares, the quoted-key fixture unquoted, one made actually valid, and the accept fixture unreadable — each **red** with its own named failure; plus the round-1 reds A–E re-run and still red |
 | `lanes-local.txt` | every local lane — `fmt-check`, `vet`, `echo-containment`, `build`, `contract-drift`, `test`, `test-noskip`, `tidy-check`, the fan-in guard, the workflow checker, `govulncheck` — with exit codes |
 
-## Counts
+## Counts (fix round 2)
 
 - `make test` (`-race -count=1 ./...`): 6 packages `ok`, exit 0.
-- `make test-noskip`: **321 pass events, 0 skips**, exit 0 (the lane's own floor is 40).
+- `make test-noskip`: **338 pass events, 0 skips**, exit 0 (the lane's own floor is 40).
+  Round 1 reported 321; the 17 added are the new lane-guard cases, all passing, none skipped.
+- `make contract-drift`: `315 tests ran across 4 package(s), 0 failures, none deselected`, exit 0.
 - `make ci`: exit 0.
 - `scripts/ci-required-guard.sh`: 6 fixtures exercised, floor 6, exit 0.
 - `govulncheck ./...`: "No vulnerabilities found", exit 0.
 
 ## What changed, and what did not
 
-The re-vendor forced **no** code change in this repository. Core's two edits between
-the old and new commits are both additive prose: a "Who enforces what" paragraph in the
-OpenAPI description, and a `key_utf8_warning` string beside `key_utf8` in the vectors
-file. No schema, no fixed number, no vector, and no field this repository reads changed.
-`TestTheContractsFixedNumbersMatchTheImplementation` still finds every number it pins.
+The re-vendor forced **no** code change in this repository.
+
+Core's `api/` directory changed in **three** files between `2b9c540` and `415a6d1`
+(`git diff --numstat 2b9c540 415a6d1 -- api/`):
+
+```
+29  0  api/README.md                       <- NOT vendored here; nothing follows from it
+ 1  0  api/search-hmac-testvectors.json
+ 8  0  api/search-internal.openapi.yaml
+```
+
+Of the two files this repository **vendors**, the diff is `2 files changed, 9
+insertions(+)`, no deletions — both additive prose: a "Who enforces what" paragraph in
+the OpenAPI `hmacSignature` description, and a `key_utf8_warning` string beside
+`key_utf8` in the vectors. No schema, no fixed number, no vector, and no field this
+repository reads changed. `TestTheContractsFixedNumbersMatchTheImplementation` still
+finds every number it pins.

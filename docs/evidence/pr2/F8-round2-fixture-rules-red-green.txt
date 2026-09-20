@@ -1,0 +1,191 @@
+=== FINDING 2 AFTER THE FIX ===
+host : Darwin 25.5.0 arm64
+bash : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+py   : Python 3.9.6
+uid  : 501  (not root; root would bypass the readability check)
+
+--- check-workflows.py now answers three ways, and each reject fixture declares its rule ---
+#            fixture|at|key spelling|value kind
+reject_fixtures="wf-plain.yml|job|continue-on-error|literal-true
+wf-quoted-key.yml|job|\"continue-on-error\"|literal-true
+wf-capitalised.yml|job|Continue-On-Error|literal-true
+wf-expression.yml|step|continue-on-error|expression
+wf-false.yml|step|continue-on-error|literal-false"
+
+--- the rule each fixture actually trips ---
+  wf-capitalised.yml     exit=1  at=job key=Continue-On-Error value=literal-true where=scripts/testdata/wf-capitalised.yml:jobs.test.Continue-On-Error
+  wf-clean.yml           exit=0  (clean — the accept fixture)
+  wf-expression.yml      exit=1  at=step key=continue-on-error value=expression where=scripts/testdata/wf-expression.yml:jobs.test.steps[0].continue-on-error
+  wf-false.yml           exit=1  at=step key=continue-on-error value=literal-false where=scripts/testdata/wf-false.yml:jobs.test.steps[0].continue-on-error
+  wf-plain.yml           exit=1  at=job key=continue-on-error value=literal-true where=scripts/testdata/wf-plain.yml:jobs.test.continue-on-error
+  wf-quoted-key.yml      exit=1  at=job key="continue-on-error" value=literal-true where=scripts/testdata/wf-quoted-key.yml:jobs.test.continue-on-error
+
+==================================================================
+GREEN 0: all six fixtures present, readable, non-empty, each tripping its declared rule
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+
+==================================================================
+RED F: a REJECT fixture made unreadable (chmod 000) — the verifier's survivor
+  Before this fix: exit 0, still printing '6 fixtures exercised, floor 6'.
+$ ls -l scripts/testdata/wf-plain.yml
+----------  1 yosefgamble  staff  135 Sep 20 16:54 scripts/testdata/wf-plain.yml
+$ ./scripts/ci-required-guard.sh
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+UNUSABLE FIXTURE: 'scripts/testdata/wf-plain.yml' exists but is not readable.
+  The checker would exit non-zero because it cannot open the file, which must never
+  be counted as 'the checker rejected it'.
+exit=1
+>>> RED. Named, and it names the file.
+
+==================================================================
+RED H: a REJECT fixture EMPTIED (the case that reaches CI through git)
+  Before this fix: exit 0, still printing '6 fixtures exercised, floor 6'.
+$ wc -c scripts/testdata/wf-quoted-key.yml
+       0 scripts/testdata/wf-quoted-key.yml
+$ ./scripts/ci-required-guard.sh
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+UNUSABLE FIXTURE: 'scripts/testdata/wf-quoted-key.yml' is empty.
+  An empty fixture tests nothing; the checker reports UNEVALUABLE, not a rejection.
+exit=1
+>>> RED.
+
+==================================================================
+RED I: a REJECT fixture truncated to INVALID YAML (checker cannot parse => UNEVALUABLE, not a rejection)
+$ cat scripts/testdata/wf-false.yml
+jobs:
+  test:
+   bad: [unclosed
+$ ./scripts/check-workflows.py scripts/testdata/wf-false.yml; echo exit=$?
+UNEVALUABLE scripts/testdata/wf-false.yml: cannot parse: while parsing a flow sequence
+  in "<unicode string>", line 3, column 9:
+checker exit=2
+$ ./scripts/ci-required-guard.sh
+           bad: [unclosed
+                ^
+    expected ',' or ']', but got '<stream end>'
+      in "<unicode string>", line 4, column 1:
+        
+        ^
+exit=1
+>>> RED, and distinct from 'the workflow checker ACCEPTED …'.
+
+==================================================================
+RED J: a reject fixture edited so it trips a DIFFERENT rule than it declares
+  wf-false.yml declares value=literal-false. Change the value to true and it still gets
+  rejected — but no longer for the rule it exists to prove.
+$ grep continue scripts/testdata/wf-false.yml
+        continue-on-error: true
+$ ./scripts/ci-required-guard.sh
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+WRONG RULE TRIPPED: scripts/testdata/wf-false.yml was rejected, but not for the rule it declares.
+  declared: VIOLATION scripts/testdata/wf-false.yml at=step key=continue-on-error value=literal-false
+  reported:
+    VIOLATION scripts/testdata/wf-false.yml at=step key=continue-on-error value=literal-true where=scripts/testdata/wf-false.yml:jobs.test.steps[0].continue-on-error
+exit=1
+>>> RED. Rejected is not enough; it must be rejected for its own rule.
+
+==================================================================
+RED K: the quoted-key fixture rewritten with an UNQUOTED key (same rule family, wrong spelling)
+$ grep continue scripts/testdata/wf-quoted-key.yml
+    continue-on-error: true
+$ ./scripts/ci-required-guard.sh
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+WRONG RULE TRIPPED: scripts/testdata/wf-quoted-key.yml was rejected, but not for the rule it declares.
+  declared: VIOLATION scripts/testdata/wf-quoted-key.yml at=job key="continue-on-error" value=literal-true
+  reported:
+    VIOLATION scripts/testdata/wf-quoted-key.yml at=job key=continue-on-error value=literal-true where=scripts/testdata/wf-quoted-key.yml:jobs.test.continue-on-error
+exit=1
+>>> RED. The fixture that proves a QUOTED key is caught must keep a quoted key.
+
+==================================================================
+RED L: a reject fixture made actually VALID (no continue-on-error at all)
+$ ./scripts/ci-required-guard.sh
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker ACCEPTED scripts/testdata/wf-capitalised.yml, which spells continue-on-error in a way it must catch
+exit=1
+>>> RED.
+
+==================================================================
+RED M: the ACCEPT fixture made unreadable (was already red; must stay red)
+$ ./scripts/ci-required-guard.sh
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+UNUSABLE FIXTURE: 'scripts/testdata/wf-clean.yml' exists but is not readable.
+  The checker would exit non-zero because it cannot open the file, which must never
+  be counted as 'the checker rejected it'.
+exit=1
+>>> RED.
+
+==================================================================
+REGRESSION: the round-1 reds A-E must still be red
+  A: directory removed                     exit=1
+  B: all fixtures deleted                  exit=1
+  C: one floor fixture deleted             exit=1
+  D: accept fixture deleted                exit=1
+  E: fixtures renamed out of the glob      exit=1
+
+==================================================================
+GREEN 1: fully restored
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+$ git status --short scripts/
+ M scripts/check-workflows.py
+ M scripts/ci-required-guard.sh
+?? scripts/contract-drift-guard.py
+
+==================================================================
+RED I, full guard output (the tail above truncated the verdict line)
+$ ./scripts/ci-required-guard.sh 2>&1 | grep -A3 'UNEVALUABLE FIXTURE'
+UNEVALUABLE FIXTURE: the workflow checker could not evaluate scripts/testdata/wf-false.yml (exit 2).
+  Nothing was checked. This is a guard failure, not a rejection.
+    UNEVALUABLE scripts/testdata/wf-false.yml: cannot parse: while parsing a flow sequence
+      in "<unicode string>", line 3, column 9:
+exit=1
+>>> The guard names it as a guard failure — 'could not evaluate', explicitly not a rejection.

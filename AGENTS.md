@@ -266,7 +266,7 @@ including a check that never ran — as a failure.
 | `vet` | `go vet ./...` |
 | `echo-containment` | ADR-001: Echo is imported only by `internal/httpapi` |
 | `build` | the binary links and reports its identity |
-| `contract-drift` | the handlers, response bodies, HMAC scheme and both vendored digests match the canonical contract, and every normative vector — ACCEPT and REJECT — is consumed |
+| `contract-drift` | the handlers, response bodies, HMAC scheme and both vendored digests match the canonical contract, and every normative vector — ACCEPT and REJECT — is consumed; the lane's own shape is checked before and after the tests run, so nothing can be deselected |
 | `test` | `go test -race -count=1 ./...` |
 | `test-noskip` | **0 skipped tests** and a non-trivial collected count (Q-001) |
 | `tidy-check` | `go.mod`/`go.sum` are tidy |
@@ -293,12 +293,44 @@ only under the broader `make ci`, which is not the lane whose name says it check
 drift.
 
 So the lane names **packages** and runs all of their tests, with no
-test-selecting flag, and `TestTheContractDriftLaneSelectsEveryVendoredFileGuard`
-holds that from the other side: it parses the recipe out of the `Makefile` and
-fails if it carries `-run`, `-skip`, `-short`, `-tags`, `-bench` or `-fuzz`, or
-if any package containing a test that reads a vendored file is missing from the
-list. A new guard is in the lane the moment it is written, wherever it is written
-and whatever it is called. Do not re-add a name filter to make the lane faster.
+test-selecting flag. A new guard is in the lane the moment it is written,
+wherever it is written and whatever it is called. Do not re-add a name filter to
+make the lane faster.
+
+**The rule is enforced from outside `go test`.** The first attempt put it in a
+Go test inside the lane — and a Go test inside the lane is selected by the same
+`go test` invocation it polices. `-run 'TestVerifier'` deselected the guard that
+forbids `-run`; the lane printed `ok … [no tests to run]` and exited **0** with a
+vendored contract file edited in place. A juror the defendant can dismiss is not
+a control.
+
+`scripts/contract-drift-guard.py` is therefore a recipe step, and the lane is
+three commands: `recipe`, then `go test`, then `ran`.
+
+- `recipe` asks **`make --dry-run`** what the lane will actually run, rather than
+  reading the `Makefile` text. Asking make resolves in one move every
+  indirection a text parser missed: a variable (`$(TESTFLAGS)`), an included
+  makefile, and a duplicate `contract-drift:` target — make runs the **last**
+  definition while a text parser reads the first. It then refuses any flag
+  except `-count=1` and `-json` (so `-run`, `-skip`, `-short`, `-tags`, `-bench`
+  and `-fuzz` are refused by name and anything invented later by default), an
+  environment assignment prefix, a wrapper script in place of `go test`,
+  `GOFLAGS`/`GOTESTFLAGS` carrying a selecting flag **in the environment**, and
+  any package holding a vendored-file guard that is missing from the list.
+- `ran` reads the report afterwards and fails if any listed package ran **zero**
+  tests — which is what a filter selecting nothing looks like from outside — or
+  reported `[no tests to run]` or `[no test files]`.
+
+The tests in `internal/httpapi/lane_selection_test.go` are the **second** layer,
+not the control: they hold the lane's shape (both guard steps still present) and
+drive the guard against every bypass above, so a guard that silently stopped
+refusing one is itself a red lane.
+
+What this does **not** cover, stated rather than implied: the guard is a line in
+the recipe it guards, so deleting that line removes it. That takes a second
+deliberate edit — the shape test goes red on its own — and `/Makefile` is a
+CODEOWNERS path. `make ci`, `test` and `test-noskip` run `./...` unfiltered and
+catch the drift regardless.
 
 ### The manifest is editable by the PR it gates
 
@@ -333,7 +365,25 @@ enforces:
   zero times. `for fixture in scripts/testdata/wf-*.yml` alone was green when
   the fixtures were gone — with no match bash passes the literal glob through,
   the checker is handed a path that does not exist and exits non-zero, and the
-  "must be rejected" branch reads that as a pass;
+  "must be rejected" branch reads that as a pass.
+
+  **A fixture must be rejected for the rule it was written to trip.** Reading
+  *any* non-zero exit as "correctly rejected" left the same hole one level down:
+  a checker that cannot read or parse its input also exits non-zero, so
+  `chmod 000` on a reject fixture — or, the case that actually reaches CI
+  through git, **emptying** one — kept the guard at exit 0 while it printed a
+  fixture count it had not earned. (`test -f` tests existence, not readability,
+  though its message said otherwise.) So `check-workflows.py` answers three
+  ways — `0` clean, `1` `VIOLATION`, `2` `UNEVALUABLE` — and prints a
+  machine-readable `VIOLATION <path> at=<job|step> key=<raw spelling>
+  value=<literal-true|literal-false|expression|other>` line. Each reject fixture
+  **declares** the rule it must trip, next to the floor list in
+  `scripts/ci-required-guard.sh`; the guard requires the fixture to be readable
+  and non-empty *before* the checker runs, requires exit `1` **exactly**, and
+  requires the reported rule to be the declared one. Exit `2` is a named guard
+  failure. A fixture rewritten so it trips a different rule — the `false` value
+  changed to `true`, the quoted key unquoted — is red, because a fixture that
+  has stopped testing what it was written for is a decoration, not a fixture;
 - every pullable Dockerfile base image is pinned by `@sha256` digest
   (`scratch` is exempt: it is the reserved empty base and has no digest).
 

@@ -2,78 +2,179 @@ package httpapi_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
 )
 
-// This file holds one property: the `contract-drift` lane in the Makefile
-// actually runs every test that guards a vendored file.
+// This file is the SECOND layer of the contract-drift lane's protection.
 //
-// Why it exists. The lane used to select tests with a `-run` regex of name
-// fragments. A regex over names is not a guard, it is a naming habit with a
-// deadline: the day someone renames a test to something the regex does not
-// match, the test stops running in that lane and nothing says so. That is not
-// hypothetical here. The manifest guard was `TestVendoredContractMatchesItsManifest`,
-// which the regex's `Contract` fragment matched; it became
-// `TestEveryVendoredFileMatchesItsManifest`, which matches no fragment in the
-// regex. From then on, editing a vendored contract file in place, or zeroing a
-// sha256 in the manifest, left `make contract-drift` GREEN. The mutation died
-// only under the broader `make ci`.
+// The first layer is scripts/contract-drift-guard.py, a recipe step that runs
+// before `go test` and therefore cannot be deselected by it. That matters,
+// because the first attempt at this fix put the rule in an ordinary Go test
+// inside the lane — and a Go test inside the lane is selected by the same
+// `go test` invocation it polices. `-run 'TestVerifier'` deselected the guard
+// that forbids `-run`, and the lane printed `ok … [no tests to run]` and exited
+// 0 with a vendored contract file edited in place. A juror the defendant can
+// dismiss is not a control.
 //
-// The fix is to delete the name coupling rather than lengthen the regex: the
-// lane names PACKAGES and runs all of their tests. This test holds that fix in
-// place from the other side, so the lane cannot quietly regain a filter and
-// cannot quietly stop covering a package where a guard lives.
+// So the tests here do not pretend to be the control. They hold the SHAPE of
+// the lane — that both guard steps are still in the recipe — and they exercise
+// the shell guard against every bypass known to have worked, so a guard that
+// silently stopped refusing one of them is itself a red lane. Removing the
+// shell guard from the recipe while also adding `-run` takes two edits to
+// /Makefile, which CODEOWNERS assigns to the owner; and `make ci`, `test` and
+// `test-noskip` run ./... unfiltered and still catch the drift regardless.
 
-const makefilePath = "../../Makefile"
+const (
+	repoRoot  = "../.."
+	guardPath = "./scripts/contract-drift-guard.py"
+)
 
-// repoRoot is where the module sits, relative to this package's directory.
-const repoRoot = "../.."
-
-// testSelectingFlags are the `go test` flags that change WHICH tests run. Any
-// of them in the contract-drift recipe can silently deselect a guard, which is
-// the exact failure this test exists to prevent. `-count=1` only changes how
-// many times the selected tests run, and caching off is what the lane wants.
+// testSelectingFlags change WHICH tests run. Any of them on the lane can
+// silently deselect a guard.
 var testSelectingFlags = []string{"-run", "-skip", "-short", "-tags", "-bench", "-fuzz"}
 
-// contractDriftRecipe returns the shell line(s) of the contract-drift target,
-// with make's line continuations joined.
-func contractDriftRecipe(t *testing.T) string {
+// resolvedLaneCommands asks make what the lane will ACTUALLY run, rather than
+// parsing the Makefile text. Asking make resolves variables, includes and
+// duplicate-target overrides in one move — each of which defeated the earlier
+// text parser.
+func resolvedLaneCommands(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(makefilePath)
+	cmd := exec.Command("make", "--dry-run", "--no-print-directory", "contract-drift")
+	cmd.Dir = repoRoot
+	cmd.Env = filteredEnv()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("reading %s: %v", makefilePath, err)
+		t.Fatalf("`make --dry-run contract-drift` failed: %v\n%s", err, out)
 	}
-	lines := strings.Split(string(raw), "\n")
-	start := -1
-	for i, ln := range lines {
-		if strings.HasPrefix(ln, "contract-drift:") {
-			start = i + 1
-			break
+	var commands []string
+	var pending string
+	for _, raw := range strings.Split(string(out), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
 		}
-	}
-	if start < 0 {
-		t.Fatalf("%s declares no contract-drift target; the lane named in .github/required-checks.txt must exist", makefilePath)
-	}
-	var recipe []string
-	for _, ln := range lines[start:] {
-		if !strings.HasPrefix(ln, "\t") {
-			break
+		if strings.HasSuffix(line, "\\") {
+			pending += strings.TrimSuffix(line, "\\") + " "
+			continue
 		}
-		recipe = append(recipe, strings.TrimSuffix(strings.TrimSpace(ln), "\\"))
+		commands = append(commands, strings.TrimSpace(pending+line))
+		pending = ""
 	}
-	if len(recipe) == 0 {
-		t.Fatalf("the contract-drift target in %s has an empty recipe, so the lane runs nothing", makefilePath)
+	if strings.TrimSpace(pending) != "" {
+		commands = append(commands, strings.TrimSpace(pending))
 	}
-	return strings.Join(recipe, " ")
+	if len(commands) == 0 {
+		t.Fatal("the contract-drift lane resolves to no commands at all")
+	}
+	return commands
 }
 
-// vendoredFileMarkers are the basenames a test must mention to be reading a
-// vendored file. They are derived from the manifest rather than written down
-// here, so adding a third vendored file to api/CONTRACT-SOURCE.json extends
-// this check automatically.
+func filteredEnv() []string {
+	var env []string
+	for _, kv := range os.Environ() {
+		switch {
+		case strings.HasPrefix(kv, "MAKEFLAGS="),
+			strings.HasPrefix(kv, "MFLAGS="),
+			strings.HasPrefix(kv, "MAKELEVEL="):
+			continue
+		}
+		env = append(env, kv)
+	}
+	return env
+}
+
+// TestTheContractDriftLaneIsGuardedFromOutsideGoTest pins the lane's shape: the
+// shell guard brackets the test command. If either step is dropped, the only
+// remaining protection is the tests in this file — which `-run` can remove.
+func TestTheContractDriftLaneIsGuardedFromOutsideGoTest(t *testing.T) {
+	commands := resolvedLaneCommands(t)
+
+	first, last := commands[0], commands[len(commands)-1]
+	if !strings.HasPrefix(first, guardPath) || !strings.Contains(first, " recipe") {
+		t.Errorf("the lane's FIRST command must be `%s recipe`, so the lane's shape is checked\n"+
+			"\tbefore any test runs — a check inside `go test` can be deselected by `-run`.\n\tgot: %s",
+			guardPath, first)
+	}
+	if !strings.HasPrefix(last, guardPath) || !strings.Contains(last, " ran") {
+		t.Errorf("the lane's LAST command must be `%s ran <report>`, which is the authority on\n"+
+			"\twhether the lane passed and refuses a lane that ran zero tests.\n\tgot: %s",
+			guardPath, last)
+	}
+
+	var tested []string
+	for _, c := range commands {
+		if !strings.HasPrefix(c, guardPath) {
+			tested = append(tested, c)
+		}
+	}
+	if len(tested) != 1 {
+		t.Fatalf("the lane must run exactly one `go test`; it runs %d commands besides the guard:\n\t%s",
+			len(tested), strings.Join(tested, "\n\t"))
+	}
+	if !strings.Contains(tested[0], "go test") {
+		t.Errorf("the lane's test command does not invoke `go test`: %s", tested[0])
+	}
+}
+
+// TestTheContractDriftLaneCarriesNoTestSelectingFlag is the second layer of the
+// flag rule. The shell guard enforces it first; this fails too, so a reader of
+// the test output sees why.
+func TestTheContractDriftLaneCarriesNoTestSelectingFlag(t *testing.T) {
+	for _, c := range resolvedLaneCommands(t) {
+		if strings.HasPrefix(c, guardPath) {
+			continue
+		}
+		for _, tok := range strings.Fields(c) {
+			tok = strings.Trim(tok, "'\"")
+			for _, flag := range testSelectingFlags {
+				if tok == flag || strings.HasPrefix(tok, flag+"=") {
+					t.Errorf("the contract-drift lane carries %s.\n"+
+						"\tThe lane must select by PACKAGE, not by test name: a name filter silently drops\n"+
+						"\ta guard out of the lane the day someone renames it. That is finding F7.\n\tcommand: %s",
+						flag, c)
+				}
+			}
+		}
+	}
+}
+
+// TestTheContractDriftLaneRunsEveryPackageHoldingAVendoredFileGuard is the
+// second layer of the coverage rule: a guard written in a package the lane does
+// not run is a guard that does not guard this lane.
+func TestTheContractDriftLaneRunsEveryPackageHoldingAVendoredFileGuard(t *testing.T) {
+	lane := map[string]bool{}
+	var listed []string
+	for _, c := range resolvedLaneCommands(t) {
+		if strings.HasPrefix(c, guardPath) {
+			continue
+		}
+		for _, tok := range strings.Fields(c) {
+			if strings.HasPrefix(tok, "./") {
+				p := strings.Trim(strings.TrimPrefix(tok, "./"), "/")
+				lane[p] = true
+				listed = append(listed, p)
+			}
+		}
+	}
+	sort.Strings(listed)
+	if len(listed) == 0 {
+		t.Fatal("the contract-drift lane names no package to test")
+	}
+	for _, g := range packagesGuardingVendoredFiles(t) {
+		if !lane[g] {
+			t.Errorf("package %q contains a test that reads a vendored contract file, but the lane\n"+
+				"\tdoes not run it, so a mutation of that file survives `make contract-drift`.\n"+
+				"\tAdd ./%s/ to the contract-drift recipe.\n\tlane packages: %v", g, g, listed)
+		}
+	}
+}
+
+// vendoredFileMarkers are derived from the manifest, not written down here, so
+// adding a third vendored file extends this check automatically.
 func vendoredFileMarkers(t *testing.T) []string {
 	t.Helper()
 	markers := []string{filepath.Base(manifestPath)}
@@ -86,13 +187,10 @@ func vendoredFileMarkers(t *testing.T) []string {
 	return markers
 }
 
-// packagesGuardingVendoredFiles walks the module for _test.go files that read a
-// vendored file, and returns the module-relative directories they live in.
 func packagesGuardingVendoredFiles(t *testing.T) []string {
 	t.Helper()
 	markers := vendoredFileMarkers(t)
 	seen := map[string]bool{}
-
 	err := filepath.WalkDir(repoRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -111,9 +209,8 @@ func packagesGuardingVendoredFiles(t *testing.T) []string {
 		if err != nil {
 			return err
 		}
-		body := string(raw)
 		for _, m := range markers {
-			if strings.Contains(body, m) {
+			if strings.Contains(string(raw), m) {
 				rel, err := filepath.Rel(repoRoot, filepath.Dir(path))
 				if err != nil {
 					return err
@@ -138,77 +235,221 @@ func packagesGuardingVendoredFiles(t *testing.T) []string {
 	return out
 }
 
-// lanePackages returns the package directories the contract-drift recipe runs,
-// normalised to module-relative slash paths ("internal/httpapi").
-func lanePackages(t *testing.T, recipe string) []string {
-	t.Helper()
-	var pkgs []string
-	for _, tok := range strings.Fields(recipe) {
-		if !strings.HasPrefix(tok, "./") {
-			continue
-		}
-		pkgs = append(pkgs, strings.Trim(strings.TrimPrefix(tok, "./"), "/"))
-	}
-	sort.Strings(pkgs)
-	return pkgs
+// ------------------------------------------------ the guard's own behaviour --
+
+// laneFixture builds a throwaway repository whose contract-drift lane has the
+// same three-step shape as the real one, so the guard can be driven against
+// recipes this repository must never contain. The guard locates its root from
+// its own path, so copying it into the fixture is what redirects it — there is
+// no environment override that could also be used to escape it in the real
+// repository.
+type laneFixture struct {
+	dir string
+	t   *testing.T
 }
 
-// TestTheContractDriftLaneSelectsEveryVendoredFileGuard is the guard that
-// replaces the lane's old `-run` regex.
-//
-// It asserts three things about the Makefile recipe:
-//
-//  1. it runs `go test`;
-//  2. it carries no flag that selects which tests run — so every test in the
-//     packages it names is in the lane, whatever it is called;
-//  3. every package containing a test that reads a vendored file appears in
-//     its package list.
-//
-// (3) is what makes (2) sufficient: a new guard test written anywhere in an
-// already-listed package is in the lane the moment it exists, and a guard
-// written in a NEW package turns this test red until the lane lists it.
-func TestTheContractDriftLaneSelectsEveryVendoredFileGuard(t *testing.T) {
-	recipe := contractDriftRecipe(t)
+func newLaneFixture(t *testing.T) *laneFixture {
+	t.Helper()
+	dir := t.TempDir()
+	f := &laneFixture{dir: dir, t: t}
 
-	if !strings.Contains(recipe, "go test") {
-		t.Fatalf("the contract-drift recipe does not run `go test`:\n\t%s", recipe)
+	mustMkdir(t, filepath.Join(dir, "scripts"))
+	mustMkdir(t, filepath.Join(dir, "api"))
+	mustMkdir(t, filepath.Join(dir, "internal", "thing"))
+
+	copyFile(t, filepath.Join(repoRoot, "scripts", "contract-drift-guard.py"),
+		filepath.Join(dir, "scripts", "contract-drift-guard.py"), 0o755)
+	copyFile(t, filepath.Join(repoRoot, manifestPath[len("../../"):]),
+		filepath.Join(dir, "api", "CONTRACT-SOURCE.json"), 0o644)
+
+	// A test that reads a vendored file, so the coverage check has something to
+	// find and the clean recipe is a genuine positive control.
+	guardTest := "package thing\n\nimport (\n\t\"os\"\n\t\"testing\"\n)\n\n" +
+		"func TestReadsTheVendoredVectors(t *testing.T) {\n" +
+		"\tif _, err := os.ReadFile(\"../../api/search-hmac-testvectors.json\"); err != nil {\n\t\tt.Fatal(err)\n\t}\n}\n"
+	writeFile(t, filepath.Join(dir, "internal", "thing", "guard_test.go"), guardTest, 0o644)
+	return f
+}
+
+func (f *laneFixture) writeMakefile(body string) {
+	f.t.Helper()
+	writeFile(f.t, filepath.Join(f.dir, "Makefile"), body, 0o644)
+}
+
+// run executes the guard's `recipe` check in the fixture and returns its
+// combined output and exit code.
+func (f *laneFixture) run(extraEnv ...string) (string, int) {
+	f.t.Helper()
+	cmd := exec.Command("./scripts/contract-drift-guard.py", "recipe")
+	cmd.Dir = f.dir
+	cmd.Env = append(filteredEnv(), extraEnv...)
+	out, err := cmd.CombinedOutput()
+	code := 0
+	if ee, ok := err.(*exec.ExitError); ok {
+		code = ee.ExitCode()
+	} else if err != nil {
+		f.t.Fatalf("running the guard: %v\n%s", err, out)
+	}
+	return string(out), code
+}
+
+const cleanRecipe = `SHELL := /bin/bash
+.PHONY: contract-drift
+contract-drift:
+	./scripts/contract-drift-guard.py recipe
+	go test -count=1 -json ./internal/thing/ > r.json || true
+	./scripts/contract-drift-guard.py ran r.json
+`
+
+// TestTheLaneGuardAcceptsAWellFormedLane is the positive control: without it, a
+// guard that refused everything would pass every negative case below.
+func TestTheLaneGuardAcceptsAWellFormedLane(t *testing.T) {
+	f := newLaneFixture(t)
+	f.writeMakefile(cleanRecipe)
+	out, code := f.run()
+	if code != 0 {
+		t.Fatalf("the guard refused a well-formed lane (exit %d):\n%s", code, out)
+	}
+	if !strings.Contains(out, "no test-selecting flag") {
+		t.Errorf("expected the guard to report a clean lane, got:\n%s", out)
+	}
+}
+
+// TestTheLaneGuardRefusesEveryKnownBypass drives the guard against every recipe
+// shape that was demonstrated to slip a vendored-file mutation past the lane.
+// Each case names the bypass and the phrase the refusal must contain, so a
+// guard that started refusing for a different reason is still a failure.
+func TestTheLaneGuardRefusesEveryKnownBypass(t *testing.T) {
+	cases := []struct {
+		name     string
+		makefile string
+		env      []string
+		want     string
+	}{
+		{
+			name: "a -run regex that selects no guard",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json",
+				"go test -count=1 -json -run 'TestNothingAtAll'", 1),
+			want: "carries -run",
+		},
+		{
+			name: "-skip",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json",
+				"go test -count=1 -json -skip 'TestEveryVendoredFileMatchesItsManifest'", 1),
+			want: "carries -skip",
+		},
+		{
+			name:     "-short",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json -short", 1),
+			want:     "carries -short",
+		},
+		{
+			name:     "-tags",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json -tags noguards", 1),
+			want:     "carries -tags",
+		},
+		{
+			name: "-run hidden behind a make variable",
+			makefile: "TESTFLAGS ?= -run=TestNothingAtAll\n" +
+				strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json $(TESTFLAGS)", 1),
+			want: "carries -run",
+		},
+		{
+			name: "a GOFLAGS prefix on the recipe line",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json",
+				"GOFLAGS=-run=TestNothingAtAll go test -count=1 -json", 1),
+			want: "environment assignment",
+		},
+		{
+			name:     "GOFLAGS in the environment",
+			makefile: cleanRecipe,
+			env:      []string{"GOFLAGS=-run=TestNothingAtAll"},
+			want:     "GOFLAGS in the environment",
+		},
+		{
+			name: "a duplicate contract-drift target",
+			makefile: cleanRecipe + "\ncontract-drift:\n\t./scripts/contract-drift-guard.py recipe\n" +
+				"\tgo test -count=1 -json -run 'TestNothingAtAll' ./internal/thing/ > r.json || true\n" +
+				"\t./scripts/contract-drift-guard.py ran r.json\n",
+			want: "DUPLICATE",
+		},
+		{
+			name: "go test moved behind a wrapper script",
+			makefile: strings.Replace(cleanRecipe, "go test -count=1 -json ./internal/thing/ > r.json || true",
+				"./scripts/drift-wrapper.sh > r.json || true", 1),
+			want: "instead of `go test`",
+		},
+		{
+			name: "the recipe guard step removed",
+			makefile: strings.Replace(cleanRecipe,
+				"\t./scripts/contract-drift-guard.py recipe\n", "", 1),
+			want: "FIRST command",
+		},
+		{
+			name: "the ran step removed",
+			makefile: strings.Replace(cleanRecipe,
+				"\t./scripts/contract-drift-guard.py ran r.json\n", "", 1),
+			want: "LAST command",
+		},
+		{
+			name:     "a package holding a vendored-file guard dropped from the list",
+			makefile: strings.Replace(cleanRecipe, "./internal/thing/", "./scripts/", 1),
+			want:     "does not run it",
+		},
 	}
 
-	// 2. No test-selecting flag. A lane that filters by name is a lane that
-	//    can be escaped by renaming a test.
-	for _, flag := range testSelectingFlags {
-		for _, tok := range strings.Fields(recipe) {
-			tok = strings.Trim(tok, "'\"")
-			if tok == flag || strings.HasPrefix(tok, flag+"=") {
-				t.Errorf("the contract-drift recipe carries %s.\n"+
-					"\tThe lane must select by PACKAGE, not by test name or tag: a name filter silently\n"+
-					"\tdrops a guard out of the lane the day someone renames it, with nothing to say so.\n"+
-					"\tThat is finding F7, and it is why this test exists.\n\trecipe: %s", flag, recipe)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newLaneFixture(t)
+			f.writeMakefile(tc.makefile)
+			out, code := f.run(tc.env...)
+			if code == 0 {
+				t.Fatalf("the guard ACCEPTED a lane that %s — this bypass is open again:\n%s", tc.name, out)
 			}
-		}
+			if !strings.Contains(out, tc.want) {
+				t.Errorf("the guard refused the lane, but not for the expected reason.\n"+
+					"\twant the message to contain: %q\n\tgot:\n%s", tc.want, out)
+			}
+		})
 	}
+}
 
-	// 3. Every package holding a vendored-file guard is in the lane.
-	lane := lanePackages(t, recipe)
-	if len(lane) == 0 {
-		t.Fatalf("the contract-drift recipe names no package to test:\n\t%s", recipe)
+// An included makefile is resolved by make, so a variable defined there is
+// expanded before this guard ever sees the recipe. This is its own case because
+// it needs a second file.
+func TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile(t *testing.T) {
+	f := newLaneFixture(t)
+	writeFile(t, filepath.Join(f.dir, "drift.mk"), "TESTFLAGS := -run=TestNothingAtAll\n", 0o644)
+	f.writeMakefile("include drift.mk\n" +
+		strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json $(TESTFLAGS)", 1))
+	out, code := f.run()
+	if code == 0 {
+		t.Fatalf("the guard ACCEPTED a lane whose -run came from an included makefile:\n%s", out)
 	}
-	inLane := map[string]bool{}
-	for _, p := range lane {
-		inLane[p] = true
-		if _, err := os.Stat(filepath.Join(repoRoot, p)); err != nil {
-			t.Errorf("the contract-drift lane names package %q, which does not exist: %v", p, err)
-		}
+	if !strings.Contains(out, "carries -run") {
+		t.Errorf("expected a -run refusal, got:\n%s", out)
 	}
+}
 
-	guards := packagesGuardingVendoredFiles(t)
-	for _, g := range guards {
-		if !inLane[g] {
-			t.Errorf("package %q contains a test that reads a vendored contract file, but the\n"+
-				"\tcontract-drift lane does not run it, so a mutation of that file survives `make contract-drift`.\n"+
-				"\tAdd ./%s/ to the contract-drift recipe in %s.\n\tlane packages: %v",
-				g, g, makefilePath, lane)
-		}
+func mustMkdir(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", dir, err)
 	}
-	t.Logf("contract-drift runs %v with no test-selecting flag; vendored-file guards live in %v", lane, guards)
+}
+
+func writeFile(t *testing.T, path, body string, mode os.FileMode) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), mode); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+}
+
+func copyFile(t *testing.T, src, dst string, mode os.FileMode) {
+	t.Helper()
+	raw, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatalf("reading %s: %v", src, err)
+	}
+	writeFile(t, dst, string(raw), mode)
 }

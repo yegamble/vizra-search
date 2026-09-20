@@ -69,18 +69,31 @@ build: ## Build the binary
 # api/CONTRACT-SOURCE.json — left this lane GREEN. The mutation died only under
 # the broader `make ci`, which is not the lane whose name says it checks drift.
 #
-# So the lane runs every test in the packages that hold the vendored-file
-# guards, with no name filter at all, and
-# TestTheContractDriftLaneSelectsEveryVendoredFileGuard (internal/httpapi)
-# holds that property: it refuses any test-selecting flag in this recipe and
-# fails if a package containing a vendored-file guard is missing from the list
-# below. A new guard is therefore in the lane the moment it is written.
+# The lane is therefore bracketed by two steps that `go test` cannot deselect,
+# because the first attempt at this fix put the rule in a Go test INSIDE the
+# lane — and `-run 'TestVerifier'` then deselected the very guard that forbids
+# `-run`, leaving `ok … [no tests to run]` and exit 0 with the contract drifted.
 #
-# The list is spelled out here, literally, because that test parses this recipe.
+#   recipe  asks `make --dry-run` what this lane will ACTUALLY run — which
+#           resolves variables, includes and duplicate targets that a text
+#           parser misses — and refuses any flag, wrapper or environment
+#           variable that could deselect a guard, plus any package holding a
+#           vendored-file guard that is missing from the list below.
+#   ran     reads the report afterwards and refuses a lane that ran zero tests
+#           in any listed package, which is what a filter that selects nothing
+#           looks like from the outside.
+#
+# `|| true` on the test line is not swallowing the result: the `ran` step is the
+# authority on pass/fail, it prints the real test output, and `recipe` refuses
+# the lane if that step is not the last command.
+DRIFT_PKGS   := ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+DRIFT_REPORT := .contract-drift-report.json
+
 .PHONY: contract-drift
 contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
-	go test -count=1 \
-		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+	./scripts/contract-drift-guard.py recipe
+	go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+	./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
 
 .PHONY: test
 test: ## Full test suite with the race detector
@@ -132,4 +145,4 @@ docker-build: ## Build the image natively (no emulation)
 
 .PHONY: clean
 clean: ## Remove build output
-	rm -rf bin .test-report.json
+	rm -rf bin .test-report.json $(DRIFT_REPORT)
