@@ -1,0 +1,58 @@
+=== F9  the ci-required aggregate picks the LATEST check-run per name ===
+repo:     yegamble/vizra-search
+baseline: 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:     2026-09-20T19:02:10Z
+host:     Darwin arm64
+
+Security FINDING 9(b): the aggregate matched a check by name with
+  awk '$1==n {print; exit}'
+which takes the FIRST row the API happened to list. If two check-runs ever
+share a name on one SHA — a re-run, or two workflows defining the same job
+name — the gate read whichever came first, so a STALE SUCCESS could mask a
+CURRENT FAILURE.
+
+The row-selection rules now live in scripts/ci-required-select.sh, which
+the workflow calls and which runs outside Actions, so this demonstration
+drives the shipped code rather than a copy of it.
+
+================= CASE 1: duplicates DISAGREE =================
+rows ('test' has a stale SUCCESS at 18:00 and a newer FAILURE at 19:00):
+  fmt^Icompleted^Isuccess^I2026-09-20T18:00:00Z
+  test^Icompleted^Isuccess^I2026-09-20T18:00:00Z
+  test^Icompleted^Ifailure^I2026-09-20T19:00:00Z
+  vet^Icompleted^Isuccess^I2026-09-20T18:00:00Z
+
+--- RED: the OLD selection, awk '$1==n {print; exit}' ---
+  fmt: success  (started 2026-09-20T18:00:00Z)
+  test: success  (started 2026-09-20T18:00:00Z)
+  vet: success  (started 2026-09-20T18:00:00Z)
+  => every required check reads 'success'; the gate goes GREEN on a failing lane.
+[old selection verdict: 0 (PASS) — this is the defect]
+
+--- GREEN: the shipped scripts/ci-required-select.sh ---
+  fmt: success
+  test: AMBIGUOUS — 2 check-runs share this name and their conclusions disagree:
+      completed failure 2026-09-20T19:00:00Z
+      completed success 2026-09-20T18:00:00Z
+  vet: success
+ci-required: at least one required check did not succeed
+[exit code: 1]
+
+================= CASE 2: duplicates AGREE =================
+  fmt: success
+  vet: (2 runs with this name, all agreeing)
+  vet: success
+[exit code: 0 — agreeing duplicates collapse to the newest and pass]
+
+================= CASE 3: a required check NEVER RAN =================
+  fmt: success
+  govulncheck: NEVER RAN
+[exit code: 2 — 2 means pending/never-ran, which is never a pass]
+
+================= CASE 4: a non-success conclusion =================
+  fmt: success
+  test: skipped
+  build: cancelled
+  vet: timed_out
+ci-required: at least one required check did not succeed
+[exit code: 1 — skipped, cancelled and timed_out all fail, per ADR-002]

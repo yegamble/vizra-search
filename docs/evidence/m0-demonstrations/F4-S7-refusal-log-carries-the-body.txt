@@ -1,0 +1,41 @@
+=== F4-S7-refusal-log-carries-the-body ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:34Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S7: add the request body to the 401 refusal log. The existing
+redaction test drove only a SUCCESSFUL request, so this SURVIVED — and a 401 is
+most often core's own clock skew, which makes that body a real member's query.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..ff44659 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -308,2 +308,3 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 				slog.String("reason", reason),
++				slog.String("body", string(body)), // MUTATION
+ 			)
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+--- FAIL: TestTheRefusalPathNeverLogsTheRequestBody (0.00s)
+    --- FAIL: TestTheRefusalPathNeverLogsTheRequestBody/unsigned (0.00s)
+        hardening_test.go:300: the refusal log carries the request body: {"time":"2026-09-20T15:00:35.386633-04:00","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/search","status":401,"reason":"missing_signature","body":"{\"query\":\"a-real-members-search-term\",\"viewer\":{\"is_anonymous\":true,\"role\":\"anonymous\"},\"site\":{\"handle\":\"default\"}}"}
+    --- FAIL: TestTheRefusalPathNeverLogsTheRequestBody/wrong_key (0.00s)
+        hardening_test.go:300: the refusal log carries the request body: {"time":"2026-09-20T15:00:35.38674-04:00","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/search","status":401,"reason":"bad_signature","body":"{\"query\":\"a-real-members-search-term\",\"viewer\":{\"is_anonymous\":true,\"role\":\"anonymous\"},\"site\":{\"handle\":\"default\"}}"}
+    --- FAIL: TestTheRefusalPathNeverLogsTheRequestBody/stale_timestamp (0.00s)
+        hardening_test.go:300: the refusal log carries the request body: {"time":"2026-09-20T15:00:35.386795-04:00","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/search","status":401,"reason":"stale_timestamp","body":"{\"query\":\"a-real-members-search-term\",\"viewer\":{\"is_anonymous\":true,\"role\":\"anonymous\"},\"site\":{\"handle\":\"default\"}}"}
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.361s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.727s
+[exit code: 0]

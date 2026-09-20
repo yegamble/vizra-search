@@ -1,0 +1,70 @@
+openapi: 3.0.3
+info:
+  title: Fixture
+  version: 0.0.0
+paths:
+  /healthz:
+    get:
+      operationId: fixtureHealth
+      security: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /internal/v1/search:
+    post:
+      operationId: fixtureSearch
+      security:
+        - hmacSignature: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        "401":
+          $ref: "#/components/responses/Rejected"
+  /internal/v1/events:
+    post:
+      operationId: fixtureEvents
+      security:
+        - hmacSignature: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        "401":
+          $ref: "#/components/responses/Rejected"
+components:
+  responses:
+    Rejected:
+      description: rejected
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Err" }
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, draining] }
+    Answer:
+      type: object
+      additionalProperties: false
+      required: [status, total]
+      properties:
+        status: { type: string, enum: [ok, not_indexed] }
+        total: { type: integer }
+        version: { type: integer, nullable: true }
+        at: { type: string, format: date-time }
+        items:
+          type: array
+          items: { type: string }
+    Err:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: { type: string }

@@ -1,0 +1,76 @@
+=== F2a-timestamp-reparsed-not-verbatim ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:41Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F2: rebuild the timestamp through ParseInt->FormatInt instead of signing it
+verbatim — the exact divergence the contract names, which made
+" 1789000000 ", "+1789000000" and "01789000000" verify here and be refused
+by core.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index 64547aa..d00f2b2 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -360,5 +360,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	// it, so the saturating-subtraction failure is unreachable by construction.
+-	if !isBareDecimalDigits(rawTS) {
+-		return reject(ReasonMalformedTimestamp)
+-	}
++	rawTS = strings.TrimSpace(rawTS) // MUTATION: normalise instead of refuse
+ 	unixSeconds, err := strconv.ParseInt(rawTS, 10, 64)
+@@ -387,3 +385,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	mac := hmac.New(sha256.New, v.Key)
+-	mac.Write([]byte(SigningString(method, path, rawTS, nonce, body)))
++	mac.Write([]byte(SigningString(method, path, strconv.FormatInt(unixSeconds, 10), nonce, body))) // MUTATION
+ 	expected := mac.Sum(nil)
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+--- FAIL: TestVerifyRejectsAMalformedTimestamp (0.00s)
+    hmacauth_test.go:161: reason for timestamp "" = "timestamp_out_of_range"
+--- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange (0.00s)
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/zero (0.00s)
+        hmacauth_test.go:499: ts="0" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_zero (0.00s)
+        hmacauth_test.go:499: ts="01789929649" reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_zeros (0.00s)
+        hmacauth_test.go:499: ts="0001789929649" reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_plus (0.00s)
+        hmacauth_test.go:499: ts="+1789929649" reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_minus (0.00s)
+        hmacauth_test.go:499: ts="-1789929649" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_space (0.00s)
+        hmacauth_test.go:499: ts=" 1789929649" reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/trailing_space (0.00s)
+        hmacauth_test.go:499: ts="1789929649 " reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/surrounding_space (0.00s)
+        hmacauth_test.go:499: ts="  1789929649  " reason = "bad_signature", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/underscores (0.00s)
+        hmacauth_test.go:499: ts="1_789_929_649" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/hex (0.00s)
+        hmacauth_test.go:499: ts="0x6AA2F5B1" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/fractional (0.00s)
+        hmacauth_test.go:499: ts="1789929649.0" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/exponent (0.00s)
+        hmacauth_test.go:499: ts="1.78e9" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/empty_value (0.00s)
+        hmacauth_test.go:499: ts="" reason = "timestamp_out_of_range", want "malformed_timestamp"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/letters (0.00s)
+        hmacauth_test.go:499: ts="yesterday" reason = "timestamp_out_of_range", want "malformed_timestamp"
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.222s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.352s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.212s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.406s
+[exit code: 0]

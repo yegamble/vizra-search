@@ -1,0 +1,58 @@
+=== G6-continue-on-error-expression-value ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:12:01Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+Mutation: the key with a ${{ }} expression value, so the literal 'true' never
+appears. The checker ignores the value entirely.
+
+--- mutation applied ---
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c831daf..fc22982 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -111,2 +111,3 @@ jobs:
+         run: make test-noskip
++        continue-on-error: ${{ github.event_name == 'pull_request' }}
+ 
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+.github/workflows/ci.yml:jobs.test-noskip.steps[2].continue-on-error: `continue-on-error` is not allowed on a required lane (found with value "${{ github.event_name == 'pull_request' }}"; the value is irrelevant — the key makes the lane unable to fail the gate)
+continue-on-error is not allowed on a required lane
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+[exit code: 0]

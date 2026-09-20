@@ -1,0 +1,40 @@
+=== G3-a-new-test-key-literal-is-unrefused ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:11:59Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+The refused list must not rot. Mutation: add a new key literal to a test file
+without adding it to the refused set — the exact mistake the AST scan exists to
+catch.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/helpers_test.go b/internal/hmacauth/helpers_test.go
+index 0a044fa..a8659cc 100644
+--- a/internal/hmacauth/helpers_test.go
++++ b/internal/hmacauth/helpers_test.go
+@@ -11 +11,6 @@ func newReader(b []byte) io.Reader { return bytes.NewReader(b) }
+ func sha256Sum(b []byte) [sha256.Size]byte { return sha256.Sum256(b) }
++
++// MUTATION: a new committed key literal that nobody added to the refused set
++const sneakyKey = "c0ffee1234567890abcdefc0ffee1234567890abcdefc0ffee1234567890abcd"
++
++var _ = sneakyKey
+
+--- RED: go test -count=1 -run TestEveryKeyLiteralInThisRepositoryIsRefused ./internal/config/ ---
+--- FAIL: TestEveryKeyLiteralInThisRepositoryIsRefused (0.01s)
+    publishedkeys_test.go:174: ../../internal/hmacauth/helpers_test.go:14:7: "sneakyKey" is a key literal committed to this repository but production would ACCEPT it.
+          A committed key is a published key. Add it to config.publishedTestKeys, or generate the key at test time.
+    publishedkeys_test.go:189: scanned 4 key literals in _test.go sources; every one is refused in production
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.230s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: go test -count=1 -run TestEveryKeyLiteralInThisRepositoryIsRefused ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.235s
+[exit code: 0]

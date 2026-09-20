@@ -1,0 +1,44 @@
+=== D3b-short-key-accepted ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:01:40Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D3: production refuses a key shorter than 32 bytes.
+Mutation: remove the length floor. This mutation originally SURVIVED, because
+the short fixture was also caught by the distinct-byte rule and the assertion
+matched only the substring 'at least'; commit ee4bdb7 pins the rule and adds a
+31-byte fixture with enough variety that only the length floor can refuse it.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 1506d77..4775eaa 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -309,3 +309,3 @@ func (v *validator) hmacKey(mode Mode) []byte {
+ 	}
+-	if len(key) < MinProductionKeyBytes {
++	if false { // MUTATION: accept any key length
+ 		v.addf("%s must be at least %d bytes in %s mode", EnvHMACKey, MinProductionKeyBytes, ModeProduction)
+
+--- RED: go test -count=1 ./internal/config/ ./cmd/... ---
+--- FAIL: TestProductionRefusesUnsafeHMACKeys (0.00s)
+    --- FAIL: TestProductionRefusesUnsafeHMACKeys/short (0.00s)
+        config_test.go:95: error "invalid vizra-search configuration:\n  - SEARCH_HMAC_KEY must contain at least 8 distinct byte values; a repeated character is not a secret" does not mention "at least 32 bytes"
+    --- FAIL: TestProductionRefusesUnsafeHMACKeys/one_byte_below_the_floor (0.00s)
+        config_test.go:92: LoadFrom accepted key "0123456789abcdefghijklmnopqrstu" in production mode; it must refuse
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.294s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.627s
+FAIL
+[exit code: 1]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: go test -count=1 ./internal/config/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.329s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.597s
+[exit code: 0]

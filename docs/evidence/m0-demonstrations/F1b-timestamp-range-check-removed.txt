@@ -1,0 +1,57 @@
+=== F1b-timestamp-range-check-removed ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:37Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F1 (BLOCKER regression): remove the absolute-range check, leaving the plain
+int64 subtraction. This is the smallest mutation that re-opens the hole.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index 64547aa..879e55f 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -370,5 +370,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	}
+-	if unixSeconds < MinTimestampUnix || unixSeconds > MaxTimestampUnix {
+-		return reject(ReasonTimestampRange)
+-	}
++	// MUTATION: absolute range check removed
+ 
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+--- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange (0.00s)
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_below_the_range_floor (0.00s)
+        hmacauth_test.go:499: ts="999999999" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_above_the_range_ceiling (0.00s)
+        hmacauth_test.go:499: ts="4102444801" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/the_verifier's_reported_boundary (0.00s)
+        hmacauth_test.go:499: ts="11013301709" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_below_that_boundary (0.00s)
+        hmacauth_test.go:499: ts="11013301708" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/year_9999 (0.00s)
+        hmacauth_test.go:499: ts="253402300799" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/1<<62 (0.00s)
+        hmacauth_test.go:499: ts="4611686018427387904" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/max_int64 (0.00s)
+        hmacauth_test.go:499: ts="9223372036854775807" reason = "stale_timestamp", want "timestamp_out_of_range"
+    --- FAIL: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one (0.00s)
+        hmacauth_test.go:499: ts="1" reason = "stale_timestamp", want "timestamp_out_of_range"
+--- FAIL: TestTheSkewArithmeticCannotSaturate (0.00s)
+    hmacauth_test.go:530: could not locate the range check and the skew computation
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	1.130s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	1.400s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.433s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.878s
+[exit code: 0]

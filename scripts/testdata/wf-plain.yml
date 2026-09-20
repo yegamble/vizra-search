@@ -1,0 +1,8 @@
+name: fixture
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - run: make test

@@ -1,0 +1,29 @@
+{
+  "$comment": [
+    "Provenance of the vendored canonical contract and its normative test vectors.",
+    "vizra-search never edits these files; vizra-core owns them. The contract-drift",
+    "lane verifies BOTH digests, so an in-place edit here fails CI by design.",
+    "If the contract is wrong it is changed in vizra-core and re-vendored here."
+  ],
+  "source_repository": "yegamble/vizra-core",
+  "source_ref": "feat/m0-foundation",
+  "source_commit": "2b9c540e81960954ee39e6a2aeec027e0f764a67",
+  "vendored_at": "2026-09-20",
+  "authority": "ADR-002 (Accepted 2026-09-20) and the Q-001 ruling: the internal contract is written in core's canonical OpenAPI and drift-checked in both repos. The vectors file declares itself normative for both repositories.",
+  "files": [
+    {
+      "source_path": "api/search-internal.openapi.yaml",
+      "vendored_path": "api/search-internal.openapi.yaml",
+      "sha256": "9723a4582e075bab77c2dd802bd1f03f163e1c03af5335aefa2b305b32b0614a",
+      "bytes": 24797,
+      "role": "the canonical OpenAPI contract"
+    },
+    {
+      "source_path": "api/search-hmac-testvectors.json",
+      "vendored_path": "api/search-hmac-testvectors.json",
+      "sha256": "3b6b0595bc4cf5f85210ad981dc2c42daf1e73b3beaf191b95eecf0923113cb2",
+      "bytes": 21939,
+      "role": "normative HMAC conformance vectors: `vectors` are ACCEPT cases, `negative_vectors` are REJECT cases, and an implementation MUST consume both halves"
+    }
+  ]
+}

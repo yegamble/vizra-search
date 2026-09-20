@@ -1,0 +1,57 @@
+=== D4c-continue-on-error-on-a-required-lane ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  271ac34cebf0c864d1ab4472764465003bcb7a15
+date:      2026-09-20T18:05:13Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D4: a lane that cannot fail is not a gate.
+Mutation: add continue-on-error to the contract-drift job.
+
+--- mutation applied ---
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 3c31df9..8cb8109 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -80,2 +80,3 @@ jobs:
+     runs-on: ubuntu-24.04
++    continue-on-error: true
+     steps:
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+.github/workflows/ci.yml:81:    continue-on-error: true
+continue-on-error is not allowed on a required lane
+[exit code: 1]
+
+--- restore ---
+source tree clean at 271ac34cebf0c864d1ab4472764465003bcb7a15
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+[exit code: 0]

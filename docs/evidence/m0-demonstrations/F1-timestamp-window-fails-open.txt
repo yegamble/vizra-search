@@ -1,0 +1,74 @@
+=== F1  BLOCKER: the timestamp window did not close (verifier FINDING 1) ===
+repo:      yegamble/vizra-search
+defect at: 7f483addd2fd3d3f7f0842defe5a06f15bdcd48a
+date:      2026-09-20T18:51:50Z
+toolchain: go version go1.27.1 darwin/arm64
+
+The defect: internal/hmacauth/hmacauth.go computed the window as
+  skew := v.now().Sub(time.Unix(unixSeconds, 0)); if skew < 0 { skew = -skew }
+time.Time.Sub SATURATES at math.MinInt64 for a far-future argument, and
+negating math.MinInt64 in two's complement yields math.MinInt64 again —
+still negative — so 'skew > MaxSkew' is false and the request is ACCEPTED.
+The timestamp window is the ONLY replay bound at M0, so a request signed
+once with a far-future timestamp was a credential that never expired.
+
+--- RED: the new table run against the OLD verifier from 7f483ad ---
+(the old hmacauth.go is checked out into a scratch package; the new
+ table drives it through the same public API)
+verifier clock: 1789929649 (2026-09-20), window +/-300s
+
+  ts=1789929649           *** ACCEPTED 200 ***
+  ts=1789929950           REJECTED 401
+  ts=4102444800           REJECTED 401
+  ts=4102444801           REJECTED 401
+  ts=11013301708          *** ACCEPTED 200 ***   <-- outside the window and never expires
+  ts=11013301709          *** ACCEPTED 200 ***   <-- outside the window and never expires
+  ts=253402300799         *** ACCEPTED 200 ***   <-- outside the window and never expires
+  ts=4611686018427387904  *** ACCEPTED 200 ***   <-- outside the window and never expires
+  ts=9223372036854775807  REJECTED 401
+
+rows accepted that must have been refused: 4
+RESULT: the window does NOT close. This is the BLOCKER.
+[old code exit: 0]
+
+--- GREEN: the same magnitudes against the FIXED verifier ---
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/now
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/299_s_in_the_past
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/299_s_in_the_future
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/exactly_300_s_in_the_past
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/exactly_300_s_in_the_future
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/301_s_in_the_past
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/301_s_in_the_future
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/the_range_floor
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/the_range_ceiling
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_below_the_ceiling
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_below_the_range_floor
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_above_the_range_ceiling
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/the_verifier's_reported_boundary
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one_below_that_boundary
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/year_9999
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/1<<62
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/max_int64
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/max_int64_plus_one,_so_ParseInt_overflows
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/twenty_nines
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/zero
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/one
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_zero
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_zeros
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_plus
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_minus
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/leading_space
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/trailing_space
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/surrounding_space
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/underscores
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/hex
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/fractional
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/exponent
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/empty_value
+=== RUN   TestTimestampWindowClosesAcrossTheWholeMagnitudeRange/letters
+--- PASS: TestTimestampWindowClosesAcrossTheWholeMagnitudeRange (0.00s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.241s
+[new code exit: 0 — see the full run below]
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.234s

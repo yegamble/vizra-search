@@ -1,0 +1,53 @@
+=== E2  govulncheck lane: first CI run FAILED, diagnosis and fix ===
+repo:   yegamble/vizra-search
+PR:     https://github.com/yegamble/vizra-search/pull/1
+SHA:    e1e76c245b54b0383542d830dfa7814c59bd3c2b (first CI run)
+date:   2026-09-20T18:12:59Z
+
+FIRST CI RUN ON e1e76c2: 10 pass, 2 fail.
+  govulncheck  FAILURE  (exit 2)
+  ci-required  FAILURE  (correct: a required lane did not succeed)
+  build, contract-drift, docker-build, echo-containment, fmt,
+  test, test-noskip, tidy-check, vet, GitGuardian  all SUCCESS
+
+The ci-required failure is the gate behaving as designed and is NOT a defect:
+a required lane failed, so the aggregate failed.
+
+--- the govulncheck failure was a SCANNER CRASH, not a finding ---
+Runner log (linux/amd64, Go 1.27.1):
+  panic: unexpected expr: *ast.KeyValueExpr
+  ...golang.org/x/vuln@v1.1.4/internal/client/source.go
+  ##[error]Process completed with exit code 2
+No vulnerability was reported. The tool aborted before producing a verdict.
+
+--- version evidence from the Go module proxy ---
+golang.org/x/vuln v1.1.4  go.mod declares:
+go 1.22.0
+golang.org/x/vuln v1.8.0  go.mod declares:
+go 1.26.0
+@latest:
+{"Version":"v1.8.0","Time":"2026-09-08T20:52:42Z","Origin":{"VCS":"git","URL":"https://go.googlesource.com/vuln","Hash":"709015412431dd2b5b28a53c06c70bc02d49074c","Ref":"refs/tags/v1.8.0"}}
+
+v1.1.4 predates Go 1.27 entirely. It was a stale pin.
+
+--- local reproduction attempt on darwin/arm64 with Go 1.27.1 ---
+No vulnerabilities found.
+[v1.1.4 local exit: 0]
+v1.1.4 does NOT crash on darwin/arm64. The crash is specific to the
+linux/amd64 analysis on the runner, so the honest diagnosis is 'scanner too
+old for this toolchain on that platform', not a claim about the exact
+stdlib file that triggered it.
+
+--- the fix, verified locally ---
+Go: go1.27.1
+Scanner: govulncheck@v1.8.0
+DB: https://vuln.go.dev
+DB updated: 2026-09-16 18:00:43 +0000 UTC
+
+
+No vulnerabilities found.
+[v1.8.0 local exit: 0]
+
+The lane now also runs 'govulncheck -version' before the scan, so a green
+tick is attributable to a named scanner and a dated database instead of
+being an unexplained pass.

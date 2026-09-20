@@ -1,0 +1,8 @@
+openapi: 3.0.3
+info: { title: Fixture, version: 0.0.0 }
+paths:
+  /healthz:
+    get:
+      operationId: fixtureHealth
+      responses:
+        "200": { description: ok }

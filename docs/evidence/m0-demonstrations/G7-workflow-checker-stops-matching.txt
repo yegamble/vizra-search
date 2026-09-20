@@ -1,0 +1,64 @@
+=== G7-workflow-checker-stops-matching ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:12:02Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+The checker itself must stay honest. Mutation: neuter check-workflows.py so it
+reports clean. The guard exercises the negative fixtures on every run, so a
+checker that stopped matching is itself a red lane.
+
+--- mutation applied ---
+diff --git a/scripts/check-workflows.py b/scripts/check-workflows.py
+index 06d811a..b366fe7 100755
+--- a/scripts/check-workflows.py
++++ b/scripts/check-workflows.py
+@@ -53,3 +53,3 @@ def find_forbidden(node, path):
+             here = f"{path}.{key}"
+-            if normalise(key) == FORBIDDEN:
++            if False: # MUTATION: never match
+                 yield here, value
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker ACCEPTED scripts/testdata/wf-capitalised.yml, which spells continue-on-error in a way it must catch
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+[exit code: 0]

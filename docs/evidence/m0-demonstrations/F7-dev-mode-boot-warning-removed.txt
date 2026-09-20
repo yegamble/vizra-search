@@ -1,0 +1,36 @@
+=== F7-dev-mode-boot-warning-removed ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:39Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+F8: remove the development-mode boot warning, making the relaxed mode silent.
+
+--- mutation applied ---
+diff --git a/cmd/vizra-search/main.go b/cmd/vizra-search/main.go
+index b320e37..9267d57 100644
+--- a/cmd/vizra-search/main.go
++++ b/cmd/vizra-search/main.go
+@@ -115,3 +115,3 @@ func run() error {
+ 	if !cfg.Mode.IsProduction() {
+-		log.Warn("running in development mode",
++		log.Debug("dev", // MUTATION: warning downgraded and renamed
+ 			"mode", string(cfg.Mode),
+
+--- RED: go test -count=1 ./cmd/... ---
+--- FAIL: TestDevelopmentBootWarnsAboutTheRelaxedMode (0.05s)
+    main_test.go:383: development boot logged no warning:
+        {"time":"2026-09-20T15:00:47.176196-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:60847","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+FAIL
+FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	6.934s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.823s
+[exit code: 0]

@@ -1,0 +1,36 @@
+# Owner review for the files that decide whether CI can fail, and for the
+# contract this repository does not own.
+#
+# docs/DEFINITION_OF_DONE.md and ADR-002 § "Branch protection and rulesets"
+# (item 7) require owner review on workflows, gate scripts and the
+# required-check manifest. A manifest edited in the same PR as the code it
+# guards defeats the gate, which is exactly what this file exists to prevent.
+#
+# NOTE: CODEOWNERS is only advisory until a ruleset requires owner review on
+# these paths. Applying that ruleset is an owner action (ADR-002 item 9:
+# "application happens after PR1 lands, because ci-required must exist before
+# it can be required") and is NOT part of this pull request.
+
+# Everything in this repository, as the baseline.
+*                           @yegamble
+
+# CI definition, the required-check manifest and the fan-in gate.
+/.github/                   @yegamble
+/.github/workflows/         @yegamble
+/.github/required-checks.txt @yegamble
+/.github/CODEOWNERS         @yegamble
+
+# The gate scripts: `make ci` defines every required lane.
+/Makefile                   @yegamble
+
+# The canonical contract, vendored from vizra-core and not ours to edit, plus
+# the manifest that pins the commit and digest it came from.
+/api/                       @yegamble
+
+# The security boundary itself.
+/internal/hmacauth/         @yegamble
+/internal/config/           @yegamble
+
+# The engineering contract for this repository.
+/AGENTS.md                  @yegamble
+/CLAUDE.md                  @yegamble

@@ -1,0 +1,93 @@
+# The single required status check for vizra-search (ADR-002 § CI fan-in and
+# merge queue).
+#
+# It reads .github/required-checks.txt and fails unless every listed job
+# concluded `success` on this SHA. Anything else — failure, cancellation,
+# timeout, skip, or never having run at all — fails this check, so a lane that
+# silently stops being triggered blocks the merge instead of disappearing.
+#
+# It runs on `pull_request` **and** `merge_group`, so a merge-queue entry is
+# gated by the same check as the pull request. The ruleset requires the
+# `ci-required` context, which means an untriggered workflow leaves the merge
+# blocked rather than invisibly unchecked.
+
+name: ci-required
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+concurrency:
+  group: ci-required-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-required:
+    name: ci-required
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The workflow check parses the YAML rather than grepping it, so it
+      # needs a YAML parser. PyYAML ships in the runner image; the install is
+      # a fallback so the lane fails on a real violation rather than on a
+      # missing library.
+      - name: ensure a YAML parser is available
+        run: |
+          python3 -c 'import yaml' 2>/dev/null \
+            || python3 -m pip install --quiet --break-system-packages pyyaml
+          python3 -c 'import yaml; print("PyYAML", yaml.__version__)'
+
+      - name: guard the manifest and the workflows
+        run: ./scripts/ci-required-guard.sh
+
+      - name: every required check succeeded on this SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # On pull_request the head SHA is the PR head; on merge_group it is
+          # the queued merge commit.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "evaluating $HEAD_SHA"
+
+          required="$(grep -vE '^\s*(#|$)' .github/required-checks.txt | tr -d '\r')"
+
+          # Poll the check runs on this SHA until every required one has a
+          # conclusion, or the timeout expires. A check that never appears is
+          # a failure, not a pass. The row-selection rules live in
+          # scripts/ci-required-select.sh so they can be run and demonstrated
+          # outside Actions.
+          deadline=$(( $(date +%s) + 1800 ))
+          while :; do
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+              --jq '.check_runs[] | [.name, .status, (.conclusion // "none"), (.started_at // "")] | @tsv' \
+              > runs.tsv || { echo "could not read check runs"; exit 1; }
+
+            set +e
+            ./scripts/ci-required-select.sh "$required" < runs.tsv
+            verdict=$?
+            set -e
+
+            case "$verdict" in
+              0)
+                echo "ci-required: every required check succeeded on $HEAD_SHA"
+                exit 0
+                ;;
+              1)
+                exit 1
+                ;;
+            esac
+
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "ci-required: timed out waiting for required checks; a check that never ran is not a pass"
+              exit 1
+            fi
+            sleep 20
+          done

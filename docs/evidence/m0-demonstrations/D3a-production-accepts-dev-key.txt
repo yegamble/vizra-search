@@ -1,0 +1,65 @@
+=== D3a-production-accepts-dev-key ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:01:38Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D3: production boot refuses the dev HMAC key.
+
+LAYERED DEFENCE, recorded honestly: removing ONLY the exact-match check does
+not turn this red, and that is correct. The documented key
+'dev-insecure-hmac-key-do-not-use-in-production' is independently caught by the
+'dev-' prefix rule and by the 'insecure' and 'do-not-use' markers, so three
+rules must fall before a production process would accept it. This mutation
+therefore removes the whole placeholder family, which is what 'production
+accepts the dev key' actually requires.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 1506d77..accc4d5 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -287,24 +287,3 @@ func (v *validator) hmacKey(mode Mode) []byte {
+ 
+-	if key == DevHMACKey {
+-		v.addf("%s is the documented development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
+-		return []byte(key)
+-	}
+-	for _, exact := range placeholderExact {
+-		if lower == exact {
+-			v.addf("%s looks like a development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
+-			return []byte(key)
+-		}
+-	}
+-	for _, prefix := range placeholderPrefixes {
+-		if strings.HasPrefix(lower, prefix) {
+-			v.addf("%s looks like a development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
+-			return []byte(key)
+-		}
+-	}
+-	for _, marker := range placeholderMarkers {
+-		if strings.Contains(lower, marker) {
+-			v.addf("%s looks like a development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
+-			return []byte(key)
+-		}
+-	}
++	// MUTATION: every development-placeholder refusal removed
+ 	if len(key) < MinProductionKeyBytes {
+
+--- RED: go test -count=1 ./internal/config/ ./cmd/... ---
+# github.com/yegamble/vizra-search/internal/config
+internal/config/config.go:286:2: declared and not used: lower
+FAIL	github.com/yegamble/vizra-search/internal/config [build failed]
+FAIL	github.com/yegamble/vizra-search/cmd/vizra-search [build failed]
+FAIL
+[exit code: 1]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: go test -count=1 ./internal/config/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.441s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	1.406s
+[exit code: 0]

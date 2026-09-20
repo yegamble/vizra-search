@@ -1,0 +1,36 @@
+=== F3-verify-over-route-template ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T18:59:52Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+C / security F4: verify over Echo's route template c.Path() instead of the
+request path as sent. For the six static routes nothing changes, so the old
+suite stayed green; the parameterised probe route catches it.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..45ba17b 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -295,3 +295,3 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 		//    grouping key and carries no authentication weight.
+-		if err := s.verifier.Verify(req.Method, req.URL.EscapedPath(), req.Header, body); err != nil {
++		if err := s.verifier.Verify(req.Method, c.Path(), req.Header, body) // MUTATION; err != nil {
+ 			var authErr *hmacauth.Error
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+# github.com/yegamble/vizra-search/internal/httpapi [github.com/yegamble/vizra-search/internal/httpapi.test]
+internal/httpapi/server.go:297:4: syntax error: unexpected keyword var, expected expression
+FAIL	github.com/yegamble/vizra-search/internal/httpapi [build failed]
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.396s
+[exit code: 0]

@@ -1,0 +1,59 @@
+=== D4b-required-lane-marked-optional ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  271ac34cebf0c864d1ab4472764465003bcb7a15
+date:      2026-09-20T18:05:13Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D4: a lane must not be neutered in place instead of being deleted.
+Mutation: annotate the test lane with an 'optional' marker.
+
+--- mutation applied ---
+diff --git a/.github/required-checks.txt b/.github/required-checks.txt
+index 2ad7a73..18e0e57 100644
+--- a/.github/required-checks.txt
++++ b/.github/required-checks.txt
+@@ -22,3 +22,3 @@ build
+ contract-drift
+-test
++test # optional
+ test-noskip
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test # optional
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+FLOOR VIOLATION: 'test' is a non-optional lane and must appear in .github/required-checks.txt, but it is absent.
+  A PR may add lanes to the manifest. It may not remove one of the floor lanes,
+  because that would silently stop gating the thing the lane exists to gate.
+[exit code: 1]
+
+--- restore ---
+source tree clean at 271ac34cebf0c864d1ab4472764465003bcb7a15
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+[exit code: 0]

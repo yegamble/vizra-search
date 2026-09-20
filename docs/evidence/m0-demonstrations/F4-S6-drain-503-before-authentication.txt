@@ -1,0 +1,50 @@
+=== F4-S6-drain-503-before-authentication ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:33Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S6: answer the drain 503 BEFORE HMAC verification, so an
+unauthenticated caller learns the drain state. SURVIVED at 7f483ad.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..71cc123 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -286,2 +286,6 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 
++		if s.draining.Load() {
++			return writeError(c, http.StatusServiceUnavailable, codeUnavailable, "the service is draining")
++		}
++
+ 		// 3. Authenticate over the exact bytes received, and over the request
+@@ -321,5 +325,3 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
+ 		//    RequestFirst pins the order so it cannot be reversed unnoticed.
+-		if s.draining.Load() {
+-			return writeError(c, http.StatusServiceUnavailable, codeUnavailable, "the service is draining")
+-		}
++
+ 
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+--- FAIL: TestADrainingServerStillRefusesAnUnsignedRequestFirst (0.00s)
+    --- FAIL: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/search (0.00s)
+        hardening_test.go:219: a draining server answered an UNSIGNED request with 503; an unauthenticated caller must not learn the drain state before any credential is checked
+    --- FAIL: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/suggestions (0.00s)
+        hardening_test.go:219: a draining server answered an UNSIGNED request with 503; an unauthenticated caller must not learn the drain state before any credential is checked
+    --- FAIL: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/events (0.00s)
+        hardening_test.go:219: a draining server answered an UNSIGNED request with 503; an unauthenticated caller must not learn the drain state before any credential is checked
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.281s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.239s
+[exit code: 0]

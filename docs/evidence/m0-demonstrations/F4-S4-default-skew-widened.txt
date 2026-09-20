@@ -1,0 +1,57 @@
+=== F4-S4-default-skew-widened ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:29Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S4: DefaultMaxClockSkew 300s -> 720h. The old assertions compared
+the config value against the constant itself, so the expectation moved with the
+mutation and it SURVIVED.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 323e271..7b8f185 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -34,3 +34,3 @@ const (
+ 	// 1 MiB)".
+-	DefaultMaxClockSkew   = 300 * time.Second
++	DefaultMaxClockSkew   = 720 * time.Hour // MUTATION
+ 	DefaultMaxBodyBytes   = int64(1 << 20) // 1 MiB
+
+--- RED: go test -count=1 ./internal/config/ ./internal/httpapi/ ---
+--- FAIL: TestDefaultsMatchTheCanonicalContract (0.00s)
+    config_test.go:260: DefaultMaxClockSkew = 720h0m0s; the canonical contract fixes the window at 300s
+    config_test.go:268: MaxProductionClockSkew = 720h0m0s; production must not accept a window wider than the contract's 300s
+--- FAIL: TestProductionRefusesAnOverwideSkewWindow (0.00s)
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/301s (0.00s)
+        config_test.go:283: production accepted a 301s replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/10m (0.00s)
+        config_test.go:283: production accepted a 10m replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/1h (0.00s)
+        config_test.go:283: production accepted a 1h replay window
+    --- FAIL: TestProductionRefusesAnOverwideSkewWindow/8760h (0.00s)
+        config_test.go:289: the refusal does not state the ceiling: invalid vizra-search configuration:
+              - VIZRA_SEARCH_MAX_CLOCK_SKEW must not exceed 720h0m0s in production mode; the canonical contract fixes the replay window at 720h0m0s and there is no nonce store to bound it otherwise
+--- FAIL: TestCheckEnvReportsTheCeilingRefusals (0.00s)
+    config_test.go:376: CheckEnv accepted a production env with a 24h replay window; doctor would then disagree with boot
+--- FAIL: TestCeilingRefusalsEchoNoOtherConfiguration (0.00s)
+    config_test.go:399: expected a refusal
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.299s
+--- FAIL: TestTheContractsFixedNumbersMatchTheImplementation (0.00s)
+    contract_drift_test.go:288: DefaultMaxClockSkew = 720h0m0s, the contract fixes 300 s
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.511s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/config/ ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.291s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.499s
+[exit code: 0]

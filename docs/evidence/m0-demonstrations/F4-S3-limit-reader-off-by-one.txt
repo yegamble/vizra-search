@@ -1,0 +1,44 @@
+=== F4-S3-limit-reader-off-by-one ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  9be5c7315bd0eaa71bf67ec308f36d78a0500838
+date:      2026-09-20T19:00:28Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+E / verifier S3: LimitReader(r, limit) instead of limit+1, so a body exactly
+at the limit is indistinguishable from one over it. SURVIVED at 7f483ad.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 18229ff..74500f7 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -363,3 +363,3 @@ func readBounded(r io.Reader, limit int64) (body []byte, tooLarge bool, err erro
+ 	}
+-	data, err := io.ReadAll(io.LimitReader(r, limit+1))
++	data, err := io.ReadAll(io.LimitReader(r, limit)) // MUTATION
+ 	if err != nil {
+
+--- RED: go test -count=1 ./internal/httpapi/ ---
+--- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes (0.00s)
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/search (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 401 ({"error":{"code":"signature_rejected","message":"request authentication failed"}}
+            ), want 413
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/suggestions (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 401 ({"error":{"code":"signature_rejected","message":"request authentication failed"}}
+            ), want 413
+    --- FAIL: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/events (0.00s)
+        hardening_test.go:172: an undeclared-length body of 4096 bytes against a 1024-byte limit = 401 ({"error":{"code":"signature_rejected","message":"request authentication failed"}}
+            ), want 413
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.416s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at 9be5c7315bd0eaa71bf67ec308f36d78a0500838
+
+--- GREEN: go test -count=1 ./internal/httpapi/ ---
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.257s
+[exit code: 0]
