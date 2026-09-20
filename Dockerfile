@@ -40,6 +40,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=${BUILD_TIME}" \
       -o /out/vizra-search ./cmd/vizra-search
 
+# `scratch` is Docker's reserved empty base. It is not a pullable image, has no
+# manifest and therefore no digest to pin; it contributes no bytes to the final
+# image. Every FROM that does resolve to a real image in this file is pinned by
+# @sha256 digest above. scripts/ci-required-guard.sh enforces that rule.
 FROM scratch
 
 ARG VERSION=unknown

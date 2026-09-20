@@ -1,0 +1,63 @@
+=== D1a-drift-renamed-route ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:00:35Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D1: a handler that drifts from the canonical contract fails CI.
+Mutation: rename the suggestions route so the served path no longer matches.
+
+--- mutation applied ---
+diff --git a/internal/httpapi/server.go b/internal/httpapi/server.go
+index 6c94cd8..371106c 100644
+--- a/internal/httpapi/server.go
++++ b/internal/httpapi/server.go
+@@ -78,3 +78,3 @@ const (
+ 	pathSearch      = "/internal/v1/search"
+-	pathSuggestions = "/internal/v1/suggestions"
++	pathSuggestions = "/internal/v1/suggest"
+ 	pathEvents      = "/internal/v1/events"
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+--- FAIL: TestNoDriftFromTheCanonicalContract (0.00s)
+    contract_drift_test.go:94: contract: the implementation has drifted from the canonical contract:
+          - declared in the contract but not implemented: POST /internal/v1/suggestions
+          - implemented but not declared in the contract: POST /internal/v1/suggest
+        
+        The canonical copy lives in vizra-core. If the contract is wrong, change it there and re-vendor; do not edit ../../api/search-internal.openapi.yaml.
+--- FAIL: TestResponseBodiesSatisfyTheContractSchemas (0.00s)
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggest_->_OK (0.00s)
+        contract_drift_test.go:157: expected 200, got 400 ({"error":{"code":"bad_request","message":"prefix is required and must not be empty"}}
+            )
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggest_->_Bad_Request (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggest 400
+            body: {"error":{"code":"bad_request","message":"the request body is not a JSON object matching the contract"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggest_->_Unauthorized (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggest 401
+            body: {"error":{"code":"signature_rejected","message":"request authentication failed"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggest_->_Request_Entity_Too_Large (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggest 413
+            body: {"error":{"code":"payload_too_large","message":"the request body exceeds MAX_INTERNAL_BODY_BYTES (1024 bytes)"}}
+    --- FAIL: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggest_->_Service_Unavailable (0.00s)
+        contract_drift_test.go:160: the response body violates the canonical contract: contract: the contract declares no application/json body for POST /internal/v1/suggest 503
+            body: {"error":{"code":"unavailable","message":"the service is draining"}}
+--- FAIL: TestRoutesAreExactlyTheContractSurface (0.00s)
+    routes_test.go:174: Routes() = [GET /healthz GET /readyz GET /version POST /internal/v1/events POST /internal/v1/search POST /internal/v1/suggest], want exactly the Q-001 surface [GET /healthz GET /readyz GET /version POST /internal/v1/events POST /internal/v1/search POST /internal/v1/suggestions]
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	1.392s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.472s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.801s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.391s
+[exit code: 0]

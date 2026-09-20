@@ -47,6 +47,10 @@ holds that line.
 canonical file in `yegamble/vizra-core`. `api/CONTRACT-SOURCE.json` records the
 source repository, path, commit SHA and sha256 of the vendored bytes.
 
+- Every `$ref` in the document must be local (`#/...`). A reference to another
+  file or a URL is refused at parse time, before anything resolves it, so the
+  drift check can never depend on a document nobody reviewed and the parser can
+  never be turned into a file-disclosure or SSRF primitive.
 - Never edit `api/search-internal.openapi.yaml` here. The drift check verifies
   its sha256 against the manifest, so an in-place edit fails CI by design — that
   is the failure mode a two-repository drift check exists to prevent.
@@ -166,6 +170,33 @@ including a check that never ran — as a failure.
 
 `test-noskip` fails on **any** skip, including a package with no test files. If
 you add a package, add tests to it; do not loosen the guard.
+
+### The manifest is editable by the PR it gates
+
+`.github/required-checks.txt` is read from the checkout under test, so the PR
+being gated can edit it. Checking only that every name *present* maps to a real
+job is not enough — deleting a lane's line would leave `ci-required` green with
+that lane no longer required. `scripts/ci-required-guard.sh` therefore also
+enforces:
+
+- a **floor** of lanes (`build`, `test`, `test-noskip`, `contract-drift`,
+  `govulncheck`) that may never be removed from the manifest. The floor lives in
+  the guard script, which CODEOWNERS puts under owner review, not in the
+  manifest it guards;
+- every manifest entry is a **bare job name** — no trailing comment, no
+  `optional` marker, no colon-separated field — so a lane cannot be neutered in
+  place instead of deleted;
+- no `continue-on-error` key anywhere in `.github/workflows/`;
+- every pullable Dockerfile base image is pinned by `@sha256` digest
+  (`scratch` is exempt: it is the reserved empty base and has no digest).
+
+A PR may **add** lanes to the manifest. It may not remove a floor lane.
+
+`.github/CODEOWNERS` assigns `/.github/`, `/scripts/`, `/Makefile`, `/api/`,
+`internal/hmacauth`, `internal/config` and this file to the owner. **CODEOWNERS
+is advisory until a ruleset requires that review**, and applying the ruleset is
+an owner action after this PR lands (ADR-002 item 9: `ci-required` must exist
+before it can be required).
 
 ### Evidence rules
 

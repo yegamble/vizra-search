@@ -1,0 +1,58 @@
+=== D2d-auth-tampered-body-accepted ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:01:22Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D2: a tampered body is rejected because its digest is bound into the MAC.
+Mutation: stop binding the body.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index de6c901..6a3d517 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -89,3 +89,3 @@ func reject(r Reason) error { return &Error{Reason: r} }
+ func SigningString(method, path string, unixSeconds int64, nonce string, body []byte) string {
+-	sum := sha256.Sum256(body)
++	sum := sha256.Sum256(nil) // MUTATION: do not bind the body
+ 	var b strings.Builder
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+--- FAIL: TestVerifyRejectsATamperedBody (0.00s)
+    hmacauth_test.go:171: expected rejection with reason "bad_signature", got nil
+--- FAIL: TestVerifyRejectsATruncatedBody (0.00s)
+    hmacauth_test.go:177: expected rejection with reason "bad_signature", got nil
+--- FAIL: TestSigningStringIsCanonicalAndStable (0.00s)
+    hmacauth_test.go:211: SigningString =
+        "v1\nPOST\n/internal/v1/search\n1774000000\n0123456789abcdef0123456789abcdef\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        want
+        "v1\nPOST\n/internal/v1/search\n1774000000\n0123456789abcdef0123456789abcdef\n953d56a8c08e56f71709a941aea7139242b258b05fbd25bd9c5b7d965294dab9"
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.459s
+--- FAIL: TestTamperedBodiesAreRejected (0.00s)
+    --- FAIL: TestTamperedBodiesAreRejected//internal/v1/search (0.00s)
+        server_test.go:397: tampered /internal/v1/search = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+    --- FAIL: TestTamperedBodiesAreRejected//internal/v1/suggestions (0.00s)
+        server_test.go:397: tampered /internal/v1/suggestions = 200 ({"status":"not_indexed","suggestions":[]}
+            ), want 401
+    --- FAIL: TestTamperedBodiesAreRejected//internal/v1/events (0.00s)
+        server_test.go:397: tampered /internal/v1/events = 200 ({"status":"not_indexed","accepted":0,"duplicates":0}
+            ), want 401
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.832s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	7.580s
+FAIL
+[exit code: 1]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.395s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.830s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	7.330s
+[exit code: 0]

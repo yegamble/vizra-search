@@ -34,36 +34,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: guard the manifest and the workflows
-        run: |
-          set -euo pipefail
-          manifest=".github/required-checks.txt"
-          test -s "$manifest" || { echo "$manifest is missing or empty"; exit 1; }
-
-          required="$(grep -vE '^\s*(#|$)' "$manifest" | tr -d '\r')"
-          test -n "$required" || { echo "$manifest lists no checks"; exit 1; }
-          echo "required checks:"; echo "$required" | sed 's/^/  - /'
-
-          # ADR-002: the fan-in guard rejects `continue-on-error` on any
-          # required lane, because a lane that cannot fail is not a gate. The
-          # pattern matches the YAML key, not the word, so this guard does not
-          # trip over its own error message.
-          if grep -rnE '^[[:space:]]*(-[[:space:]]+)?continue-on-error[[:space:]]*:' .github/workflows/; then
-            echo "continue-on-error is not allowed on a required lane"
-            exit 1
-          fi
-
-          # Every required check must exist as a job in a workflow, or the
-          # aggregate would wait forever for something nobody defined.
-          missing=0
-          while IFS= read -r check; do
-            [ -z "$check" ] && continue
-            if ! grep -qE "^  ${check}:\s*$" .github/workflows/*.yml; then
-              echo "required check '$check' has no job of that name in .github/workflows/"
-              missing=1
-            fi
-          done <<< "$required"
-          test "$missing" = "0" || exit 1
-          echo "every required check is defined by a job"
+        run: ./scripts/ci-required-guard.sh
 
       - name: every required check succeeded on this SHA
         env:

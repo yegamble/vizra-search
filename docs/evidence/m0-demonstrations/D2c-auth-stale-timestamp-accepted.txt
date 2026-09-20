@@ -1,0 +1,56 @@
+=== D2c-auth-stale-timestamp-accepted ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:01:08Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D2: the 300 s replay window is enforced.
+Mutation: accept any timestamp.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index de6c901..0ab149e 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -218,3 +218,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	}
+-	if skew > v.MaxSkew {
++	if false { // MUTATION: accept any timestamp
+ 		return reject(ReasonStaleTimestamp)
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+--- FAIL: TestVerifyRejectsAStaleTimestamp (0.00s)
+    hmacauth_test.go:127: expected rejection with reason "stale_timestamp", got nil
+--- FAIL: TestVerifyRejectsAFutureTimestamp (0.00s)
+    hmacauth_test.go:133: expected rejection with reason "stale_timestamp", got nil
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.286s
+--- FAIL: TestStaleTimestampsAreRejected (0.00s)
+    --- FAIL: TestStaleTimestampsAreRejected//internal/v1/search (0.00s)
+        server_test.go:365: stale /internal/v1/search = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+            ), want 401
+    --- FAIL: TestStaleTimestampsAreRejected//internal/v1/suggestions (0.00s)
+        server_test.go:365: stale /internal/v1/suggestions = 200 ({"status":"not_indexed","suggestions":[]}
+            ), want 401
+    --- FAIL: TestStaleTimestampsAreRejected//internal/v1/events (0.00s)
+        server_test.go:365: stale /internal/v1/events = 200 ({"status":"not_indexed","accepted":0,"duplicates":0}
+            ), want 401
+--- FAIL: TestFutureTimestampsAreRejected (0.00s)
+    server_test.go:374: future-dated = 200 ({"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+        ), want 401
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.483s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.814s
+FAIL
+[exit code: 1]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.210s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.400s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.817s
+[exit code: 0]

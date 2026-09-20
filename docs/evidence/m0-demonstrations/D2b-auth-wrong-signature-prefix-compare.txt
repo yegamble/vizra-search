@@ -1,0 +1,44 @@
+=== D2b-auth-wrong-signature-prefix-compare ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+date:      2026-09-20T18:00:54Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D2: a wrongly signed request is rejected, and the comparison covers the WHOLE
+MAC. Mutation: compare only the first byte. This mutation SURVIVED the original
+suite — two unrelated MACs almost always differ in the first byte — and the
+three tests added in commit 7abf369 close that gap.
+
+--- mutation applied ---
+diff --git a/internal/hmacauth/hmacauth.go b/internal/hmacauth/hmacauth.go
+index de6c901..725709a 100644
+--- a/internal/hmacauth/hmacauth.go
++++ b/internal/hmacauth/hmacauth.go
+@@ -229,3 +229,3 @@ func (v *Verifier) Verify(method, path string, header http.Header, body []byte)
+ 	// much of the MAC the caller guessed correctly.
+-	if !hmac.Equal(provided, expected) {
++	if len(provided) > 0 && provided[0] != expected[0] { // MUTATION: one byte only
+ 		return reject(ReasonBadSignature)
+
+--- RED: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+--- FAIL: TestVerifyRejectsASignatureThatDiffersOnlyInTheLastByte (0.00s)
+    hmacauth_test.go:355: expected rejection with reason "bad_signature", got nil
+--- FAIL: TestVerifyUsesTheDocumentedConstantTimePrimitive (0.00s)
+    hmacauth_test.go:387: the MAC comparison no longer goes through hmac.Equal; a non-constant-time comparison leaks how much of a forgery was correct
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/hmacauth	0.229s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.368s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.735s
+FAIL
+[exit code: 1]
+
+--- restore: git checkout -- cmd internal api ---
+source tree clean at ee4bdb783e04edcbc1f911ca6bfb0cb7cd7b1bcd
+
+--- GREEN: go test -count=1 ./internal/hmacauth/ ./internal/httpapi/ ./cmd/... ---
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.221s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.408s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.741s
+[exit code: 0]

@@ -93,6 +93,15 @@ func Parse(data []byte) (*Doc, error) {
 		return nil, fmt.Errorf("%w: the document has no top-level \"openapi\" version field", ErrContract)
 	}
 
+	// Every $ref must be local before anything resolves one. A $ref to
+	// another file or a URL would make the drift check depend on a document
+	// nobody reviewed, and would turn the parser into an SSRF or
+	// file-disclosure primitive in whatever tool consumes it. The check runs
+	// over the whole tree, including branches this parser never walks.
+	if err := rejectNonLocalRefs(root, "$"); err != nil {
+		return nil, err
+	}
+
 	doc := &Doc{OpenAPI: openapi, raw: root, schemas: map[string]any{}}
 	if info, ok := root["info"].(map[string]any); ok {
 		doc.Title, _ = info["title"].(string)
@@ -138,6 +147,36 @@ func Parse(data []byte) (*Doc, error) {
 	}
 	sort.Slice(doc.Operations, func(i, j int) bool { return doc.Operations[i].Key() < doc.Operations[j].Key() })
 	return doc, nil
+}
+
+// rejectNonLocalRefs walks the document and fails on any $ref that is not a
+// local JSON pointer into this same document.
+func rejectNonLocalRefs(node any, path string) error {
+	switch v := node.(type) {
+	case map[string]any:
+		for key, value := range v {
+			if key == "$ref" {
+				ref, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("%w: %s.$ref is not a string", ErrContract, path)
+				}
+				if !strings.HasPrefix(ref, "#/") {
+					return fmt.Errorf("%w: %s.$ref = %q is not a local reference; only local \"#/...\" references are allowed, so the contract cannot pull in a document nobody reviewed", ErrContract, path, ref)
+				}
+				continue
+			}
+			if err := rejectNonLocalRefs(value, path+"."+key); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for i, item := range v {
+			if err := rejectNonLocalRefs(item, fmt.Sprintf("%s[%d]", path, i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (d *Doc) hasInternalOperation() bool {

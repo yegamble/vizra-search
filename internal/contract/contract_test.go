@@ -288,3 +288,66 @@ func TestDigestIsStable(t *testing.T) {
 		t.Fatal("Digest collides on distinct inputs")
 	}
 }
+
+// A $ref that points outside this document would make the drift check depend
+// on a file nobody reviewed, and would turn the parser into a file-disclosure
+// or SSRF primitive in whatever tool consumes the spec. Every non-local
+// reference is refused before anything resolves one.
+func TestParseRefusesANonLocalRef(t *testing.T) {
+	cases := map[string]string{
+		"a sibling file":   "common.yaml#/components/schemas/X",
+		"an absolute path": "/etc/passwd",
+		"a URL":            "https://example.invalid/openapi.yaml#/components/schemas/X",
+		"a relative path":  "../vizra-core/api/openapi.yaml#/x",
+		"a bare fragment":  "#components/schemas/X",
+	}
+	for name, ref := range cases {
+		doc := "openapi: 3.0.3\n" +
+			"paths:\n" +
+			"  /internal/v1/search:\n" +
+			"    post:\n" +
+			"      operationId: x\n" +
+			"      responses:\n" +
+			"        \"200\":\n" +
+			"          content:\n" +
+			"            application/json:\n" +
+			"              schema:\n" +
+			"                $ref: \"" + ref + "\"\n"
+		_, err := contract.Parse([]byte(doc))
+		if err == nil {
+			t.Errorf("Parse accepted %s: %s", name, ref)
+			continue
+		}
+		if !strings.Contains(err.Error(), "local") {
+			t.Errorf("%s: error %q does not explain the refusal", name, err.Error())
+		}
+	}
+}
+
+// The check reaches branches the rest of the parser never walks, such as a
+// requestBody, so a hostile reference cannot hide where this parser does not
+// look.
+func TestParseRefusesANonLocalRefInAnUnwalkedBranch(t *testing.T) {
+	doc := "openapi: 3.0.3\n" +
+		"paths:\n" +
+		"  /internal/v1/search:\n" +
+		"    post:\n" +
+		"      operationId: x\n" +
+		"      requestBody:\n" +
+		"        content:\n" +
+		"          application/json:\n" +
+		"            schema:\n" +
+		"              $ref: \"https://example.invalid/evil.yaml#/x\"\n" +
+		"      responses:\n" +
+		"        \"200\": {description: ok}\n"
+	if _, err := contract.Parse([]byte(doc)); err == nil {
+		t.Fatal("a non-local $ref inside requestBody was accepted")
+	}
+}
+
+func TestTheRealContractUsesOnlyLocalRefs(t *testing.T) {
+	// The vendored canonical contract must itself satisfy the rule.
+	if _, err := contract.Load("../../api/search-internal.openapi.yaml"); err != nil {
+		t.Fatalf("the vendored canonical contract does not parse: %v", err)
+	}
+}
