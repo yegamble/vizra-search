@@ -1,0 +1,9 @@
+openapi: 3.0.3
+info: { title: Fixture, version: 0.0.0 }
+paths:
+  /internal/v1/search:
+    post:
+      operationId: fixtureSearch
+      responses:
+        "200": { description: ok }
+        "4XX": { description: client error }

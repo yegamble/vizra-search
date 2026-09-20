@@ -1,0 +1,21 @@
+# Required check manifest for vizra-search (ADR-002 § CI fan-in and merge queue).
+#
+# `ci-required` reads this file and fails unless every listed job concluded
+# `success`. Anything else — failure, cancellation, timeout, skip, never-ran —
+# fails the aggregate, so a lane that silently stops running blocks the merge
+# instead of disappearing.
+#
+# One job name per line. Blank lines and # comments are ignored.
+# This file is owner-reviewed (CODEOWNERS): it must not be edited in the same
+# PR as the code it guards.
+
+fmt
+vet
+echo-containment
+build
+contract-drift
+test
+test-noskip
+tidy-check
+govulncheck
+docker-build

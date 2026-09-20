@@ -1,0 +1,131 @@
+# The single required status check for vizra-search (ADR-002 § CI fan-in and
+# merge queue).
+#
+# It reads .github/required-checks.txt and fails unless every listed job
+# concluded `success` on this SHA. Anything else — failure, cancellation,
+# timeout, skip, or never having run at all — fails this check, so a lane that
+# silently stops being triggered blocks the merge instead of disappearing.
+#
+# It runs on `pull_request` **and** `merge_group`, so a merge-queue entry is
+# gated by the same check as the pull request. The ruleset requires the
+# `ci-required` context, which means an untriggered workflow leaves the merge
+# blocked rather than invisibly unchecked.
+
+name: ci-required
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+concurrency:
+  group: ci-required-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-required:
+    name: ci-required
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: guard the manifest and the workflows
+        run: |
+          set -euo pipefail
+          manifest=".github/required-checks.txt"
+          test -s "$manifest" || { echo "$manifest is missing or empty"; exit 1; }
+
+          required="$(grep -vE '^\s*(#|$)' "$manifest" | tr -d '\r')"
+          test -n "$required" || { echo "$manifest lists no checks"; exit 1; }
+          echo "required checks:"; echo "$required" | sed 's/^/  - /'
+
+          # ADR-002: the fan-in guard rejects `continue-on-error` on any
+          # required lane, because a lane that cannot fail is not a gate. The
+          # pattern matches the YAML key, not the word, so this guard does not
+          # trip over its own error message.
+          if grep -rnE '^[[:space:]]*(-[[:space:]]+)?continue-on-error[[:space:]]*:' .github/workflows/; then
+            echo "continue-on-error is not allowed on a required lane"
+            exit 1
+          fi
+
+          # Every required check must exist as a job in a workflow, or the
+          # aggregate would wait forever for something nobody defined.
+          missing=0
+          while IFS= read -r check; do
+            [ -z "$check" ] && continue
+            if ! grep -qE "^  ${check}:\s*$" .github/workflows/*.yml; then
+              echo "required check '$check' has no job of that name in .github/workflows/"
+              missing=1
+            fi
+          done <<< "$required"
+          test "$missing" = "0" || exit 1
+          echo "every required check is defined by a job"
+
+      - name: every required check succeeded on this SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # On pull_request the head SHA is the PR head; on merge_group it is
+          # the queued merge commit.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "evaluating $HEAD_SHA"
+
+          required="$(grep -vE '^\s*(#|$)' .github/required-checks.txt | tr -d '\r')"
+
+          # Poll the check runs on this SHA until every required one has a
+          # conclusion, or the timeout expires. A check that never appears is
+          # a failure, not a pass.
+          deadline=$(( $(date +%s) + 1800 ))
+          while :; do
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+              --jq '.check_runs[] | [.name, .status, (.conclusion // "none")] | @tsv' \
+              > runs.tsv || { echo "could not read check runs"; exit 1; }
+
+            pending=0
+            failed=0
+            : > report.txt
+            while IFS= read -r check; do
+              [ -z "$check" ] && continue
+              line="$(awk -F'\t' -v n="$check" '$1==n {print; exit}' runs.tsv || true)"
+              if [ -z "$line" ]; then
+                echo "  $check: NEVER RAN" >> report.txt
+                pending=1
+                continue
+              fi
+              status="$(printf '%s' "$line" | cut -f2)"
+              conclusion="$(printf '%s' "$line" | cut -f3)"
+              if [ "$status" != "completed" ]; then
+                echo "  $check: $status" >> report.txt
+                pending=1
+                continue
+              fi
+              echo "  $check: $conclusion" >> report.txt
+              # Only `success` passes. skipped, cancelled, timed_out, failure,
+              # neutral and action_required all fail.
+              if [ "$conclusion" != "success" ]; then
+                failed=1
+              fi
+            done <<< "$required"
+
+            cat report.txt
+
+            if [ "$failed" = "1" ]; then
+              echo "ci-required: at least one required check did not succeed"
+              exit 1
+            fi
+            if [ "$pending" = "0" ]; then
+              echo "ci-required: every required check succeeded on $HEAD_SHA"
+              exit 0
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "ci-required: timed out waiting for required checks; a check that never ran is not a pass"
+              exit 1
+            fi
+            sleep 20
+          done

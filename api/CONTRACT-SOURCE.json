@@ -1,0 +1,12 @@
+{
+  "$comment": "Provenance of the vendored canonical contract. vizra-search never edits api/search-internal.openapi.yaml; vizra-core owns it. The drift check verifies these bytes against sha256 below, so an in-place edit here fails CI.",
+  "source_repository": "yegamble/vizra-core",
+  "source_path": "api/search-internal.openapi.yaml",
+  "source_ref": "feat/m0-foundation",
+  "source_commit": "b0dbeb6dc27294fe793492ea60bc18b6aed4b042",
+  "vendored_path": "api/search-internal.openapi.yaml",
+  "sha256": "5bf9dd22a2209dbfacb99f4c2d2d620ff15e0465f9b98228ec120983a3bf448a",
+  "bytes": 21551,
+  "vendored_at": "2026-09-20",
+  "authority": "ADR-002 (Accepted 2026-09-20) and the Q-001 ruling: the internal contract is written in core's canonical OpenAPI and drift-checked in both repos."
+}

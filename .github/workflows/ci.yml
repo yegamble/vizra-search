@@ -1,0 +1,209 @@
+# vizra-search CI lanes.
+#
+# Every job here is listed in .github/required-checks.txt and aggregated by the
+# `ci-required` workflow. ADR-009 / Q-027 makes Ubuntu 24.04 on amd64 the
+# qualified target, so every lane runs on the GitHub-hosted `ubuntu-24.04`
+# image and nothing is built under emulation.
+#
+# Third-party actions are pinned by commit SHA, never by tag, so a moved tag
+# cannot change what runs in CI.
+
+name: ci
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The toolchain directive in go.mod pins 1.27.1; this keeps the runner's
+  # preinstalled Go from silently deciding the version.
+  GO_VERSION: "1.27.1"
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make fmt-check
+
+  vet:
+    name: vet
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make vet
+
+  echo-containment:
+    name: echo-containment
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make echo-containment
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make build
+      - name: the built binary reports its identity
+        run: ./bin/vizra-search version
+
+  contract-drift:
+    name: contract-drift
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - name: the handlers match the canonical contract owned by vizra-core
+        run: make contract-drift
+
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make test
+
+  test-noskip:
+    name: test-noskip
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - name: nothing is skipped (Q-001)
+        run: make test-noskip
+
+  tidy-check:
+    name: tidy-check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - run: make tidy-check
+
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+      - run: govulncheck ./...
+
+  docker-build:
+    name: docker-build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: build the image natively for linux/amd64 (ADR-009 / Q-027)
+        run: |
+          docker build \
+            --build-arg VERSION="${GITHUB_SHA::7}" \
+            --build-arg COMMIT="${GITHUB_SHA}" \
+            --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t vizra-search:ci .
+      - name: the image runs and refuses the development key in production mode
+        run: |
+          set -euo pipefail
+          if docker run --rm \
+              -e VIZRA_SEARCH_MODE=production \
+              -e SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
+              vizra-search:ci; then
+            echo "the image booted with the development key in production mode"
+            exit 1
+          fi
+          echo "the image refused the development key, as required"
+      - name: the image serves the probes and answers not_indexed
+        run: |
+          set -euo pipefail
+          KEY="$(openssl rand -hex 32)"
+          docker run -d --name search-ci \
+            -e VIZRA_SEARCH_MODE=production \
+            -e SEARCH_HMAC_KEY="$KEY" \
+            -p 127.0.0.1:8081:8081 \
+            vizra-search:ci
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8081/healthz >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          echo "--- /healthz ---";  curl -fsS http://127.0.0.1:8081/healthz
+          echo "--- /readyz ---";   curl -fsS http://127.0.0.1:8081/readyz
+          echo "--- /version ---";  curl -fsS http://127.0.0.1:8081/version
+
+          # search_schema_version must be present and null (Q-001).
+          curl -fsS http://127.0.0.1:8081/version \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "search_schema_version" in d, "field missing"; assert d["search_schema_version"] is None, d["search_schema_version"]; print("search_schema_version is null, as Q-001 requires")'
+
+          # An unsigned internal call is rejected by the running image.
+          code="$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{"query":"x","viewer":{"is_anonymous":true,"role":"anonymous"},"site":{"handle":"default"}}' \
+            http://127.0.0.1:8081/internal/v1/search)"
+          test "$code" = "401" || { echo "unsigned request returned $code, expected 401"; exit 1; }
+          echo "an unsigned internal request was rejected with 401"
+
+          # A correctly signed one answers not_indexed.
+          BODY='{"query":"x","viewer":{"is_anonymous":true,"role":"anonymous"},"site":{"handle":"default"}}'
+          TS="$(date -u +%s)"
+          NONCE="$(openssl rand -hex 16)"
+          HASH="$(printf '%s' "$BODY" | openssl dgst -sha256 -hex | awk '{print $NF}')"
+          CANON="$(printf 'v1\nPOST\n/internal/v1/search\n%s\n%s\n%s' "$TS" "$NONCE" "$HASH")"
+          SIG="$(printf '%s' "$CANON" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$(printf '%s' "$KEY" | xxd -p -c 256)" -hex | awk '{print $NF}')"
+          curl -fsS -X POST \
+            -H 'Content-Type: application/json' \
+            -H "X-Vizra-Timestamp: $TS" \
+            -H "X-Vizra-Nonce: $NONCE" \
+            -H "X-Vizra-Signature: v1=$SIG" \
+            -d "$BODY" \
+            http://127.0.0.1:8081/internal/v1/search \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="not_indexed", d; print("the running image answered not_indexed")'
+      - name: container logs
+        if: always()
+        run: docker logs search-ci || true
+      - name: stop the container
+        if: always()
+        run: docker rm -f search-ci || true

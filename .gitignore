@@ -1,0 +1,4 @@
+/bin/
+.test-report.json
+.go.mod.bak
+.go.sum.bak
