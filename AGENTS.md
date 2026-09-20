@@ -321,16 +321,50 @@ three commands: `recipe`, then `go test`, then `ran`.
   tests — which is what a filter selecting nothing looks like from outside — or
   reported `[no tests to run]` or `[no test files]`.
 
-The tests in `internal/httpapi/lane_selection_test.go` are the **second** layer,
-not the control: they hold the lane's shape (both guard steps still present) and
-drive the guard against every bypass above, so a guard that silently stopped
-refusing one is itself a red lane.
+`recipe` also reads the **Makefile text**, because some ways of disarming a
+recipe line are invisible to `make --dry-run`. It refuses a `-` prefix on any
+recipe line (make ignores that line's exit status, and the dry-run prints the
+command *without* the `-`, so the guard could refuse the lane, print its
+refusal, and the lane would still exit 0), a `|| true` / `|| :` / `; true`
+appended to a guard step, a second `contract-drift:` target, and a lane defined
+inside a make conditional.
 
-What this does **not** cover, stated rather than implied: the guard is a line in
-the recipe it guards, so deleting that line removes it. That takes a second
-deliberate edit — the shape test goes red on its own — and `/Makefile` is a
-CODEOWNERS path. `make ci`, `test` and `test-noskip` run `./...` unfiltered and
-catch the drift regardless.
+**A recipe step alone is not enough, because every check invoked by the recipe
+dies with the recipe.** A duplicate `contract-drift:` target that supplies its
+own recipe replaces the guard steps outright, so nothing in-recipe runs. There
+are therefore three readings:
+
+1. `recipe` and `ran`, as recipe steps — the fast, local one;
+2. `recipe` again as its **own step in `.github/workflows/ci.yml`, before
+   `make contract-drift`**. Being outside make, no Makefile edit can remove it.
+   `scripts/ci-required-guard.sh` (in the `ci-required` job) and
+   `TestTheLaneGuardIsAnchoredInTheWorkflow` both assert that step exists, is
+   unconditional and is not `continue-on-error`;
+3. `TestThisRepositoryPassesItsOwnLaneGuard`, which runs the guard against the
+   real `Makefile` from the ordinary suite, so `test` and `test-noskip` object
+   to a tampered lane even when the in-recipe step is gone.
+
+The rest of `internal/httpapi/lane_selection_test.go` drives the guard against
+all nineteen bypasses in a temporary repository, with a positive control, so a
+guard that silently stopped refusing one is itself a red lane.
+
+**What one edit to `/Makefile` can no longer do:** leave the `contract-drift`
+CI job green with a vendored file edited in place. Measured for a `-` prefix,
+`|| true`, and a duplicate target that replaces the recipe — each red at the job
+and in `test`.
+
+**What is not covered, stated rather than implied:**
+
+- `SHELL := /usr/bin/true`, or any `SHELL` override, makes every recipe in this
+  repository a no-op, so `make contract-drift` and the job built on it go green.
+  No check written inside a `Makefile` can prevent that, and it always could.
+  The drift is still caught, because the required `test` and `test-noskip` lanes
+  run `go test` directly and go red.
+- Editing `.github/workflows/ci.yml` as well removes reading 2. That is a second
+  file and a second diff, and `ci-required` is red while the step is missing —
+  but `ci-required-guard.sh` is itself checked out from the PR under test.
+- Every one of these paths is CODEOWNERS-assigned, and **CODEOWNERS is advisory
+  until the owner's ruleset requires that review**, which does not yet exist.
 
 ### The manifest is editable by the PR it gates
 

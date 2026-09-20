@@ -28,12 +28,45 @@ variables (`$(TESTFLAGS)`), an included makefile, and a duplicate target (make
 runs the LAST definition; a text parser reads the first). The environment is
 checked too, because `GOFLAGS=-run=…` never appears in the recipe at all.
 
-What remains, stated rather than implied: this program is itself a line in the
-recipe it guards. Deleting that line removes the control. That takes a
-deliberate edit to `/Makefile`, which CODEOWNERS assigns to the owner, and
-`TestTheContractDriftLaneSelectsEveryVendoredFileGuard` fails when the recipe
-loses either guard step — so escaping needs two edits, not one, and `make ci`,
-`test` and `test-noskip` run `./...` unfiltered and still catch the drift.
+A recipe step alone was not enough, and the reason is worth stating precisely.
+Every check invoked BY the recipe dies with the recipe. Three one-edit
+mutations proved it: a `-` prefix on a guard line (make ignores that line's exit
+status, and `make --dry-run` prints the command WITHOUT the `-`, so no scan of
+the resolved recipe can see it); `|| true` appended to a guard line; and a
+duplicate `contract-drift:` target that supplies its own recipe, which replaces
+the guard steps outright so nothing in-recipe runs at all.
+
+So there are three readings, and what each can and cannot do:
+
+  1. this program, as a recipe step. It now also reads the Makefile TEXT —
+     `check_makefile_text` — because `-` is invisible in the dry-run. It cannot
+     run at all when a duplicate target has replaced the recipe;
+  2. this program again, as its own step in `.github/workflows/ci.yml`, BEFORE
+     `make contract-drift`. Being outside make, no Makefile edit can remove it.
+     `scripts/ci-required-guard.sh` and `TestTheLaneGuardIsAnchoredInTheWorkflow`
+     both assert that step exists, is unconditional and is not
+     continue-on-error, so deleting it turns `ci-required` and the `test` lane
+     red;
+  3. `TestThisRepositoryPassesItsOwnLaneGuard`, which runs this program against
+     the real Makefile from the ordinary suite, so `test` and `test-noskip`
+     object to a tampered lane even when the in-recipe step is gone.
+
+What one edit to /Makefile can therefore NOT do: leave the `contract-drift` CI
+job green with a vendored file edited in place. Measured for `-`, `|| true`, and
+a duplicate target that replaces the recipe — each red at the job and in `test`.
+
+What is NOT covered, stated rather than implied:
+
+  - `SHELL := /usr/bin/true` (or any SHELL override) makes every recipe in this
+    repository a no-op, so `make contract-drift` and the job built on it go
+    green. No check written inside a Makefile can prevent that. The drift is
+    still caught, because `test` and `test-noskip` run `go test` directly;
+  - editing `.github/workflows/ci.yml` as well removes reading 2. That is a
+    second file and a second diff, and `ci-required` goes red while the step is
+    missing — but `ci-required-guard.sh` is itself checked out from the PR under
+    test;
+  - all of these paths are CODEOWNERS-assigned, and **CODEOWNERS is advisory
+    until the owner's ruleset requires that review**, which does not yet exist.
 """
 
 import json
@@ -60,6 +93,21 @@ SELECTING_FLAGS = ("-run", "-skip", "-short", "-tags", "-bench", "-fuzz", "-args
 
 # Environment variables `go test` reads as extra flags.
 FLAG_ENV = ("GOFLAGS", "GOTESTFLAGS")
+
+MAKEFILE = "Makefile"
+WORKFLOW = ".github/workflows/ci.yml"
+
+# Suffixes that discard a guard step's exit status. `make --dry-run` DOES show
+# these, but only as trailing text after a command that still starts with the
+# guard's path, so a prefix match alone accepts them.
+SWALLOWING_SUFFIXES = ("|| true", "|| :", "|| exit 0", "; true", "; :", "|| /bin/true")
+
+# Make's recipe-line prefixes. `-` is the dangerous one: make ignores the line's
+# exit status, and `make --dry-run` prints the command WITHOUT the prefix, so no
+# amount of dry-run scanning can see it. That is why the Makefile TEXT is read.
+RECIPE_PREFIX_CHARS = "@-+"
+
+MAKE_CONDITIONALS = ("ifeq", "ifneq", "ifdef", "ifndef")
 
 
 class Refused(Exception):
@@ -113,6 +161,113 @@ def resolved_recipe():
 
 def indent(text, prefix="    "):
     return "\n".join(prefix + ln for ln in (text or "").rstrip().splitlines())
+
+
+# ------------------------------------------------------- the Makefile TEXT ---
+#
+# Some ways of disarming a recipe line are invisible to `make --dry-run`, so the
+# resolved-recipe scan above cannot be the only reading. The clearest case is a
+# leading `-`: make ignores that line's exit status AND prints the command
+# without the prefix, so the guard could refuse the lane, print its refusal, and
+# the lane would still exit 0. These checks therefore read the file.
+
+
+def logical_recipe_lines(lines, start):
+    """Collect one target's recipe from Makefile text, joining continuations.
+
+    Returns a list of (first_physical_line_number, joined_text_without_tab).
+    """
+    recipe, i = [], start
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "" or line.lstrip().startswith("#"):
+            i += 1
+            continue
+        if not line.startswith("\t"):
+            break
+        first, body = i, line[1:]
+        while body.rstrip().endswith("\\") and i + 1 < len(lines):
+            i += 1
+            body = body.rstrip()[:-1] + " " + lines[i].lstrip("\t")
+        recipe.append((first + 1, body.strip()))
+        i += 1
+    return recipe
+
+
+def check_makefile_text():
+    """Refuse lane definitions whose text disarms a guard step."""
+    path = os.path.join(REPO_ROOT, MAKEFILE)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as err:
+        fail("cannot read %s: %s" % (MAKEFILE, err))
+    lines = text.split("\n")
+
+    target_re = re.compile(r"^%s\s*:" % re.escape(LANE))
+    targets = [i for i, ln in enumerate(lines) if target_re.match(ln)]
+    if not targets:
+        fail("%s declares no `%s` target" % (MAKEFILE, LANE))
+    if len(targets) > 1:
+        fail(
+            "%s declares the `%s` target %d times, at lines %s.\n"
+            "  make runs the LAST definition, which REPLACES the earlier recipe — guard steps\n"
+            "  included — so a duplicate can remove this check before it ever runs. The lane\n"
+            "  must have exactly one recipe."
+            % (MAKEFILE, LANE, len(targets), ", ".join(str(t + 1) for t in targets))
+        )
+
+    # A lane defined inside a make conditional can be swapped out by setting a
+    # variable, with the recipe a reader sees never executing.
+    depth = 0
+    for i, ln in enumerate(lines[: targets[0]]):
+        head = ln.strip().split(" ")[0]
+        if head in MAKE_CONDITIONALS:
+            depth += 1
+        elif head == "endif":
+            depth = max(0, depth - 1)
+    if depth > 0:
+        fail(
+            "the `%s` target at %s:%d is defined inside a make conditional, so which recipe\n"
+            "  runs depends on a variable. The lane must be unconditional."
+            % (LANE, MAKEFILE, targets[0] + 1)
+        )
+
+    recipe = logical_recipe_lines(lines, targets[0] + 1)
+    if not recipe:
+        fail("the `%s` target in %s has an empty recipe" % (LANE, MAKEFILE))
+
+    saw_guard = False
+    for lineno, body in recipe:
+        prefix = ""
+        while body and body[0] in RECIPE_PREFIX_CHARS:
+            prefix += body[0]
+            body = body[1:].lstrip()
+        is_guard = body.startswith(GUARD)
+        saw_guard = saw_guard or is_guard
+
+        if "-" in prefix:
+            fail(
+                "%s:%d begins with `-`, so make IGNORES that line's exit status:\n    %s%s\n"
+                "  `make --dry-run` prints the command WITHOUT the `-`, so no scan of the\n"
+                "  resolved recipe can see it: the guard would refuse the lane, print its\n"
+                "  refusal, and the lane would still exit 0. Remove the `-`."
+                % (MAKEFILE, lineno, prefix, body)
+            )
+        if is_guard:
+            for suffix in SWALLOWING_SUFFIXES:
+                if body.rstrip().endswith(suffix):
+                    fail(
+                        "%s:%d ends with `%s`, which discards the guard's exit status:\n    %s\n"
+                        "  A guard whose failure is swallowed is not a guard."
+                        % (MAKEFILE, lineno, suffix, body)
+                    )
+
+    if not saw_guard:
+        fail(
+            "the `%s` recipe in %s contains no `%s` step, so nothing checks the lane's shape:\n%s"
+            % (LANE, MAKEFILE, GUARD, indent("\n".join(b for _, b in recipe)))
+        )
 
 
 # ------------------------------------------------------------- recipe checks --
@@ -294,15 +449,19 @@ def check_structure(commands):
     """
     if not commands:
         fail("the contract-drift lane runs no commands at all")
-    if not commands[0].startswith(GUARD) or " recipe" not in commands[0]:
+    # Compared as exact token lists, not by prefix: a prefix match accepts
+    # `… recipe || true`, which discards the guard's exit status.
+    if shlex.split(commands[0]) != [GUARD, "recipe"]:
         fail(
-            "the contract-drift lane's FIRST command must be `%s recipe`, so the lane's shape is\n"
-            "  checked before any test runs. It is:\n    %s" % (GUARD, commands[0])
+            "the contract-drift lane's FIRST command must be exactly `%s recipe`, so the lane's\n"
+            "  shape is checked before any test runs and its failure is not discarded.\n"
+            "  It is:\n    %s" % (GUARD, commands[0])
         )
-    if not commands[-1].startswith(GUARD) or " ran" not in commands[-1]:
+    last = shlex.split(commands[-1])
+    if len(last) != 3 or last[0] != GUARD or last[1] != "ran":
         fail(
-            "the contract-drift lane's LAST command must be `%s ran <report>`, which is the\n"
-            "  authority on whether the lane passed. It is:\n    %s" % (GUARD, commands[-1])
+            "the contract-drift lane's LAST command must be exactly `%s ran <report>`, which is\n"
+            "  the authority on whether the lane passed. It is:\n    %s" % (GUARD, commands[-1])
         )
     if len(commands) < 3:
         fail(
@@ -311,7 +470,106 @@ def check_structure(commands):
         )
 
 
+# ----------------------------------------------------- the workflow anchor --
+
+
+def cmd_workflow():
+    """Assert the lane's guard also runs from the WORKFLOW, outside make.
+
+    Every check in `recipe` is invoked by a line in the recipe it guards, so a
+    single Makefile edit that replaces or disarms that line — a duplicate target
+    supplying its own recipe, `SHELL := /usr/bin/true`, `MAKEFLAGS` — removes the
+    check along with the lane. Running the same check as its own workflow step
+    means no Makefile edit can remove it: disarming the lane then requires
+    editing `.github/workflows/ci.yml` as well, which is a separate file and a
+    separate diff.
+
+    This is called by scripts/ci-required-guard.sh, which runs in the
+    `ci-required` job, so the anchor step cannot be deleted without that job
+    going red.
+    """
+    try:
+        import yaml
+    except ImportError:
+        fail(
+            "PyYAML is required to check the workflow anchor. This parses the workflow rather\n"
+            "  than grepping it, for the same reason scripts/check-workflows.py does."
+        )
+
+    path = os.path.join(REPO_ROOT, WORKFLOW)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            doc = yaml.safe_load(handle)
+    except (OSError, yaml.YAMLError) as err:
+        fail("cannot read or parse %s: %s" % (WORKFLOW, err))
+
+    jobs = doc.get("jobs") if isinstance(doc, dict) else None
+    if not isinstance(jobs, dict) or LANE not in jobs:
+        fail("%s declares no `%s` job" % (WORKFLOW, LANE))
+    job = jobs[LANE] or {}
+
+    for key in ("if", "continue-on-error"):
+        if key in job:
+            fail(
+                "the `%s` job in %s carries `%s`. The lane's anchor must run on every run and\n"
+                "  must be able to fail the gate." % (LANE, WORKFLOW, key)
+            )
+
+    steps = job.get("steps")
+    if not isinstance(steps, list) or not steps:
+        fail("the `%s` job in %s declares no steps" % (LANE, WORKFLOW))
+
+    anchor_at = make_at = None
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict):
+            continue
+        run = step.get("run") or ""
+        if not isinstance(run, str):
+            continue
+        if GUARD in run and "recipe" in run:
+            if "if" in step:
+                fail(
+                    "the guard step at %s:jobs.%s.steps[%d] is conditional (`if`), so it can be\n"
+                    "  skipped. The anchor must be unconditional." % (WORKFLOW, LANE, i)
+                )
+            if "continue-on-error" in step:
+                fail(
+                    "the guard step at %s:jobs.%s.steps[%d] carries `continue-on-error`, so its\n"
+                    "  failure cannot fail the lane." % (WORKFLOW, LANE, i)
+                )
+            if anchor_at is None:
+                anchor_at = i
+        if re.search(r"\bmake\s+%s\b" % re.escape(LANE), run):
+            if make_at is None:
+                make_at = i
+
+    if anchor_at is None:
+        fail(
+            "the `%s` job in %s does not run `%s recipe` as its own step.\n"
+            "  Without it, every check on this lane is invoked by the recipe it guards, so one\n"
+            "  Makefile edit — a duplicate target that supplies its own recipe, or a SHELL\n"
+            "  override — removes the check along with the lane. Add, before `make %s`:\n"
+            "      - name: the lane's own shape, checked outside make\n"
+            "        run: %s recipe" % (LANE, WORKFLOW, GUARD, LANE, GUARD)
+        )
+    if make_at is None:
+        fail("the `%s` job in %s never runs `make %s`" % (LANE, WORKFLOW, LANE))
+    if anchor_at > make_at:
+        fail(
+            "the guard step (step %d) runs AFTER `make %s` (step %d) in %s. It must run first,\n"
+            "  so a disarmed lane is refused before it reports success."
+            % (anchor_at, LANE, make_at, WORKFLOW)
+        )
+
+    print(
+        "workflow anchor: %s:jobs.%s runs `%s recipe` unconditionally at step %d, before "
+        "`make %s` at step %d" % (WORKFLOW, LANE, GUARD, anchor_at, LANE, make_at)
+    )
+    return 0
+
+
 def cmd_recipe():
+    check_makefile_text()
     commands, stderr = resolved_recipe()
     check_make_warnings(stderr)
     check_environment()
@@ -412,11 +670,13 @@ def cmd_ran(report_path):
 
 def main(argv):
     if len(argv) < 2:
-        sys.stderr.write("usage: contract-drift-guard.py recipe | ran <report.json>\n")
+        sys.stderr.write("usage: contract-drift-guard.py recipe | ran <report.json> | workflow\n")
         return 2
     try:
         if argv[1] == "recipe":
             return cmd_recipe()
+        if argv[1] == "workflow":
+            return cmd_workflow()
         if argv[1] == "ran":
             if len(argv) < 3:
                 sys.stderr.write("usage: contract-drift-guard.py ran <report.json>\n")

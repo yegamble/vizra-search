@@ -78,10 +78,23 @@ build: ## Build the binary
 #           resolves variables, includes and duplicate targets that a text
 #           parser misses — and refuses any flag, wrapper or environment
 #           variable that could deselect a guard, plus any package holding a
-#           vendored-file guard that is missing from the list below.
+#           vendored-file guard that is missing from the list below. It ALSO
+#           reads this file's text, because a `-` prefix on a recipe line makes
+#           make ignore that line's exit status and `make --dry-run` prints the
+#           command WITHOUT the `-`: the guard would refuse the lane, print its
+#           refusal, and the lane would still exit 0.
 #   ran     reads the report afterwards and refuses a lane that ran zero tests
 #           in any listed package, which is what a filter that selects nothing
 #           looks like from the outside.
+#
+# A recipe step alone is not enough: every check invoked by this recipe dies
+# with it, and a duplicate `contract-drift:` target supplying its own recipe
+# replaces these two lines outright. So `recipe` also runs as its own step in
+# .github/workflows/ci.yml BEFORE `make contract-drift`, where no Makefile edit
+# reaches it, and scripts/ci-required-guard.sh asserts that step is there,
+# unconditional and able to fail. See AGENTS.md for what is still not covered
+# (a SHELL override neuters every recipe here, and the required `test` lanes are
+# what catch the drift in that case).
 #
 # `|| true` on the test line is not swallowing the result: the `ran` step is the
 # authority on pass/fail, it prints the real test output, and `recipe` refuses

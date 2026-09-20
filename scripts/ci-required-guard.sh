@@ -32,6 +32,15 @@ if ! ./scripts/check-workflows.py; then
   echo "continue-on-error is not allowed on a required lane"
   exit 1
 fi
+# The contract-drift lane's shape check must also run as its own WORKFLOW step,
+# outside make. Every check inside `make contract-drift` is invoked by a line in
+# the recipe it guards, so one Makefile edit — a duplicate target supplying its
+# own recipe, a `-` prefix, a SHELL override — removes the check along with the
+# lane. Asserting the workflow step here means deleting it turns ci-required red.
+if ! ./scripts/contract-drift-guard.py workflow; then
+  echo "the contract-drift lane has no unconditional out-of-make shape check"
+  exit 1
+fi
 # FLOOR. The manifest is read from the checkout under test, so the
 # PR being gated can edit it. Checking only that every name PRESENT
 # maps to a real job is not enough: deleting a lane's line would
@@ -149,6 +158,22 @@ wf-capitalised.yml|job|Continue-On-Error|literal-true
 wf-expression.yml|step|continue-on-error|expression
 wf-false.yml|step|continue-on-error|literal-false"
 
+# The declared set is itself a floor. Without this, deleting a row above would
+# lower the fixture floor from 6 to 5 and the guard would still print a tidy
+# "N fixtures exercised, floor N" — a count that moved to match whatever was
+# left, which is the same class of false green this script exists to remove.
+# This number is changed only when a spelling is deliberately added or retired.
+expected_reject_fixtures=5
+declared_reject_fixtures="$(printf '%s\n' "$reject_fixtures" | grep -c .)"
+if [ "$declared_reject_fixtures" != "$expected_reject_fixtures" ]; then
+  echo "FIXTURE FLOOR CHANGED: $declared_reject_fixtures reject-fixture rule(s) are declared;"
+  echo "  expected_reject_fixtures says $expected_reject_fixtures."
+  echo "  A spelling of continue-on-error was added or removed. If that was deliberate, change"
+  echo "  expected_reject_fixtures in the same commit so the floor is a decision, not a"
+  echo "  consequence of whatever rows happen to be left."
+  exit 1
+fi
+
 test -d "$fixtures_dir" || {
   echo "MISSING FIXTURES: '$fixtures_dir' does not exist."
   echo "  The workflow checker's negative fixtures are what prove it still catches every"
@@ -257,7 +282,7 @@ done
 
 # A count, not a claim. The floor is 1 accept fixture + the reject fixtures
 # named above; anything fewer means the loop skipped something.
-floor_count=$(($(printf '%s\n' "$reject_fixtures" | grep -c . ) + 1))
+floor_count=$((expected_reject_fixtures + 1))
 if [ "$checked" -lt "$floor_count" ]; then
   echo "only $checked fixture(s) were exercised; the floor is $floor_count"
   exit 1

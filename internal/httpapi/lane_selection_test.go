@@ -367,11 +367,14 @@ func TestTheLaneGuardRefusesEveryKnownBypass(t *testing.T) {
 			want:     "GOFLAGS in the environment",
 		},
 		{
-			name: "a duplicate contract-drift target",
+			// A duplicate that KEEPS the guard line, so the guard still runs.
+			// The text scan catches it first, before make's own warning — which
+			// matters because that warning's wording is version-dependent.
+			name: "a duplicate contract-drift target that keeps the guard",
 			makefile: cleanRecipe + "\ncontract-drift:\n\t./scripts/contract-drift-guard.py recipe\n" +
 				"\tgo test -count=1 -json -run 'TestNothingAtAll' ./internal/thing/ > r.json || true\n" +
 				"\t./scripts/contract-drift-guard.py ran r.json\n",
-			want: "DUPLICATE",
+			want: "declares the `contract-drift` target 2 times",
 		},
 		{
 			name: "go test moved behind a wrapper script",
@@ -396,6 +399,57 @@ func TestTheLaneGuardRefusesEveryKnownBypass(t *testing.T) {
 			makefile: strings.Replace(cleanRecipe, "./internal/thing/", "./scripts/", 1),
 			want:     "does not run it",
 		},
+		// The cases below each disarm the lane in ONE edit, and each is
+		// invisible to `make --dry-run` or survives a prefix match. They are
+		// why the guard reads the Makefile TEXT as well as asking make.
+		{
+			name: "a `-` prefix on the recipe guard step",
+			makefile: strings.Replace(cleanRecipe,
+				"\t./scripts/contract-drift-guard.py recipe",
+				"\t-./scripts/contract-drift-guard.py recipe", 1),
+			want: "begins with `-`",
+		},
+		{
+			name: "a `-` prefix on the ran step",
+			makefile: strings.Replace(cleanRecipe,
+				"\t./scripts/contract-drift-guard.py ran r.json",
+				"\t-./scripts/contract-drift-guard.py ran r.json", 1),
+			want: "begins with `-`",
+		},
+		{
+			name: "`|| true` appended to the recipe guard step",
+			makefile: strings.Replace(cleanRecipe,
+				"./scripts/contract-drift-guard.py recipe\n",
+				"./scripts/contract-drift-guard.py recipe || true\n", 1),
+			want: "discards the guard's exit status",
+		},
+		{
+			name: "`|| true` appended to the ran step",
+			makefile: strings.Replace(cleanRecipe,
+				"./scripts/contract-drift-guard.py ran r.json",
+				"./scripts/contract-drift-guard.py ran r.json || true", 1),
+			want: "discards the guard's exit status",
+		},
+		{
+			// The natural form of the duplicate-target bypass: the second
+			// definition REPLACES the recipe, guard steps included, so no
+			// in-recipe check can run to object. The text scan sees it anyway.
+			name: "a duplicate target that REPLACES the recipe without the guard",
+			makefile: cleanRecipe + "\ncontract-drift:\n" +
+				"\tgo test -count=1 -json -run 'TestNothingAtAll' ./internal/thing/ > r.json || true\n",
+			want: "declares the `contract-drift` target 2 times",
+		},
+		{
+			name:     "the lane defined inside a make conditional",
+			makefile: "ifeq ($(SKIP),1)\n" + cleanRecipe + "endif\n",
+			want:     "inside a make conditional",
+		},
+		{
+			name: "the guard step replaced by something that is not the guard",
+			makefile: strings.Replace(cleanRecipe,
+				"./scripts/contract-drift-guard.py recipe\n", "true\n", 1),
+			want: "FIRST command",
+		},
 	}
 
 	for _, tc := range cases {
@@ -411,6 +465,37 @@ func TestTheLaneGuardRefusesEveryKnownBypass(t *testing.T) {
 					"\twant the message to contain: %q\n\tgot:\n%s", tc.want, out)
 			}
 		})
+	}
+}
+
+// TestThisRepositoryPassesItsOwnLaneGuard runs the guard against the REAL
+// Makefile from inside the ordinary test suite.
+//
+// It is what makes the one-edit Makefile mutations red in a lane that cannot be
+// removed by editing the Makefile: `test` and `test-noskip` run `./...`, so a
+// `-` prefix, a swallowed exit status, or a duplicate target that replaces the
+// recipe fails here even when it has removed the in-recipe guard step.
+func TestThisRepositoryPassesItsOwnLaneGuard(t *testing.T) {
+	cmd := exec.Command("./scripts/contract-drift-guard.py", "recipe")
+	cmd.Dir = repoRoot
+	cmd.Env = filteredEnv()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("this repository's own contract-drift lane is refused by its guard: %v\n%s", err, out)
+	}
+}
+
+// TestTheLaneGuardIsAnchoredInTheWorkflow holds the out-of-make anchor. Every
+// check inside `make contract-drift` is invoked by a line in the recipe it
+// guards, so one Makefile edit can remove the check along with the lane. The
+// workflow step cannot be removed that way.
+func TestTheLaneGuardIsAnchoredInTheWorkflow(t *testing.T) {
+	cmd := exec.Command("./scripts/contract-drift-guard.py", "workflow")
+	cmd.Dir = repoRoot
+	cmd.Env = filteredEnv()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("the contract-drift lane has lost its out-of-make workflow anchor: %v\n%s", err, out)
 	}
 }
 

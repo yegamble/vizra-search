@@ -28,14 +28,18 @@ be built under emulation on this machine — and runs natively in CI.
 | `F8-before-the-fix.txt` | the finding: `scripts/ci-required-guard.sh` is **green** with `scripts/testdata/` deleted, green with an empty `wf-*.yml` glob, and green with a single negative fixture deleted |
 | `F8-after-the-fix-red-green.txt` | **round 1.** Five mutations red: missing directory, empty glob, missing floor fixture, missing accept fixture, and a fixture rewritten to clean YAML |
 | `F8-round2-fixture-rules-red-green.txt` | **round 2, verifier FINDING 2.** An unreadable reject fixture, an **emptied** one, one truncated to invalid YAML, one edited to trip a *different* rule than it declares, the quoted-key fixture unquoted, one made actually valid, and the accept fixture unreadable — each **red** with its own named failure; plus the round-1 reds A–E re-run and still red |
+| `F5-F6-round3-one-edit-bypasses-red-green.txt` | **round 3, verifier FINDINGS 5, 6 and 7.** The one-edit Makefile mutations that round 2 did not catch, each applied *with* a drifted vendored file, each recorded against four readings — `L` (`make contract-drift`), `W` (the out-of-make guard), `JOB` (the CI job: `W` then `L`, the required check), `T` (`go test ./internal/httpapi/`): a `-` prefix on either guard line, `\|\| true` on either guard line, and a duplicate target that **replaces** the recipe without the guard. Also the workflow anchor deleted and made conditional, the fixture-floor pin, and the **stated residual** `SHELL := /usr/bin/true`, which no in-Makefile check can catch |
 | `lanes-local.txt` | every local lane — `fmt-check`, `vet`, `echo-containment`, `build`, `contract-drift`, `test`, `test-noskip`, `tidy-check`, the fan-in guard, the workflow checker, `govulncheck` — with exit codes |
 
-## Counts (fix round 2)
+## Counts (fix round 3)
 
 - `make test` (`-race -count=1 ./...`): 6 packages `ok`, exit 0.
-- `make test-noskip`: **338 pass events, 0 skips**, exit 0 (the lane's own floor is 40).
-  Round 1 reported 321; the 17 added are the new lane-guard cases, all passing, none skipped.
-- `make contract-drift`: `315 tests ran across 4 package(s), 0 failures, none deselected`, exit 0.
+- `make test-noskip`: **347 pass events, 0 skips**, exit 0 (the lane's own floor is 40).
+  321 in round 1, 338 in round 2; the additions are lane-guard cases, all passing, none skipped.
+- `make contract-drift`: `324 tests ran across 4 package(s), 0 failures, none deselected`, exit 0.
+- `./scripts/contract-drift-guard.py workflow`: the out-of-make anchor is present at
+  `.github/workflows/ci.yml:jobs.contract-drift` step 2, unconditional, before `make contract-drift`
+  at step 3.
 - `make ci`: exit 0.
 - `scripts/ci-required-guard.sh`: 6 fixtures exercised, floor 6, exit 0.
 - `govulncheck ./...`: "No vulnerabilities found", exit 0.

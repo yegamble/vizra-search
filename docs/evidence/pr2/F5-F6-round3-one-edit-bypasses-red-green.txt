@@ -1,0 +1,282 @@
+=== FINDINGS 5 + 6 AFTER THE FIX ===
+host : Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64
+make : GNU Make 3.81   python3: Python 3.9.6
+
+Each case is ONE edit plus a drifted vendored file. Four readings are recorded:
+  L   = make contract-drift                    (the recipe alone)
+  W   = ./scripts/contract-drift-guard.py recipe   (the out-of-make anchor)
+  JOB = the contract-drift CI job: W then L, in that order — the REQUIRED check
+  T   = go test ./internal/httpapi/            (the required test / test-noskip lanes)
+
+L alone cannot catch a duplicate target that replaces the recipe: there is no
+in-recipe step left to run. That is why the anchor exists and why JOB is the
+row that matters for the merge gate.
+
+DRIFT_PKGS   := ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+DRIFT_REPORT := .contract-drift-report.json
+
+.PHONY: contract-drift
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	./scripts/contract-drift-guard.py recipe
+	go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+	./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
+
+      - name: the lane's own shape, checked outside make
+        run: ./scripts/contract-drift-guard.py recipe
+
+==================================================================
+GREEN 0: clean tree
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 324 tests ran across 4 package(s), 0 failures, none deselected
+L exit=0
+$ ./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+W exit=0
+JOB exit=0
+$ ./scripts/contract-drift-guard.py workflow
+workflow anchor: .github/workflows/ci.yml:jobs.contract-drift runs `./scripts/contract-drift-guard.py recipe` unconditionally at step 2, before `make contract-drift` at step 3
+exit=0
+
+==================================================================
+RED P15a: a '-' prefix on the recipe guard line
+  make ignores that line's exit status, AND 'make --dry-run' prints the command
+  WITHOUT the '-', so no scan of the resolved recipe can see it.
+mutated Makefile
+$ grep -n 'guard.py recipe' Makefile
+94:	-./scripts/contract-drift-guard.py recipe
+$ make --dry-run --no-print-directory contract-drift   (note: the '-' is absent here)
+./scripts/contract-drift-guard.py recipe
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+$ make contract-drift
+          `make --dry-run` prints the command WITHOUT the `-`, so no scan of the
+          resolved recipe can see it: the guard would refuse the lane, print its
+          refusal, and the lane would still exit 0. Remove the `-`.
+--- FAIL: TestThisRepositoryPassesItsOwnLaneGuard (0.04s)
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	5.046s
+CONTRACT-DRIFT LANE REFUSED: 2 test(s) failed: github.com/yegamble/vizra-search/internal/httpapi.TestEveryVendoredFileMatchesItsManifest, github.com/yegamble/vizra-search/internal/httpapi.TestThisRepositoryPassesItsOwnLaneGuard
+make: *** [contract-drift] Error 1
+L exit=2
+$ ./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:94 begins with `-`, so make IGNORES that line's exit status:
+    -./scripts/contract-drift-guard.py recipe
+  `make --dry-run` prints the command WITHOUT the `-`, so no scan of the
+  resolved recipe can see it: the guard would refuse the lane, print its
+  refusal, and the lane would still exit 0. Remove the `-`.
+W exit=1
+JOB exit=1
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	4.870s
+FAIL
+T exit=1
+>>> RED (L=2 W=1 JOB=1 T=1) — the required job and the required test lanes both object.
+
+==================================================================
+RED P15b: a '-' prefix on the ran line
+mutated Makefile
+$ grep -n 'guard.py ran' Makefile
+96:	-./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:96 begins with `-`, so make IGNORES that line's exit status:
+    -./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
+  `make --dry-run` prints the command WITHOUT the `-`, so no scan of the
+  resolved recipe can see it: the guard would refuse the lane, print its
+  refusal, and the lane would still exit 0. Remove the `-`.
+make: *** [contract-drift] Error 1
+L exit=2
+$ ./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:96 begins with `-`, so make IGNORES that line's exit status:
+    -./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
+  `make --dry-run` prints the command WITHOUT the `-`, so no scan of the
+  resolved recipe can see it: the guard would refuse the lane, print its
+  refusal, and the lane would still exit 0. Remove the `-`.
+W exit=1
+JOB exit=1
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	4.864s
+FAIL
+T exit=1
+>>> RED (L=2 W=1 JOB=1 T=1) — the required job and the required test lanes both object.
+
+==================================================================
+RED P16a: '|| true' appended to the recipe guard line
+mutated Makefile
+$ grep -n 'guard.py recipe' Makefile
+94:	./scripts/contract-drift-guard.py recipe || true
+$ make contract-drift
+        CONTRACT-DRIFT LANE REFUSED: Makefile:94 ends with `|| true`, which discards the guard's exit status:
+            ./scripts/contract-drift-guard.py recipe || true
+          A guard whose failure is swallowed is not a guard.
+--- FAIL: TestThisRepositoryPassesItsOwnLaneGuard (0.04s)
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	5.096s
+CONTRACT-DRIFT LANE REFUSED: 2 test(s) failed: github.com/yegamble/vizra-search/internal/httpapi.TestEveryVendoredFileMatchesItsManifest, github.com/yegamble/vizra-search/internal/httpapi.TestThisRepositoryPassesItsOwnLaneGuard
+make: *** [contract-drift] Error 1
+L exit=2
+$ ./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:94 ends with `|| true`, which discards the guard's exit status:
+    ./scripts/contract-drift-guard.py recipe || true
+  A guard whose failure is swallowed is not a guard.
+W exit=1
+JOB exit=1
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	5.120s
+FAIL
+T exit=1
+>>> RED (L=2 W=1 JOB=1 T=1) — the required job and the required test lanes both object.
+
+==================================================================
+RED P16b: '|| true' appended to the ran line
+mutated Makefile
+$ grep -n 'guard.py ran' Makefile
+96:	./scripts/contract-drift-guard.py ran $(DRIFT_REPORT) || true
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:96 ends with `|| true`, which discards the guard's exit status:
+    ./scripts/contract-drift-guard.py ran $(DRIFT_REPORT) || true
+  A guard whose failure is swallowed is not a guard.
+make: *** [contract-drift] Error 1
+L exit=2
+$ ./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile:96 ends with `|| true`, which discards the guard's exit status:
+    ./scripts/contract-drift-guard.py ran $(DRIFT_REPORT) || true
+  A guard whose failure is swallowed is not a guard.
+W exit=1
+JOB exit=1
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	4.653s
+FAIL
+T exit=1
+>>> RED (L=2 W=1 JOB=1 T=1) — the required job and the required test lanes both object.
+
+==================================================================
+RED F5: a duplicate contract-drift target that REPLACES the recipe WITHOUT the guard
+  The natural form of the bypass: make runs the LAST definition, so there is no
+  in-recipe step left to object. L therefore CANNOT catch this — W and T do, and
+  the CI job is red because the anchor runs before make.
+$ tail -5 Makefile
+	rm -rf bin .test-report.json $(DRIFT_REPORT)
+
+.PHONY: contract-drift
+contract-drift:
+	go test -count=1 -json -run 'TestNothingAtAll' $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+$ make contract-drift
+Makefile:152: warning: overriding commands for target `contract-drift'
+Makefile:94: warning: ignoring old commands for target `contract-drift'
+go test -count=1 -json -run 'TestNothingAtAll' ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+L exit=0
+$ ./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: Makefile declares the `contract-drift` target 2 times, at lines 93, 151.
+  make runs the LAST definition, which REPLACES the earlier recipe — guard steps
+  included — so a duplicate can remove this check before it ever runs. The lane
+  must have exactly one recipe.
+W exit=1
+JOB exit=1
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	4.812s
+FAIL
+T exit=1
+>>> RED (L=0 W=1 JOB=1 T=1) — the required job and the required test lanes both object.
+
+==================================================================
+RESIDUAL F5b: a SHELL override that neuters every recipe line (P18) — stated, not claimed red
+mutated Makefile
+$ grep -n '^SHELL' Makefile
+7:SHELL := /usr/bin/true
+$ make contract-drift
+L exit=0
+$ ./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+W exit=0
+JOB exit=0
+$ go test -count=1 ./internal/httpapi/
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	4.471s
+FAIL
+T exit=1
+>>> RESIDUAL (L=0 W=0 JOB=0 T=1). `SHELL := /usr/bin/true` makes every recipe in this
+    repository a no-op, so the contract-drift job is green. Nothing inside a Makefile can
+    prevent that, and this always was the case. The drift is still caught: the required
+    `test` and `test-noskip` lanes run go test directly and go red (T=1).
+
+==================================================================
+RED N1: the workflow anchor step DELETED from .github/workflows/ci.yml
+mutated .github/workflows/ci.yml
+$ grep -c 'checked outside make' .github/workflows/ci.yml
+0
+$ ./scripts/ci-required-guard.sh
+  Without it, every check on this lane is invoked by the recipe it guards, so one
+  Makefile edit — a duplicate target that supplies its own recipe, or a SHELL
+  override — removes the check along with the lane. Add, before `make contract-drift`:
+      - name: the lane's own shape, checked outside make
+        run: ./scripts/contract-drift-guard.py recipe
+the contract-drift lane has no unconditional out-of-make shape check
+ci-required-guard exit=1
+$ go test -count=1 -run TestTheLaneGuardIsAnchoredInTheWorkflow ./internal/httpapi/
+                run: ./scripts/contract-drift-guard.py recipe
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.330s
+FAIL
+T exit=1
+>>> RED. Deleting the anchor turns ci-required AND the test lane red.
+
+==================================================================
+RED N2: the workflow anchor step made conditional
+mutated .github/workflows/ci.yml
+$ sed -n "/checked outside make/,+2p" .github/workflows/ci.yml
+      - name: the lane's own shape, checked outside make
+        if: ${{ false }}
+        run: ./scripts/contract-drift-guard.py recipe
+workflows parsed: 2; no continue-on-error on any job or step
+CONTRACT-DRIFT LANE REFUSED: the guard step at .github/workflows/ci.yml:jobs.contract-drift.steps[2] is conditional (`if`), so it can be
+  skipped. The anchor must be unconditional.
+the contract-drift lane has no unconditional out-of-make shape check
+ci-required-guard exit=1
+T exit=1
+>>> RED.
+
+==================================================================
+NIT (FINDING 7): deleting a fixture declaration row must not lower the floor
+mutated scripts/ci-required-guard.sh
+$ ./scripts/ci-required-guard.sh
+every pullable Dockerfile base image is pinned by digest
+FIXTURE FLOOR CHANGED: 4 reject-fixture rule(s) are declared;
+  expected_reject_fixtures says 5.
+  A spelling of continue-on-error was added or removed. If that was deliberate, change
+  expected_reject_fixtures in the same commit so the floor is a decision, not a
+  consequence of whatever rows happen to be left.
+exit=1
+>>> RED. The floor is a declared number, not a count of whatever rows remain.
+
+==================================================================
+REGRESSION: round-2 reds, one sample each
+  run-TestVerifier       make contract-drift exit=2
+  GOFLAGS-env            make contract-drift exit=2
+  in-place-edit-alone    make contract-drift exit=2
+
+==================================================================
+GREEN 1: fully restored
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 324 tests ran across 4 package(s), 0 failures, none deselected
+L exit=0
+$ ./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+W exit=0
+JOB exit=0
+$ ./scripts/ci-required-guard.sh
+exit=0
+$ git status --short
+ M .github/workflows/ci.yml
+ M internal/httpapi/lane_selection_test.go
+ M scripts/ci-required-guard.sh
+ M scripts/contract-drift-guard.py
+?? docs/evidence/pr2/F5-F6-round3-one-edit-bypasses-red-green.txt

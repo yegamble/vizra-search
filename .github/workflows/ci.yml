@@ -84,6 +84,19 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
+      # Run the lane's own shape check OUTSIDE make, before the lane.
+      #
+      # Every check inside `make contract-drift` is invoked by a line in the
+      # recipe it guards, so one Makefile edit — a duplicate `contract-drift:`
+      # target that supplies its own recipe, a `-` prefix, a SHELL override —
+      # removes the check along with the lane, and the lane reports success.
+      # This step cannot be removed by editing the Makefile, only by editing
+      # this file, which is a separate diff. scripts/ci-required-guard.sh
+      # asserts this step exists, is unconditional and is not
+      # continue-on-error, so deleting it turns `ci-required` red.
+      - name: the lane's own shape, checked outside make
+        run: ./scripts/contract-drift-guard.py recipe
+
       - name: the handlers match the canonical contract owned by vizra-core
         run: make contract-drift
 
