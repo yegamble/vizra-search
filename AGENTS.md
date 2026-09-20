@@ -348,23 +348,45 @@ The rest of `internal/httpapi/lane_selection_test.go` drives the guard against
 all nineteen bypasses in a temporary repository, with a positive control, so a
 guard that silently stopped refusing one is itself a red lane.
 
-**What one edit to `/Makefile` can no longer do:** leave the `contract-drift`
-CI job green with a vendored file edited in place. Measured for a `-` prefix,
-`|| true`, and a duplicate target that replaces the recipe — each red at the job
-and in `test`.
+**What these readings do stop.** Each was measured with a vendored file edited
+in place, and each turns a required check red:
 
-**What is not covered, stated rather than implied:**
+- a `-` prefix on a guard line, and `|| true` appended to one — red at all three
+  readings, because `recipe` reads the `Makefile` text as well as the dry-run;
+- a duplicate `contract-drift:` target that replaces the recipe — red at
+  readings 2 and 3. Reading 1 cannot run at all, so `make contract-drift` alone
+  stays green;
+- a test-selecting flag, whether written into the recipe, reached through a
+  variable or an included makefile, or carried in `GOFLAGS`/`GOTESTFLAGS`; a
+  wrapper script in place of `go test`; a lane defined inside a make
+  conditional; a listed package dropped from the lane;
+- deleting the workflow anchor, making it conditional, marking it
+  `continue-on-error`, or moving it after `make contract-drift` — red on
+  `ci-required` and on the `test` lane, not on `contract-drift` itself.
 
-- `SHELL := /usr/bin/true`, or any `SHELL` override, makes every recipe in this
-  repository a no-op, so `make contract-drift` and the job built on it go green.
-  No check written inside a `Makefile` can prevent that, and it always could.
-  The drift is still caught, because the required `test` and `test-noskip` lanes
-  run `go test` directly and go red.
+**What they do not stop, stated rather than implied:**
+
+- A `Makefile`-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is
+  **one line**, and either makes every recipe in this repository a no-op —
+  `contract-drift`, `test` and `test-noskip` alike. Measured with a vendored
+  file edited in place: `make contract-drift`, `make test` and `make test-noskip`
+  **all exit 0**. No check written inside a `Makefile` can prevent that, and
+  **no CI lane catches it today**: the workflows invoke `make test` and
+  `make test-noskip`, not `go test`, so they are no-opped too, and the only
+  command that goes red is a direct `go test ./internal/httpapi/`, which nothing
+  in CI runs. The exposure is generic to any make-driven gate, is equally true
+  of `main`, and is not introduced by this lane — what is new is that it is
+  written down. Closing it is **queued as a cross-repo hardening item**: an
+  out-of-make check that refuses a `SHELL`, `.SHELLFLAGS` or `MAKEFLAGS`
+  override anywhere in the `Makefile`, plus one required lane that runs
+  `go test` without make. Until that lands, the only backstop is human review of
+  the `Makefile` diff.
 - Editing `.github/workflows/ci.yml` as well removes reading 2. That is a second
   file and a second diff, and `ci-required` is red while the step is missing —
   but `ci-required-guard.sh` is itself checked out from the PR under test.
 - Every one of these paths is CODEOWNERS-assigned, and **CODEOWNERS is advisory
-  until the owner's ruleset requires that review**, which does not yet exist.
+  until the owner's ruleset requires that review**, which does not yet exist —
+  so the human review that backstops the first bullet is enforced by nothing.
 
 ### The manifest is editable by the PR it gates
 

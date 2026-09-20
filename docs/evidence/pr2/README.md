@@ -28,8 +28,39 @@ be built under emulation on this machine — and runs natively in CI.
 | `F8-before-the-fix.txt` | the finding: `scripts/ci-required-guard.sh` is **green** with `scripts/testdata/` deleted, green with an empty `wf-*.yml` glob, and green with a single negative fixture deleted |
 | `F8-after-the-fix-red-green.txt` | **round 1.** Five mutations red: missing directory, empty glob, missing floor fixture, missing accept fixture, and a fixture rewritten to clean YAML |
 | `F8-round2-fixture-rules-red-green.txt` | **round 2, verifier FINDING 2.** An unreadable reject fixture, an **emptied** one, one truncated to invalid YAML, one edited to trip a *different* rule than it declares, the quoted-key fixture unquoted, one made actually valid, and the accept fixture unreadable — each **red** with its own named failure; plus the round-1 reds A–E re-run and still red |
-| `F5-F6-round3-one-edit-bypasses-red-green.txt` | **round 3, verifier FINDINGS 5, 6 and 7.** The one-edit Makefile mutations that round 2 did not catch, each applied *with* a drifted vendored file, each recorded against four readings — `L` (`make contract-drift`), `W` (the out-of-make guard), `JOB` (the CI job: `W` then `L`, the required check), `T` (`go test ./internal/httpapi/`): a `-` prefix on either guard line, `\|\| true` on either guard line, and a duplicate target that **replaces** the recipe without the guard. Also the workflow anchor deleted and made conditional, the fixture-floor pin, and the **stated residual** `SHELL := /usr/bin/true`, which no in-Makefile check can catch |
+| `F5-F6-round3-one-edit-bypasses-red-green.txt` | **round 3, verifier FINDINGS 5, 6 and 7.** The one-edit Makefile mutations that round 2 did not catch, each applied *with* a drifted vendored file, each recorded against four readings — `L` (`make contract-drift`), `W` (the out-of-make guard), `JOB` (the CI job: `W` then `L`, the required check), `T` (`go test ./internal/httpapi/`): a `-` prefix on either guard line, `\|\| true` on either guard line, and a duplicate target that **replaces** the recipe without the guard. Also the workflow anchor deleted and made conditional, the fixture-floor pin, and the **stated residual** `SHELL := /usr/bin/true`, which no in-Makefile check can catch. **Read that file's `>>> RESIDUAL` annotation together with the correction below: its claim that the required `test`/`test-noskip` lanes still catch the drift is wrong.** |
 | `lanes-local.txt` | every local lane — `fmt-check`, `vet`, `echo-containment`, `build`, `contract-drift`, `test`, `test-noskip`, `tidy-check`, the fan-in guard, the workflow checker, `govulncheck` — with exit codes |
+
+## Correction — the `SHELL` residual, and `MAKEFLAGS += -i`
+
+`F5-F6-round3-one-edit-bypasses-red-green.txt` records, under
+`RESIDUAL F5b`, that `SHELL := /usr/bin/true` leaves `make contract-drift`
+green, and then annotates it: *"The drift is still caught: the required `test`
+and `test-noskip` lanes run go test directly and go red (T=1)."*
+
+**That annotation is wrong, and it is corrected here rather than rewritten** —
+the transcript is a record of what was run and is left as it was recorded. The
+`T=1` column in it is `go test -count=1 ./internal/httpapi/`, invoked directly.
+It is **not** `make test`. `.github/workflows/ci.yml` runs `make test` and
+`make test-noskip`, which are make recipes, so a `SHELL` override no-ops them
+too. Re-measured at `7babbd3` on this host (`Darwin arm64`, GNU Make 3.81,
+go1.27.1), each mutation one line in `/Makefile`, each with a vendored file
+edited in place:
+
+| `/Makefile` edit | `make contract-drift` | `make test` | `make test-noskip` | `go test ./internal/httpapi/` |
+|---|---|---|---|---|
+| none (drift only — the control) | 2 | 2 | 2 | 1 |
+| `SHELL := /usr/bin/true` | **0** | **0** | **0** | 1 |
+| `MAKEFLAGS += -i` | **0** | **0** | **0** | 1 |
+
+So `MAKEFLAGS += -i` is a second one-line edit with the same effect, and **no CI
+lane catches either one today**. The exposure is generic to any make-driven
+gate, is equally true of `main`, and is not introduced by this PR; what this PR
+owes is an accurate statement of it, which `AGENTS.md`, the `Makefile` comment
+and `scripts/contract-drift-guard.py` now carry. Closing it — an out-of-make
+check refusing `SHELL` / `.SHELLFLAGS` / `MAKEFLAGS` overrides, plus a required
+lane that runs `go test` without make — is queued as a cross-repo hardening
+item, not part of this PR.
 
 ## Counts (fix round 3)
 

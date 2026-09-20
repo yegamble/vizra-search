@@ -92,9 +92,17 @@ build: ## Build the binary
 # replaces these two lines outright. So `recipe` also runs as its own step in
 # .github/workflows/ci.yml BEFORE `make contract-drift`, where no Makefile edit
 # reaches it, and scripts/ci-required-guard.sh asserts that step is there,
-# unconditional and able to fail. See AGENTS.md for what is still not covered
-# (a SHELL override neuters every recipe here, and the required `test` lanes are
-# what catch the drift in that case).
+# unconditional and able to fail.
+#
+# What none of this stops, and AGENTS.md says the same: a Makefile-level
+# `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is one line and makes
+# EVERY recipe in this file a no-op, so contract-drift, test and test-noskip all
+# exit 0 with a vendored file edited in place. CI invokes `make test` and
+# `make test-noskip`, so they are no-opped too; only a direct
+# `go test ./internal/httpapi/` goes red, and no CI lane runs that. Nothing
+# inside a Makefile can prevent it; an out-of-make check refusing such overrides
+# is queued as a cross-repo hardening item. Until then the backstop is review of
+# this file's diff, under a CODEOWNERS entry nothing enforces yet.
 #
 # `|| true` on the test line is not swallowing the result: the `ran` step is the
 # authority on pass/fail, it prints the real test output, and `recipe` refuses
