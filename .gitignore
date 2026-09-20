@@ -1,4 +1,5 @@
 /bin/
 .test-report.json
+.contract-drift-report.json
 .go.mod.bak
 .go.sum.bak

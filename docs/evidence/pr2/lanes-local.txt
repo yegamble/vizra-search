@@ -1,0 +1,109 @@
+=== LOCAL VERIFICATION LANES — vizra-search PR2, fix round 3 ===
+host        : Darwin 25.5.0 arm64
+go (path)   : go version go1.27.1 darwin/arm64
+make        : GNU Make 3.81
+bash        : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+python3     : Python 3.9.6
+branch      : chore/revendor-core-main
+tree        : working tree on e219fc6b9f64d04d2adde87b830b2e9a4f388b5d + this round's changes
+date        : 2026-09-20T22:04:07Z
+
+------------------------------------------------------------------
+$ ./scripts/contract-drift-guard.py recipe    (the out-of-make anchor, as CI runs it)
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+exit=0
+------------------------------------------------------------------
+$ ./scripts/contract-drift-guard.py workflow  (the anchor step is present and unconditional)
+workflow anchor: .github/workflows/ci.yml:jobs.contract-drift runs `./scripts/contract-drift-guard.py recipe` unconditionally at step 2, before `make contract-drift` at step 3
+exit=0
+------------------------------------------------------------------
+$ make fmt-check
+fmt-check: clean
+exit=0
+------------------------------------------------------------------
+$ make vet
+go vet ./...
+exit=0
+------------------------------------------------------------------
+$ make echo-containment
+echo-containment: Echo is confined to internal/httpapi
+exit=0
+------------------------------------------------------------------
+$ make build
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=e219fc6-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=e219fc6b9f64d04d2adde87b830b2e9a4f388b5d -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-20T22:04:08Z' -o bin/vizra-search ./cmd/vizra-search
+exit=0
+------------------------------------------------------------------
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 324 tests ran across 4 package(s), 0 failures, none deselected
+exit=0
+------------------------------------------------------------------
+$ make test
+go test -race -count=1 ./...
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	8.089s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	1.264s
+ok  	github.com/yegamble/vizra-search/internal/config	1.909s
+ok  	github.com/yegamble/vizra-search/internal/contract	2.111s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	1.492s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	7.619s
+exit=0
+------------------------------------------------------------------
+$ make test-noskip
+test-noskip: 347 pass events, 0 skips
+exit=0
+------------------------------------------------------------------
+$ make tidy-check
+tidy-check: tidy
+exit=0
+------------------------------------------------------------------
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+workflow anchor: .github/workflows/ci.yml:jobs.contract-drift runs `./scripts/contract-drift-guard.py recipe` unconditionally at step 2, before `make contract-drift` at step 3
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+------------------------------------------------------------------
+$ ./scripts/check-workflows.py
+workflows parsed: 2; no continue-on-error on any job or step
+exit=0
+------------------------------------------------------------------
+$ govulncheck -version && govulncheck ./...   (local arm64; CI runs the same pinned v1.8.0 on ubuntu-24.04 amd64)
+Go: go1.27.1
+Scanner: govulncheck@v1.8.0
+DB: https://vuln.go.dev
+DB updated: 2026-09-16 18:00:43 +0000 UTC
+
+No vulnerabilities found.
+exit=0
+------------------------------------------------------------------
+$ make ci
+make ci exit=0
+------------------------------------------------------------------
+$ make clean && git status --short   (no stray report file left behind)
+rm -rf bin .test-report.json .contract-drift-report.json
+ M .github/workflows/ci.yml
+ M AGENTS.md
+ M Makefile
+ M docs/evidence/pr2/README.md
+ M docs/evidence/pr2/lanes-local.txt
+ M internal/httpapi/lane_selection_test.go
+ M scripts/ci-required-guard.sh
+ M scripts/contract-drift-guard.py
+?? docs/evidence/pr2/F5-F6-round3-one-edit-bypasses-red-green.txt

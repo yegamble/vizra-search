@@ -57,10 +57,64 @@ echo-containment: ## ADR-001: Echo types stay inside internal/httpapi
 build: ## Build the binary
 	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/$(BINARY) ./cmd/$(BINARY)
 
+# contract-drift selects by PACKAGE, never by test name.
+#
+# It used to carry a `-run` regex of name fragments. That is a guard tied to a
+# naming habit: renaming a test to something the regex does not match silently
+# drops it out of the lane, with no failure anywhere to say so. It had already
+# happened. The manifest guard was `TestVendoredContractMatchesItsManifest`,
+# which the regex's `Contract` fragment matched; it was renamed to
+# `TestEveryVendoredFileMatchesItsManifest`, which matches no fragment in the
+# regex. From then on, editing a vendored file in place — or zeroing a sha256 in
+# api/CONTRACT-SOURCE.json — left this lane GREEN. The mutation died only under
+# the broader `make ci`, which is not the lane whose name says it checks drift.
+#
+# The lane is therefore bracketed by two steps that `go test` cannot deselect,
+# because the first attempt at this fix put the rule in a Go test INSIDE the
+# lane — and `-run 'TestVerifier'` then deselected the very guard that forbids
+# `-run`, leaving `ok … [no tests to run]` and exit 0 with the contract drifted.
+#
+#   recipe  asks `make --dry-run` what this lane will ACTUALLY run — which
+#           resolves variables, includes and duplicate targets that a text
+#           parser misses — and refuses any flag, wrapper or environment
+#           variable that could deselect a guard, plus any package holding a
+#           vendored-file guard that is missing from the list below. It ALSO
+#           reads this file's text, because a `-` prefix on a recipe line makes
+#           make ignore that line's exit status and `make --dry-run` prints the
+#           command WITHOUT the `-`: the guard would refuse the lane, print its
+#           refusal, and the lane would still exit 0.
+#   ran     reads the report afterwards and refuses a lane that ran zero tests
+#           in any listed package, which is what a filter that selects nothing
+#           looks like from the outside.
+#
+# A recipe step alone is not enough: every check invoked by this recipe dies
+# with it, and a duplicate `contract-drift:` target supplying its own recipe
+# replaces these two lines outright. So `recipe` also runs as its own step in
+# .github/workflows/ci.yml BEFORE `make contract-drift`, where no Makefile edit
+# reaches it, and scripts/ci-required-guard.sh asserts that step is there,
+# unconditional and able to fail.
+#
+# What none of this stops, and AGENTS.md says the same: a Makefile-level
+# `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is one line and makes
+# EVERY recipe in this file a no-op, so contract-drift, test and test-noskip all
+# exit 0 with a vendored file edited in place. CI invokes `make test` and
+# `make test-noskip`, so they are no-opped too; only a direct
+# `go test ./internal/httpapi/` goes red, and no CI lane runs that. Nothing
+# inside a Makefile can prevent it; an out-of-make check refusing such overrides
+# is queued as a cross-repo hardening item. Until then the backstop is review of
+# this file's diff, under a CODEOWNERS entry nothing enforces yet.
+#
+# `|| true` on the test line is not swallowing the result: the `ran` step is the
+# authority on pass/fail, it prints the real test output, and `recipe` refuses
+# the lane if that step is not the last command.
+DRIFT_PKGS   := ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+DRIFT_REPORT := .contract-drift-report.json
+
 .PHONY: contract-drift
 contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
-	go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
-		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+	./scripts/contract-drift-guard.py recipe
+	go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+	./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
 
 .PHONY: test
 test: ## Full test suite with the race detector
@@ -112,4 +166,4 @@ docker-build: ## Build the image natively (no emulation)
 
 .PHONY: clean
 clean: ## Remove build output
-	rm -rf bin .test-report.json
+	rm -rf bin .test-report.json $(DRIFT_REPORT)

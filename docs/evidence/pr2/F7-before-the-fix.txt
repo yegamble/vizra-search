@@ -1,0 +1,101 @@
+=== F7 BEFORE THE FIX: 'make contract-drift' does not select the manifest guard ===
+host : Darwin 25.5.0 arm64
+go   : go version go1.27.1 darwin/arm64
+tree : chore/revendor-core-main, api/ re-vendored from vizra-core main@415a6d1, manifest updated
+       (git HEAD 581d79d + the uncommitted re-vendor; the lane recipe is still the one PR #1 shipped)
+
+--- the lane recipe as shipped by PR #1 ---
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+
+--- that -run regex does not match the guard test's name ---
+$ go test -count=1 -list 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' ./internal/httpapi/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.262s
+TestErrorHandlerRendersTheContractErrorShape
+TestEveryInternalOperationIsSecured
+TestIdenticalRequestsCanStillBeReplayedInsideTheWindowAtM0
+TestNoDriftFromTheCanonicalContract
+TestReadyzAlsoReportsNoSearchSchemaVersion
+TestRejectionBodiesUseTheContractErrorShape
+TestResponseBodiesSatisfyTheContractSchemas
+TestRoutesAreExactlyTheContractSurface
+TestSignatureRemainsValidInsideTheWindow
+TestTheContractSchemasActuallyRejectDrift
+TestTheContractsFixedNumbersMatchTheImplementation
+TestTheContractStillDeclaresTheQ001Surface
+TestTheVendoredVectorsAreUsable
+TestVersionReportsNoSearchSchemaVersion
+
+>>> TestEveryVendoredFileMatchesItsManifest is ABSENT from that list.
+    PR #1 renamed it from a 'Contract...'-prefixed name and it fell out of the regex.
+
+=== GREEN BASELINE: make contract-drift, unmutated ===
+$ make contract-drift
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.594s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.247s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.412s
+exit=0
+
+=== MUTATION 1: edit a vendored file IN PLACE (the exact failure this repo exists to prevent) ===
+$ tail -2 api/search-internal.openapi.yaml
+
+# drift injected by the F7 demonstration
+$ shasum -a 256 api/search-internal.openapi.yaml
+fee490dc9237d749e438afb066cf3a5986c03617bf166ec43154426ef459d71f  api/search-internal.openapi.yaml
+
+$ make contract-drift
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.241s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.546s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.392s
+exit=0
+>>> F7 CONFIRMED: the lane is GREEN with a vendored file edited in place.
+
+--- the guard test exists and does catch it; the LANE simply never runs it ---
+$ go test -count=1 -run TestEveryVendoredFileMatchesItsManifest ./internal/httpapi/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:106: the vendored api/search-internal.openapi.yaml does not match its manifest.
+          manifest sha256: a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+          file sha256:     fee490dc9237d749e438afb066cf3a5986c03617bf166ec43154426ef459d71f
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+    contract_drift_test.go:111: the vendored api/search-internal.openapi.yaml is 25339 bytes, the manifest says 25297
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.248s
+FAIL
+exit=1
+
+=== MUTATION 2: zero the vectors sha256 in api/CONTRACT-SOURCE.json ===
+$ jq -r '.files[] | .vendored_path + "  " + .sha256' api/CONTRACT-SOURCE.json
+api/search-internal.openapi.yaml  a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+api/search-hmac-testvectors.json  0000000000000000000000000000000000000000000000000000000000000000
+
+$ make contract-drift
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.247s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.388s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.553s
+exit=0
+>>> F7 CONFIRMED: the lane is GREEN with a manifest sha256 zeroed.
+
+--- again, the guard test by name does catch it ---
+$ go test -count=1 -run TestEveryVendoredFileMatchesItsManifest ./internal/httpapi/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:106: the vendored api/search-hmac-testvectors.json does not match its manifest.
+          manifest sha256: 0000000000000000000000000000000000000000000000000000000000000000
+          file sha256:     ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.251s
+FAIL
+exit=1
+
+=== RESTORED: both digests match the manifest again ===
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.243s
+exit=0
+a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448  api/search-internal.openapi.yaml
+ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3  api/search-hmac-testvectors.json

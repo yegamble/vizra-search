@@ -1,0 +1,192 @@
+=== FINDING 1/3 AFTER THE FIX ===
+host : Darwin 25.5.0 arm64
+go   : go version go1.27.1 darwin/arm64
+make : GNU Make 3.81
+py   : Python 3.9.6
+
+--- the lane is now bracketed by a step go test cannot deselect ---
+DRIFT_PKGS   := ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+DRIFT_REPORT := .contract-drift-report.json
+
+.PHONY: contract-drift
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	./scripts/contract-drift-guard.py recipe
+	go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+	./scripts/contract-drift-guard.py ran $(DRIFT_REPORT)
+
+==================================================================
+GREEN 0: clean tree, clean recipe
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 315 tests ran across 4 package(s), 0 failures, none deselected
+exit=0
+
+==================================================================
+RED 1: THE VERIFIER'S EXACT CASE — -run 'TestVerifier' + a vendored file edited in place
+  Before this fix: 'ok … [no tests to run]' on three packages and EXIT 0.
+$ shasum -a 256 api/search-internal.openapi.yaml
+e5a415261ed9517ac9fd6f97bb88cc99c81dee2a1b31efe12753e4cef0f3bc55  api/search-internal.openapi.yaml
+$ grep 'go test' Makefile
+	go test -count=1 -json -run 'TestVerifier' $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: the contract-drift lane carries -run.
+  The lane must select by PACKAGE, not by test name, tag or duration: a name
+  filter silently drops a guard out of the lane the day someone renames it,
+  with nothing to say so. That is finding F7, and it is why this guard exists.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED. The bypass is closed.
+
+==================================================================
+RED 2: -run selecting NOTHING at all, + drift
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: the contract-drift lane carries -run.
+  The lane must select by PACKAGE, not by test name, tag or duration: a name
+  filter silently drops a guard out of the lane the day someone renames it,
+  with nothing to say so. That is finding F7, and it is why this guard exists.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 3: -run hidden in a make variable ($(TESTFLAGS)), + drift
+$ grep -n 'TESTFLAGS' Makefile
+89:TESTFLAGS ?= -run=TestNothingAtAll
+96:	go test -count=1 -json $(TESTFLAGS) $(DRIFT_PKGS) > $(DRIFT_REPORT) || true
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: the contract-drift lane carries -run.
+  The lane must select by PACKAGE, not by test name, tag or duration: a name
+  filter silently drops a guard out of the lane the day someone renames it,
+  with nothing to say so. That is finding F7, and it is why this guard exists.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 4: GOFLAGS=-run=… in the ENVIRONMENT (never appears in the recipe), + drift
+$ GOFLAGS=-run=TestNothingAtAll make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: GOFLAGS in the environment carries -run: '-run=TestNothingAtAll'
+  `go test` reads that as if it were on the command line, so it can deselect
+  a guard without appearing in the recipe at all. Unset it for this lane.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 5: a SECOND contract-drift target appended (make runs the last; a text parser reads the first), + drift
+$ make contract-drift
+Makefile:151: warning: overriding commands for target `contract-drift'
+Makefile:94: warning: ignoring old commands for target `contract-drift'
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: make reports a DUPLICATE `contract-drift` target:
+    Makefile:151: warning: overriding commands for target `contract-drift'
+    Makefile:94: warning: ignoring old commands for target `contract-drift'
+  make runs the LAST definition while a reader — and any text-based check —
+  sees the first. The lane must have exactly one recipe.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 6: the flag defined in an INCLUDED makefile, + drift
+$ cat drift.mk
+TESTFLAGS := -run=TestNothingAtAll
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: the contract-drift lane carries -run.
+  The lane must select by PACKAGE, not by test name, tag or duration: a name
+  filter silently drops a guard out of the lane the day someone renames it,
+  with nothing to say so. That is finding F7, and it is why this guard exists.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 7: go test moved behind a WRAPPER SCRIPT, + drift
+$ grep -n 'drift-wrapper' Makefile
+95:	./scripts/drift-wrapper.sh 20 20 12 61 79 80 81 98 701 33 100 204 250 395 398 399 400DRIFT_PKGS) > $(DRIFT_REPORT) || true
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: the lane runs './scripts/drift-wrapper.sh' instead of `go test`:
+    ./scripts/drift-wrapper.sh 20 20 12 61 79 80 81 98 701 33 100 204 250 395 398 399 400DRIFT_PKGS) > .contract-drift-report.json || true
+  A wrapper can add flags this guard never sees. The lane must invoke `go test`
+  directly.
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 8: the recipe guard step DELETED (the control removed outright), + drift
+$ make contract-drift
+    contract_drift_test.go:111: the vendored api/search-internal.openapi.yaml is 25327 bytes, the manifest says 25297
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    hardening_test.go:364: M0 behaviour confirmed: an identical request replayed inside the window is accepted; the timestamp window is the whole replay bound
+    lane_selection_test.go:98: the lane's FIRST command must be `./scripts/contract-drift-guard.py recipe`, so the lane's shape is checked
+        	before any test runs — a check inside `go test` can be deselected by `-run`.
+        	got: go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+--- FAIL: TestTheContractDriftLaneIsGuardedFromOutsideGoTest (0.05s)
+PASS
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	3.608s
+CONTRACT-DRIFT LANE REFUSED: 2 test(s) failed: github.com/yegamble/vizra-search/internal/httpapi.TestEveryVendoredFileMatchesItsManifest, github.com/yegamble/vizra-search/internal/httpapi.TestTheContractDriftLaneIsGuardedFromOutsideGoTest
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED (the in-lane second layer catches the missing step).
+
+==================================================================
+RED 9: the in-place edit alone, no recipe change at all (F7's original acceptance)
+$ make contract-drift
+          file sha256:     e5a415261ed9517ac9fd6f97bb88cc99c81dee2a1b31efe12753e4cef0f3bc55
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+    contract_drift_test.go:111: the vendored api/search-internal.openapi.yaml is 25327 bytes, the manifest says 25297
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    hardening_test.go:364: M0 behaviour confirmed: an identical request replayed inside the window is accepted; the timestamp window is the whole replay bound
+PASS
+    publishedkeys_test.go:189: scanned 3 key literals in _test.go sources; every one is refused in production
+PASS
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	3.710s
+CONTRACT-DRIFT LANE REFUSED: 1 test(s) failed: github.com/yegamble/vizra-search/internal/httpapi.TestEveryVendoredFileMatchesItsManifest
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+RED 10: a manifest sha256 zeroed, no recipe change
+$ make contract-drift
+          file sha256:     a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    hardening_test.go:364: M0 behaviour confirmed: an identical request replayed inside the window is accepted; the timestamp window is the whole replay bound
+    publishedkeys_test.go:189: scanned 3 key literals in _test.go sources; every one is refused in production
+PASS
+PASS
+PASS
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	3.857s
+CONTRACT-DRIFT LANE REFUSED: 1 test(s) failed: github.com/yegamble/vizra-search/internal/httpapi.TestEveryVendoredFileMatchesItsManifest
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED.
+
+==================================================================
+GREEN 1: fully restored
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 315 tests ran across 4 package(s), 0 failures, none deselected
+exit=0
+$ git status --short
+ M docs/evidence/pr2/F7-round2-lane-guard-red-green.txt
+ M docs/evidence/pr2/lanes-local.txt
+ M scripts/contract-drift-guard.py
+?? docs/evidence/pr2/F7-round2-make-version-portability.txt

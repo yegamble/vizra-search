@@ -1,0 +1,72 @@
+=== D-KEY: the published-key refusal and the vector loader against the RE-VENDORED files ===
+commit under test: working tree on chore/revendor-core-main, api/ re-vendored from vizra-core main@415a6d1
+go: go version go1.27.1 darwin/arm64
+
+--- key_utf8 as it now sits in the vendored file, and the new sibling field ---
+{
+  "key_utf8": "Ar4Lo8Cq2Ei6Uk0Wn3Sv7Yb1Md5Pt9Xz",
+  "key_utf8_warning_present": true,
+  "warning_len": 362
+}
+
+$ go test -count=1 -v -run 'TestTheVectorsPublishedKeyIsStillTheOneWeRefuse|TestProductionRefusesThePublishedVectorsKey|TestCheckEnvRefusesThePublishedVectorsKey|TestDevelopmentStillAcceptsThePublishedKeys|TestProductionRefusesEveryPublishedKey|TestEveryKeyLiteralInThisRepositoryIsRefused' ./internal/config/
+=== RUN   TestTheVectorsPublishedKeyIsStillTheOneWeRefuse
+--- PASS: TestTheVectorsPublishedKeyIsStillTheOneWeRefuse (0.00s)
+=== RUN   TestProductionRefusesThePublishedVectorsKey
+--- PASS: TestProductionRefusesThePublishedVectorsKey (0.00s)
+=== RUN   TestDevelopmentStillAcceptsThePublishedKeys
+--- PASS: TestDevelopmentStillAcceptsThePublishedKeys (0.00s)
+=== RUN   TestProductionRefusesEveryPublishedKey
+--- PASS: TestProductionRefusesEveryPublishedKey (0.00s)
+=== RUN   TestCheckEnvRefusesThePublishedVectorsKey
+--- PASS: TestCheckEnvRefusesThePublishedVectorsKey (0.00s)
+=== RUN   TestEveryKeyLiteralInThisRepositoryIsRefused
+    publishedkeys_test.go:189: scanned 3 key literals in _test.go sources; every one is refused in production
+--- PASS: TestEveryKeyLiteralInThisRepositoryIsRefused (0.01s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/config	0.259s
+exit=0
+
+--- the vector loader still consumes both halves of the re-vendored file ---
+$ go test -count=1 -v -run 'Vector' ./internal/hmacauth/ ./internal/httpapi/
+=== RUN   TestTheVendoredVectorsCoverTheContractsWindow
+--- PASS: TestTheVendoredVectorsCoverTheContractsWindow (0.00s)
+=== RUN   TestVerifierReproducesTheSharedVectors
+=== RUN   TestVerifierReproducesTheSharedVectors/search-empty-body
+=== RUN   TestVerifierReproducesTheSharedVectors/search-simple
+=== RUN   TestVerifierReproducesTheSharedVectors/suggestions
+=== RUN   TestVerifierReproducesTheSharedVectors/events-batch
+=== RUN   TestVerifierReproducesTheSharedVectors/unicode-body
+--- PASS: TestVerifierReproducesTheSharedVectors (0.00s)
+=== RUN   TestVerifierRefusesEveryNegativeVector
+=== RUN   TestVerifierRefusesEveryNegativeVector/method-lowercase
+=== RUN   TestVerifierRefusesEveryNegativeVector/method-mixed-case
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-plus
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-zero
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-zeros
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-space
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-trailing-space
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-underscores
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-empty
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-stale-past-window
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-future-past-window
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-zero
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-one
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-year-10000
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-ahead
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-far
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-max-int64
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-max-int64-overflow
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-uppercase-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-not-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-too-short
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-empty
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duplicated-header
+--- PASS: TestVerifierRefusesEveryNegativeVector (0.00s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.241s
+=== RUN   TestTheVendoredVectorsAreUsable
+--- PASS: TestTheVendoredVectorsAreUsable (0.00s)
+PASS
+exit=
