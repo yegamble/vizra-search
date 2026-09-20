@@ -1,0 +1,54 @@
+=== E1  the built image serves the boundary end to end (native arm64 dev build) ===
+repo:     yegamble/vizra-search
+commit:   271ac34cebf0c864d1ab4472764465003bcb7a15
+date:     2026-09-20T18:06:26Z
+host:     Darwin arm64 / docker linux/arm64
+image:    vizra-search:local  10.4MB
+
+NOTE: ADR-009 / Q-027 makes Ubuntu 24.04 on native amd64 the only qualified
+acceptance target and publishes linux/amd64 images only. This local run is a
+native arm64 developer build with NO support claim; the amd64 evidence is the
+docker-build lane on the ubuntu-24.04 runner.
+
+--- the image refuses the development key in production mode ---
+vizra-search: invalid vizra-search configuration:
+  - SEARCH_HMAC_KEY is the documented development placeholder and is refused in production mode
+[exit code: 1]
+
+--- container health status (the HEALTHCHECK the scratch image self-probes) ---
+healthy
+
+--- GET /healthz ---
+{"status":"ok"}
+
+--- GET /readyz  ---
+{"status":"ok","components":[],"search_schema_version":null,"checked_at":"2026-09-20T18:06:34Z"}
+
+--- GET /version ---
+{"release":"local","commit":"271ac34cebf0c864d1ab4472764465003bcb7a15","built_at":"2026-09-20T18:05:25Z","go_version":"go1.27.1","image_digest":null,"search_schema_version":null}
+
+
+--- POST /internal/v1/search  UNSIGNED  (expect 401 signature_rejected) ---
+{"error":{"code":"signature_rejected","message":"request authentication failed"}}
+
+[http 401]
+
+--- POST /internal/v1/search  SIGNED  (expect 200 not_indexed) ---
+{"status":"not_indexed","results":[],"total":0,"search_schema_version":null}
+
+[http 200]
+
+--- the same signature replayed against a DIFFERENT endpoint (expect 401) ---
+{"error":{"code":"signature_rejected","message":"request authentication failed"}}
+
+[http 401]
+
+--- container log (must carry no key, nonce or signature) ---
+{"time":"2026-09-20T18:06:26.692451878Z","level":"INFO","msg":"starting","config":{"mode":"production","addr":":8081","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"local","commit":"271ac34cebf0c864d1ab4472764465003bcb7a15"}
+{"time":"2026-09-20T18:06:34.852366757Z","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/search","status":401,"reason":"missing_signature"}
+{"time":"2026-09-20T18:06:34.880093215Z","level":"INFO","msg":"request","method":"POST","path":"/internal/v1/search","body_bytes":96}
+{"time":"2026-09-20T18:06:34.890305465Z","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/events","status":401,"reason":"bad_signature"}
+
+log contains the shared key:  0
+log contains the signature:   0
+log contains the nonce:       0

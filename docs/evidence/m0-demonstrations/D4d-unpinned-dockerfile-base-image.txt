@@ -1,0 +1,61 @@
+=== D4d-unpinned-dockerfile-base-image ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  271ac34cebf0c864d1ab4472764465003bcb7a15
+date:      2026-09-20T18:05:13Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D4: every pullable base image is pinned by digest, so a moved tag cannot
+change what CI builds and what operators run.
+Mutation: replace the digest-pinned builder with a floating tag.
+
+--- mutation applied ---
+diff --git a/Dockerfile b/Dockerfile
+index 4b0816a..b829f0c 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -18,3 +18,3 @@
+ # CI runner and on an Apple-Silicon developer machine.
+-FROM golang@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS build
++FROM golang:1.27.1-bookworm AS build
+ 
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+UNPINNED BASE IMAGE: 'golang:1.27.1-bookworm' is not pinned by @sha256 digest
+[exit code: 1]
+
+--- restore ---
+source tree clean at 271ac34cebf0c864d1ab4472764465003bcb7a15
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+[exit code: 0]

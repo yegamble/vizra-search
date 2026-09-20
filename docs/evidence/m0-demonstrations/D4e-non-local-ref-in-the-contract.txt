@@ -1,0 +1,61 @@
+=== D4e-non-local-ref-in-the-contract ===
+repo:      yegamble/vizra-search
+branch:    feat/m0-minimal-service
+baseline:  271ac34cebf0c864d1ab4472764465003bcb7a15
+date:      2026-09-20T18:05:14Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D4: a $ref that points outside the document is refused before anything
+resolves it, so the drift check cannot depend on an unreviewed file and the
+parser cannot become a file-disclosure or SSRF primitive.
+Mutation: point the SearchResponse reference at an external URL.
+
+--- mutation applied ---
+diff --git a/api/search-internal.openapi.yaml b/api/search-internal.openapi.yaml
+index 7792eb7..60a2389 100644
+--- a/api/search-internal.openapi.yaml
++++ b/api/search-internal.openapi.yaml
+@@ -138,3 +138,3 @@ paths:
+               schema:
+-                $ref: "#/components/schemas/SearchResponse"
++                $ref: "https://example.invalid/evil.yaml#/components/schemas/SearchResponse"
+         "400":
+
+--- RED: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+--- FAIL: TestVendoredContractMatchesItsManifest (0.00s)
+    contract_drift_test.go:67: the vendored contract does not match its manifest.
+          manifest sha256: 5bf9dd22a2209dbfacb99f4c2d2d620ff15e0465f9b98228ec120983a3bf448a
+          file sha256:     af09aa3d9b9631110e7a51e56e73467dbb38323941a6d5a8e11233075ce61b50
+        This repository does not own api/search-internal.openapi.yaml. Re-vendor it from yegamble/vizra-core@b0dbeb6dc27294fe793492ea60bc18b6aed4b042 instead of editing it.
+--- FAIL: TestNoDriftFromTheCanonicalContract (0.00s)
+    contract_drift_test.go:91: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+--- FAIL: TestTheContractStillDeclaresTheQ001Surface (0.00s)
+    contract_drift_test.go:102: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+--- FAIL: TestEveryInternalOperationIsSecured (0.00s)
+    contract_drift_test.go:126: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+--- FAIL: TestResponseBodiesSatisfyTheContractSchemas (0.00s)
+    contract_drift_test.go:142: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+--- FAIL: TestTheContractSchemasActuallyRejectDrift (0.00s)
+    contract_drift_test.go:171: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+--- FAIL: TestRejectionBodiesUseTheContractErrorShape (0.00s)
+    contract_drift_test.go:210: loading the canonical contract: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.906s
+--- FAIL: TestTheRealContractUsesOnlyLocalRefs (0.00s)
+    contract_test.go:351: the vendored canonical contract does not parse: contract: $.paths./internal/v1/search.post.responses.200.content.application/json.schema.$ref = "https://example.invalid/evil.yaml#/components/schemas/SearchResponse" is not a local reference; only local "#/..." references are allowed, so the contract cannot pull in a document nobody reviewed
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/contract	0.575s
+FAIL
+make: *** [contract-drift] Error 1
+[exit code: 2]
+
+--- restore ---
+source tree clean at 271ac34cebf0c864d1ab4472764465003bcb7a15
+
+--- GREEN: make contract-drift ---
+go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.437s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.647s
+[exit code: 0]
