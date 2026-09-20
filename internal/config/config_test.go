@@ -69,12 +69,15 @@ func TestProductionRefusesUnsafeHMACKeys(t *testing.T) {
 		{"the documented dev key", config.DevHMACKey, "development placeholder"},
 		{"empty", "", "must be set"},
 		{"whitespace only", "   ", "must be set"},
-		{"short", "abc123", "at least"},
+		{"short", "abc123", "at least 32 bytes"},
 		{"changeme", "changeme-changeme-changeme-changeme", "development placeholder"},
 		{"dev prefix", "dev-0123456789abcdef0123456789abcdef", "development placeholder"},
 		{"test prefix", "test-0123456789abcdef0123456789abcdef", "development placeholder"},
 		{"insecure substring", "0123456789-insecure-0123456789abcdef", "development placeholder"},
-		{"repeated byte", strings.Repeat("a", 48), "distinct"},
+		{"repeated byte", strings.Repeat("a", 48), "distinct byte values"},
+		// 31 bytes with plenty of variety: only the length rule can catch it,
+		// so this case cannot pass by accident through another refusal.
+		{"one byte below the floor", "0123456789abcdefghijklmnopqrstu", "at least 32 bytes"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

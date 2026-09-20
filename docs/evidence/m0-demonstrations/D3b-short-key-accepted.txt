@@ -1,0 +1,43 @@
+=== D3b-short-key-accepted ===
+repo:      yegamble/vizra-search
+baseline:  7abf36918beaad9116deeb24f6696446592bd7ba (feat/m0-minimal-service)
+date:      2026-09-20T17:59:16Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+D3: production refuses a key shorter than 32 bytes.
+
+--- mutation applied ---
+diff --git a/docs/evidence/m0-demonstrations/D3a-production-accepts-dev-key.txt b/docs/evidence/m0-demonstrations/D3a-production-accepts-dev-key.txt
+index b7c9544..0ccc545 100644
+--- a/docs/evidence/m0-demonstrations/D3a-production-accepts-dev-key.txt
++++ b/docs/evidence/m0-demonstrations/D3a-production-accepts-dev-key.txt
+@@ -35 +35,7 @@ ok  	github.com/yegamble/vizra-search/cmd/vizra-search	1.266s
+ [exit code: 0]
++working tree is clean at 7abf36918beaad9116deeb24f6696446592bd7ba
++
++--- GREEN: go test -count=1 ./internal/config/ ./cmd/... ---
++ok  	github.com/yegamble/vizra-search/internal/config	0.178s
++ok  	github.com/yegamble/vizra-search/cmd/vizra-search	6.482s
++[exit code: 0]
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 1506d77..4775eaa 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -309,3 +309,3 @@ func (v *validator) hmacKey(mode Mode) []byte {
+ 	}
+-	if len(key) < MinProductionKeyBytes {
++	if false { // MUTATION: accept any key length
+ 		v.addf("%s must be at least %d bytes in %s mode", EnvHMACKey, MinProductionKeyBytes, ModeProduction)
+
+--- RED: go test -count=1 ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.231s
+[exit code: 0]
+!!! DEMONSTRATION FAILED: the mutation did not turn the check red
+
+--- restore (git checkout -- .) ---
+working tree is clean at 7abf36918beaad9116deeb24f6696446592bd7ba
+
+--- GREEN: go test -count=1 ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.202s
+[exit code: 0]
