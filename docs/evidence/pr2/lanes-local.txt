@@ -1,0 +1,84 @@
+=== LOCAL VERIFICATION LANES — vizra-search PR2 ===
+host        : Darwin 25.5.0 arm64
+go (path)   : go version go1.27.1 darwin/arm64
+make        : GNU Make 3.81
+branch      : chore/revendor-core-main
+base commit : 581d79dc01e11fcbab9149eec95707d4637b46e4  (working tree; head SHA recorded again after commit)
+date        : 2026-09-20T20:55:28Z
+
+------------------------------------------------------------------
+$ make fmt-check
+fmt-check: clean
+exit=0
+------------------------------------------------------------------
+$ make vet
+go vet ./...
+exit=0
+------------------------------------------------------------------
+$ make echo-containment
+echo-containment: Echo is confined to internal/httpapi
+exit=0
+------------------------------------------------------------------
+$ make build
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=581d79d-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=581d79dc01e11fcbab9149eec95707d4637b46e4 -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-20T20:55:28Z' -o bin/vizra-search ./cmd/vizra-search
+exit=0
+------------------------------------------------------------------
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.364s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.509s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.841s
+ok  	github.com/yegamble/vizra-search/internal/config	0.675s
+exit=0
+------------------------------------------------------------------
+$ make test
+go test -race -count=1 ./...
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	2.741s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	1.235s
+ok  	github.com/yegamble/vizra-search/internal/config	1.694s
+ok  	github.com/yegamble/vizra-search/internal/contract	2.103s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	1.871s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	2.369s
+exit=0
+------------------------------------------------------------------
+$ make test-noskip
+test-noskip: 321 pass events, 0 skips
+exit=0
+------------------------------------------------------------------
+$ make tidy-check
+tidy-check: tidy
+exit=0
+------------------------------------------------------------------
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+------------------------------------------------------------------
+$ ./scripts/check-workflows.py
+workflows parsed: 2; no continue-on-error on any job or step
+exit=0
+------------------------------------------------------------------
+$ govulncheck -version && govulncheck ./...   (local arm64; CI runs the same pinned v1.8.0 on ubuntu-24.04 amd64)
+Go: go1.27.1
+Scanner: govulncheck@v1.8.0
+DB: https://vuln.go.dev
+DB updated: 2026-09-16 18:00:43 +0000 UTC
+
+No vulnerabilities found.
+exit=0

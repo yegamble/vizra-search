@@ -111,9 +111,59 @@ echo "every pullable Dockerfile base image is pinned by digest"
 # catch. A checker that silently stopped matching would leave the gate open,
 # so its fixtures are exercised on every run rather than only in a
 # demonstration.
-for fixture in scripts/testdata/wf-*.yml; do
+#
+# The fixture set is therefore a FLOOR, checked by name, exactly like the lane
+# floor above — and for the same reason. `for fixture in scripts/testdata/*.yml`
+# alone is green when the fixtures are gone: with no match bash passes the
+# literal glob through, the checker is handed a path that does not exist and
+# exits non-zero, and the "must be rejected" branch reads that as a pass. So a
+# deleted fixture directory, an empty glob, or a single missing negative fixture
+# each have to be a NAMED failure, not a silent one.
+fixtures_dir="scripts/testdata"
+accept_fixture="wf-clean.yml"
+# Every spelling of continue-on-error that a literal grep would miss. Each of
+# these must still be REJECTED by scripts/check-workflows.py.
+reject_fixtures="wf-plain.yml
+wf-quoted-key.yml
+wf-capitalised.yml
+wf-expression.yml
+wf-false.yml"
+
+test -d "$fixtures_dir" || {
+  echo "MISSING FIXTURES: '$fixtures_dir' does not exist."
+  echo "  The workflow checker's negative fixtures are what prove it still catches every"
+  echo "  spelling of continue-on-error. With the directory gone there is nothing to prove"
+  echo "  it with, and this guard must not pass by default."
+  exit 1
+}
+
+missing_fixture=0
+for fixture in $accept_fixture $reject_fixtures; do
+  if [ ! -f "$fixtures_dir/$fixture" ]; then
+    echo "MISSING FIXTURE: '$fixtures_dir/$fixture' is a non-optional fixture and is absent."
+    echo "  It is in the floor because the checker must keep proving it handles that spelling."
+    missing_fixture=1
+  fi
+done
+test "$missing_fixture" = "0" || exit 1
+
+# Now run every fixture actually present — the floor above is a minimum, not a
+# maximum, so a fixture added later is exercised too. An empty glob is refused
+# rather than skipped.
+shopt -s nullglob
+present=("$fixtures_dir"/wf-*.yml)
+shopt -u nullglob
+if [ "${#present[@]}" -eq 0 ]; then
+  echo "NO FIXTURES MATCHED: '$fixtures_dir/wf-*.yml' matched nothing."
+  echo "  An empty fixture glob must fail loudly; it previously left this guard green."
+  exit 1
+fi
+
+checked=0
+for fixture in "${present[@]}"; do
+  test -f "$fixture" || { echo "fixture '$fixture' is not a readable file"; exit 1; }
   case "$fixture" in
-    *wf-clean.yml)
+    *"/$accept_fixture")
       if ! ./scripts/check-workflows.py "$fixture" >/dev/null 2>&1; then
         echo "the workflow checker rejected its own clean fixture: $fixture"
         exit 1
@@ -126,5 +176,14 @@ for fixture in scripts/testdata/wf-*.yml; do
       fi
       ;;
   esac
+  checked=$((checked + 1))
 done
-echo "the workflow checker rejects every continue-on-error spelling in scripts/testdata/"
+
+# A count, not a claim. The floor is 1 accept fixture + the reject fixtures
+# named above; anything fewer means the loop skipped something.
+floor_count=$(($(printf '%s\n' "$reject_fixtures" | grep -c . ) + 1))
+if [ "$checked" -lt "$floor_count" ]; then
+  echo "only $checked fixture(s) were exercised; the floor is $floor_count"
+  exit 1
+fi
+echo "the workflow checker rejects every continue-on-error spelling in $fixtures_dir/ ($checked fixtures exercised, floor $floor_count)"

@@ -1,0 +1,72 @@
+=== re-vendor provenance ===
+source repository : yegamble/vizra-core
+source ref        : main
+source commit     : 415a6d19cfc0acedd8ad84c1857c95db0ed63627
+generated         : 2026-09-20T20:50:35Z
+host              : Darwin 25.5.0 arm64
+
+--- 1. the new source commit exists and is the tip of core's main ---
+415a6d1 feat: M0 foundation — config + doctor, migrations 0001-0004, authz evaluator, jobs, OpenAPI + sqlc drift, core↔search HMAC contract, ci-required (#1)
+415a6d19cfc0acedd8ad84c1857c95db0ed63627	refs/heads/main
+
+--- 2. the OLD recorded source_commit 2b9c540 (core feat/m0-foundation) is unreachable on the remote ---
+$ gh api repos/yegamble/vizra-core/branches/feat/m0-foundation
+  -> HTTP 404 Branch not found
+$ gh api repos/yegamble/vizra-core/compare/main...2b9c540e81960954ee39e6a2aeec027e0f764a67 --jq .status
+  -> diverged  (i.e. not an ancestor of main; it survived core's squash-merge only as a dangling object)
+(a stale LOCAL branch of that name still exists in this machine's core checkout; the remote has only refs/heads/main, shown above)
+
+--- 3. what changed in core between 2b9c540 and 415a6d19cfc0acedd8ad84c1857c95db0ed63627 ---
+ api/search-hmac-testvectors.json | 1 +
+ api/search-internal.openapi.yaml | 8 ++++++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/api/search-hmac-testvectors.json b/api/search-hmac-testvectors.json
+index 814e124..6548d87 100644
+--- a/api/search-hmac-testvectors.json
++++ b/api/search-hmac-testvectors.json
+@@ -19,6 +19,7 @@
+   ],
+   "scheme": "v1",
+   "key_utf8": "Ar4Lo8Cq2Ei6Uk0Wn3Sv7Yb1Md5Pt9Xz",
++  "key_utf8_warning": "TEST VECTOR ONLY. This value is published in a public repository and must NEVER be used as VIZRA_SEARCH_HMAC_KEY, VIZRA_SESSION_SECRET or any other configuration value. vizra-core's production loader refuses it by exact match (knownPublishedSecrets in internal/config/config.go); vizra-search must do the same. Generate a real key with `openssl rand -base64 32`.",
+   "max_clock_skew_seconds": 300,
+   "vectors": [
+     {
+diff --git a/api/search-internal.openapi.yaml b/api/search-internal.openapi.yaml
+index 3afe4ab..848503c 100644
+--- a/api/search-internal.openapi.yaml
++++ b/api/search-internal.openapi.yaml
+@@ -297,6 +297,14 @@ components:
+         `MAX_INTERNAL_BODY_BYTES` (default 1 MiB) is rejected with 413 *before*
+         it is read.
+ 
++        **Who enforces what.** `MAX_INTERNAL_BODY_BYTES` is configured and
++        enforced by `vizra-search`, which is the SERVER of these routes. It is
++        deliberately NOT a `vizra-core` configuration key: core is the client,
++        and an operator-settable knob in core that changed nothing would be a
++        promise the software does not keep. Core bounds the other direction —
++        the RESPONSE it will read from search — at a fixed 8 MiB, in
++        `internal/search/remote.go`.
++
+         The signature comparison is constant-time.
+ 
+         Rejection is always 401 with body
+
+--- 4. vendoring, and blob-id / sha256 / byte agreement ---
+api/search-internal.openapi.yaml
+  git -C vizra-core rev-parse 415a6d1:api/search-internal.openapi.yaml
+    core   blob id : 848503cca45dc427fede810d3ab30e73e07bd392
+    search blob id : 848503cca45dc427fede810d3ab30e73e07bd392   AGREE
+    core   sha256  : a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+    search sha256  : a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448   AGREE
+    core   bytes   : 25297
+    search bytes   : 25297   AGREE
+api/search-hmac-testvectors.json
+  git -C vizra-core rev-parse 415a6d1:api/search-hmac-testvectors.json
+    core   blob id : 6548d87e1811336d7e62ad99e78a4b687a88fe7e
+    search blob id : 6548d87e1811336d7e62ad99e78a4b687a88fe7e   AGREE
+    core   sha256  : ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+    search sha256  : ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3   AGREE
+    core   bytes   : 22327
+    search bytes   : 22327   AGREE

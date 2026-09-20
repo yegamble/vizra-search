@@ -1,0 +1,191 @@
+=== F7 AFTER THE FIX: red/green under 'make contract-drift' specifically ===
+host : Darwin 25.5.0 arm64
+go   : go version go1.27.1 darwin/arm64
+tree : chore/revendor-core-main
+
+--- the lane now selects by package, with no test-selecting flag ---
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+
+------------------------------------------------------------------
+=== GREEN 0: make contract-drift, unmutated ===
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.579s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.715s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.261s
+ok  	github.com/yegamble/vizra-search/internal/config	0.413s
+exit=0
+
+------------------------------------------------------------------
+=== RED 1: a vendored file edited in place (api/search-internal.openapi.yaml) ===
+$ shasum -a 256 api/search-internal.openapi.yaml
+fee490dc9237d749e438afb066cf3a5986c03617bf166ec43154426ef459d71f  api/search-internal.openapi.yaml
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:106: the vendored api/search-internal.openapi.yaml does not match its manifest.
+          manifest sha256: a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+          file sha256:     fee490dc9237d749e438afb066cf3a5986c03617bf166ec43154426ef459d71f
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+    contract_drift_test.go:111: the vendored api/search-internal.openapi.yaml is 25339 bytes, the manifest says 25297
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.551s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.703s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.374s
+ok  	github.com/yegamble/vizra-search/internal/config	0.206s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== GREEN 1: restored ===
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.718s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.384s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.532s
+ok  	github.com/yegamble/vizra-search/internal/config	0.218s
+exit=0
+
+------------------------------------------------------------------
+=== RED 2: the OTHER vendored file edited in place (api/search-hmac-testvectors.json) ===
+$ shasum -a 256 api/search-hmac-testvectors.json
+566de11c5e890a7d287ec403f9910df430e40f2a7f94194f405f3de4aaccf6a6  api/search-hmac-testvectors.json
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:106: the vendored api/search-hmac-testvectors.json does not match its manifest.
+          manifest sha256: ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+          file sha256:     566de11c5e890a7d287ec403f9910df430e40f2a7f94194f405f3de4aaccf6a6
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+    contract_drift_test.go:111: the vendored api/search-hmac-testvectors.json is 22380 bytes, the manifest says 22327
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.227s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.421s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.572s
+ok  	github.com/yegamble/vizra-search/internal/config	0.727s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 3: a manifest sha256 zeroed (api/CONTRACT-SOURCE.json) ===
+$ jq -r '.files[] | .vendored_path + "  " + .sha256' api/CONTRACT-SOURCE.json
+api/search-internal.openapi.yaml  a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448
+api/search-hmac-testvectors.json  0000000000000000000000000000000000000000000000000000000000000000
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:106: the vendored api/search-hmac-testvectors.json does not match its manifest.
+          manifest sha256: 0000000000000000000000000000000000000000000000000000000000000000
+          file sha256:     ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+        This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.241s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.387s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.539s
+ok  	github.com/yegamble/vizra-search/internal/config	0.693s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 4: the manifest stops pinning a file at all ===
+$ jq -r '.files[].vendored_path' api/CONTRACT-SOURCE.json
+api/search-internal.openapi.yaml
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    contract_drift_test.go:119: the manifest no longer pins api/search-hmac-testvectors.json, so that file could be edited in place with CI green
+--- FAIL: TestTheContractDriftLaneSelectsEveryVendoredFileGuard (0.00s)
+    lane_selection_test.go:202: expected the manifest to pin at least two vendored files, got markers [CONTRACT-SOURCE.json search-internal.openapi.yaml]
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.252s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.385s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.696s
+ok  	github.com/yegamble/vizra-search/internal/config	0.530s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 5: the name coupling is reintroduced — a -run filter is put back on the lane ===
+$ sed -n '/^contract-drift:/,/internal\/config\//p' Makefile
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	go test -count=1 -run 'Contract|Drift|Schema' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+$ make contract-drift
+go test -count=1 -run 'Contract|Drift|Schema' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestTheContractDriftLaneSelectsEveryVendoredFileGuard (0.00s)
+    lane_selection_test.go:181: the contract-drift recipe carries -run.
+        	The lane must select by PACKAGE, not by test name or tag: a name filter silently
+        	drops a guard out of the lane the day someone renames it, with nothing to say so.
+        	That is finding F7, and it is why this test exists.
+        	recipe: go test -count=1 -run 'Contract|Drift|Schema'  ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+    lane_selection_test.go:211: contract-drift runs [internal/config internal/contract internal/hmacauth internal/httpapi] with no test-selecting flag; vendored-file guards live in [internal/config internal/contract internal/hmacauth internal/httpapi]
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.277s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.560s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.397s
+ok  	github.com/yegamble/vizra-search/internal/config	0.731s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED: the lane refuses to carry a test-name filter.
+
+------------------------------------------------------------------
+=== RED 6: a vendored-file guard is moved into a package the lane does not run ===
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+--- FAIL: TestTheContractDriftLaneSelectsEveryVendoredFileGuard (0.00s)
+    lane_selection_test.go:205: package "internal/strayguard" contains a test that reads a vendored contract file, but the
+        	contract-drift lane does not run it, so a mutation of that file survives `make contract-drift`.
+        	Add ./internal/strayguard/ to the contract-drift recipe in ../../Makefile.
+        	lane packages: [internal/config internal/contract internal/hmacauth internal/httpapi]
+    lane_selection_test.go:211: contract-drift runs [internal/config internal/contract internal/hmacauth internal/httpapi] with no test-selecting flag; vendored-file guards live in [internal/config internal/contract internal/hmacauth internal/httpapi internal/strayguard]
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.437s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.584s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.245s
+ok  	github.com/yegamble/vizra-search/internal/config	0.778s
+FAIL
+make: *** [contract-drift] Error 1
+exit=2
+>>> RED: the lane must list every package holding a vendored-file guard.
+
+------------------------------------------------------------------
+=== GREEN 2: fully restored ===
+$ make contract-drift
+go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.620s
+ok  	github.com/yegamble/vizra-search/internal/contract	0.421s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.797s
+ok  	github.com/yegamble/vizra-search/internal/config	0.238s
+exit=0
+
+$ git status --short
+ M Makefile
+ M api/CONTRACT-SOURCE.json
+ M api/search-hmac-testvectors.json
+ M api/search-internal.openapi.yaml
+ M scripts/ci-required-guard.sh
+?? docs/evidence/pr2/
+?? internal/httpapi/lane_selection_test.go
+$ shasum -a 256 api/search-internal.openapi.yaml api/search-hmac-testvectors.json
+a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448  api/search-internal.openapi.yaml
+ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3  api/search-hmac-testvectors.json

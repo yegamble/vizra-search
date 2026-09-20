@@ -1,0 +1,118 @@
+=== F8 AFTER THE FIX: a missing directory or an empty glob is a named failure ===
+host : Darwin 25.5.0 arm64
+bash : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+
+
+------------------------------------------------------------------
+=== GREEN 0: fixtures present, full guard output ===
+$ ls scripts/testdata/
+wf-capitalised.yml
+wf-clean.yml
+wf-expression.yml
+wf-false.yml
+wf-plain.yml
+wf-quoted-key.yml
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+
+------------------------------------------------------------------
+=== RED 1: the whole scripts/testdata directory is removed ===
+$ ./scripts/ci-required-guard.sh   (tail)
+  The workflow checker's negative fixtures are what prove it still catches every
+  spelling of continue-on-error. With the directory gone there is nothing to prove
+  it with, and this guard must not pass by default.
+exit=1
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== GREEN 1: restored ===
+exit=0
+
+------------------------------------------------------------------
+=== RED 2: the directory stays, every wf-*.yml fixture is deleted (empty glob) ===
+$ ls -a scripts/testdata/
+.
+..
+$ ./scripts/ci-required-guard.sh   (tail)
+  It is in the floor because the checker must keep proving it handles that spelling.
+MISSING FIXTURE: 'scripts/testdata/wf-false.yml' is a non-optional fixture and is absent.
+  It is in the floor because the checker must keep proving it handles that spelling.
+exit=1
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 3: a single floor fixture is deleted (wf-quoted-key.yml) ===
+$ ./scripts/ci-required-guard.sh   (tail)
+every pullable Dockerfile base image is pinned by digest
+MISSING FIXTURE: 'scripts/testdata/wf-quoted-key.yml' is a non-optional fixture and is absent.
+  It is in the floor because the checker must keep proving it handles that spelling.
+exit=1
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 4: the clean (accept) fixture is deleted ===
+$ ./scripts/ci-required-guard.sh   (tail)
+every pullable Dockerfile base image is pinned by digest
+MISSING FIXTURE: 'scripts/testdata/wf-clean.yml' is a non-optional fixture and is absent.
+  It is in the floor because the checker must keep proving it handles that spelling.
+exit=1
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== RED 5: the checker stops catching a spelling (fixtures intact) ===
+    A fixture set that is present but no longer discriminating must also fail.
+    wf-quoted-key.yml is replaced with a clean workflow, so the checker accepts it.
+$ ./scripts/ci-required-guard.sh   (tail)
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker ACCEPTED scripts/testdata/wf-quoted-key.yml, which spells continue-on-error in a way it must catch
+exit=1
+>>> RED, as required.
+
+------------------------------------------------------------------
+=== GREEN 2: fully restored ===
+$ ls scripts/testdata/
+wf-capitalised.yml
+wf-clean.yml
+wf-expression.yml
+wf-false.yml
+wf-plain.yml
+wf-quoted-key.yml
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+$ git status --short scripts/
+ M scripts/ci-required-guard.sh

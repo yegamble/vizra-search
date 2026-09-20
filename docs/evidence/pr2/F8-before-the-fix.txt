@@ -1,0 +1,140 @@
+=== F8 BEFORE THE FIX: the fixture loop is green when the fixtures vanish ===
+host : Darwin 25.5.0 arm64
+bash : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+
+--- the loop as shipped by PR #1 ---
+for fixture in scripts/testdata/wf-*.yml; do
+  case "$fixture" in
+    *wf-clean.yml)
+      if ! ./scripts/check-workflows.py "$fixture" >/dev/null 2>&1; then
+        echo "the workflow checker rejected its own clean fixture: $fixture"
+        exit 1
+      fi
+      ;;
+    *)
+      if ./scripts/check-workflows.py "$fixture" >/dev/null 2>&1; then
+        echo "the workflow checker ACCEPTED $fixture, which spells continue-on-error in a way it must catch"
+        exit 1
+      fi
+      ;;
+  esac
+done
+echo "the workflow checker rejects every continue-on-error spelling in scripts/testdata/"
+
+>>> With no match, bash leaves the glob as the literal string 'scripts/testdata/wf-*.yml'.
+    check-workflows.py is then handed a path that does not exist, exits non-zero,
+    and the '*)' branch reads that non-zero exit as 'correctly rejected'.
+
+=== GREEN BASELINE: fixtures present ===
+$ ls scripts/testdata/
+wf-capitalised.yml
+wf-clean.yml
+wf-expression.yml
+wf-false.yml
+wf-plain.yml
+wf-quoted-key.yml
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+exit=0
+
+=== MUTATION 1: the whole scripts/testdata directory is removed ===
+$ ls scripts/testdata 2>&1
+ls: scripts/testdata: No such file or directory
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+exit=0
+>>> F8 CONFIRMED: the guard is GREEN with its own negative fixtures deleted.
+
+=== MUTATION 2: the directory stays, every wf-*.yml fixture is deleted ===
+$ ls -a scripts/testdata/
+.
+..
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+exit=0
+>>> F8 CONFIRMED: the guard is GREEN with an empty fixture glob.
+
+=== MUTATION 3: only the fixture that proves a quoted key is caught is deleted ===
+$ ls scripts/testdata/
+wf-capitalised.yml
+wf-clean.yml
+wf-expression.yml
+wf-false.yml
+wf-plain.yml
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+exit=0
+>>> ALSO GREEN: a single deleted negative fixture is not noticed either.
+
+=== RESTORED ===
+wf-capitalised.yml
+wf-clean.yml
+wf-expression.yml
+wf-false.yml
+wf-plain.yml
+wf-quoted-key.yml
+guard exit=0

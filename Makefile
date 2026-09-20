@@ -57,10 +57,30 @@ echo-containment: ## ADR-001: Echo types stay inside internal/httpapi
 build: ## Build the binary
 	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/$(BINARY) ./cmd/$(BINARY)
 
+# contract-drift selects by PACKAGE, never by test name.
+#
+# It used to carry a `-run` regex of name fragments. That is a guard tied to a
+# naming habit: renaming a test to something the regex does not match silently
+# drops it out of the lane, with no failure anywhere to say so. It had already
+# happened. The manifest guard was `TestVendoredContractMatchesItsManifest`,
+# which the regex's `Contract` fragment matched; it was renamed to
+# `TestEveryVendoredFileMatchesItsManifest`, which matches no fragment in the
+# regex. From then on, editing a vendored file in place — or zeroing a sha256 in
+# api/CONTRACT-SOURCE.json — left this lane GREEN. The mutation died only under
+# the broader `make ci`, which is not the lane whose name says it checks drift.
+#
+# So the lane runs every test in the packages that hold the vendored-file
+# guards, with no name filter at all, and
+# TestTheContractDriftLaneSelectsEveryVendoredFileGuard (internal/httpapi)
+# holds that property: it refuses any test-selecting flag in this recipe and
+# fails if a package containing a vendored-file guard is missing from the list
+# below. A new guard is therefore in the lane the moment it is written.
+#
+# The list is spelled out here, literally, because that test parses this recipe.
 .PHONY: contract-drift
 contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
-	go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
-		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
+	go test -count=1 \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
 
 .PHONY: test
 test: ## Full test suite with the race detector

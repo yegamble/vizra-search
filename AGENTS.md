@@ -279,6 +279,27 @@ you add a package, add tests to it; do not loosen the guard.
 `make ci` includes `tidy-check`, so a local `make ci` covers the same lanes CI
 runs.
 
+#### `contract-drift` selects by package, never by test name
+
+The lane originally selected its tests with a `-run` regex of name fragments.
+That is a guard tied to a naming habit: rename a test to something the regex
+does not match and it silently leaves the lane, with nothing to say so. It
+happened. The manifest guard was `TestVendoredContractMatchesItsManifest`, which
+the regex's `Contract` fragment matched; it was renamed to
+`TestEveryVendoredFileMatchesItsManifest`, which matches no fragment in the
+regex. After that, **editing a vendored file in place, or zeroing a sha256 in
+`api/CONTRACT-SOURCE.json`, left `make contract-drift` green**. The mutation died
+only under the broader `make ci`, which is not the lane whose name says it checks
+drift.
+
+So the lane names **packages** and runs all of their tests, with no
+test-selecting flag, and `TestTheContractDriftLaneSelectsEveryVendoredFileGuard`
+holds that from the other side: it parses the recipe out of the `Makefile` and
+fails if it carries `-run`, `-skip`, `-short`, `-tags`, `-bench` or `-fuzz`, or
+if any package containing a test that reads a vendored file is missing from the
+list. A new guard is in the lane the moment it is written, wherever it is written
+and whatever it is called. Do not re-add a name filter to make the lane faster.
+
 ### The manifest is editable by the PR it gates
 
 `.github/required-checks.txt` is read from the checkout under test, so the PR
@@ -306,7 +327,13 @@ enforces:
   is refused too: "currently false" is not a property CI can rely on), and an
   unparseable workflow fails closed. The negative fixtures in
   `scripts/testdata/` are exercised on every run, so a checker that stopped
-  matching is itself a red lane;
+  matching is itself a red lane. Those fixtures are a **floor** too, named one
+  by one: a missing `scripts/testdata/`, an empty `wf-*.yml` glob, or a single
+  absent fixture is a named failure with a count, not a loop that quietly runs
+  zero times. `for fixture in scripts/testdata/wf-*.yml` alone was green when
+  the fixtures were gone — with no match bash passes the literal glob through,
+  the checker is handed a path that does not exist and exits non-zero, and the
+  "must be rejected" branch reads that as a pass;
 - every pullable Dockerfile base image is pinned by `@sha256` digest
   (`scratch` is exempt: it is the reserved empty base and has no digest).
 
