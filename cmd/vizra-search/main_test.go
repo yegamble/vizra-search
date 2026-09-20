@@ -2,6 +2,8 @@ package main_test
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -20,7 +22,23 @@ import (
 	"github.com/yegamble/vizra-search/internal/hmacauth"
 )
 
-const strongKey = "9f2c1d7a4b3e6f80c5a91d2e3f4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
+// strongKey is generated once per test binary. These tests boot the real
+// binary in production mode, and production refuses every key literal committed
+// to this repository — a committed key is a published key.
+var strongKey = mustFreshKey()
+
+func mustFreshKey() string {
+	for {
+		var raw [32]byte
+		if _, err := rand.Read(raw[:]); err != nil {
+			panic("generating a test key: " + err.Error())
+		}
+		key := hex.EncodeToString(raw[:])
+		if !config.IsPublishedKey(key) {
+			return key
+		}
+	}
+}
 
 var (
 	buildOnce sync.Once

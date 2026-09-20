@@ -19,10 +19,16 @@ required="$(grep -vE '^\s*(#|$)' "$manifest" | tr -d '\r')"
 test -n "$required" || { echo "$manifest lists no checks"; exit 1; }
 echo "required checks:"; echo "$required" | sed 's/^/  - /'
 # ADR-002: the fan-in guard rejects `continue-on-error` on any
-# required lane, because a lane that cannot fail is not a gate. The
-# pattern matches the YAML key, not the word, so this guard does not
-# trip over its own error message.
-if grep -rnE '^[[:space:]]*(-[[:space:]]+)?continue-on-error[[:space:]]*:' .github/workflows/; then
+# required lane, because a lane that cannot fail is not a gate.
+#
+# This PARSES the workflows rather than grepping them. A literal
+# grep is evaded by a quoted key, a capitalised key, or a value
+# that is a ${{ }} expression, and it also trips over its own error
+# message. scripts/check-workflows.py matches the key after
+# unquoting and case-folding, ignores the value entirely, and fails
+# closed on a workflow it cannot parse. Its negative fixtures live
+# in scripts/testdata/.
+if ! ./scripts/check-workflows.py; then
   echo "continue-on-error is not allowed on a required lane"
   exit 1
 fi
@@ -100,3 +106,25 @@ while IFS= read -r line; do
 done <<< "$(grep -hiE '^FROM[[:space:]]' Dockerfile 2>/dev/null || true)"
 test "$unpinned" = "0" || exit 1
 echo "every pullable Dockerfile base image is pinned by digest"
+
+# The workflow checker must itself still reject every spelling it exists to
+# catch. A checker that silently stopped matching would leave the gate open,
+# so its fixtures are exercised on every run rather than only in a
+# demonstration.
+for fixture in scripts/testdata/wf-*.yml; do
+  case "$fixture" in
+    *wf-clean.yml)
+      if ! ./scripts/check-workflows.py "$fixture" >/dev/null 2>&1; then
+        echo "the workflow checker rejected its own clean fixture: $fixture"
+        exit 1
+      fi
+      ;;
+    *)
+      if ./scripts/check-workflows.py "$fixture" >/dev/null 2>&1; then
+        echo "the workflow checker ACCEPTED $fixture, which spells continue-on-error in a way it must catch"
+        exit 1
+      fi
+      ;;
+  esac
+done
+echo "the workflow checker rejects every continue-on-error spelling in scripts/testdata/"

@@ -193,10 +193,39 @@ still gets the production refusals. An unrecognised mode fails closed.
 | `VIZRA_SEARCH_REQUEST_TIMEOUT` | `5s` | Bounds each handler. |
 | `VIZRA_SEARCH_SHUTDOWN_GRACE` | `15s` | Drain window. |
 
-In production mode the boot refuses: an empty key, the documented development
-key `dev-insecure-hmac-key-do-not-use-in-production`, anything shorter than 32
-bytes, anything that looks like a placeholder (`dev-`, `test-`, `changeme`,
-`insecure`, …), and a key with fewer than 8 distinct byte values. `validate()`
+In production mode the boot refuses: an empty key; anything shorter than 32
+bytes; anything that looks like a placeholder (`dev-`, `test-`, `changeme`,
+`insecure`, …); a key with fewer than 8 distinct byte values; and — **by exact
+value** — every key this project publishes.
+
+### Published keys are refused by exact value
+
+A committed key is a published key. Three classes are refused outright:
+
+| Key | Why a heuristic cannot catch it |
+|---|---|
+| `dev-insecure-hmac-key-do-not-use-in-production` | it is caught, three times over — but it keeps its own message |
+| the `key_utf8` of `api/search-hmac-testvectors.json` | exactly 32 bytes of mixed-case alphanumerics with 32 distinct byte values. It passes **every** heuristic here, and it is the one key whose documentation is a committed file an operator will read and copy |
+| every key literal in this repository's own `_test.go` sources | likewise indistinguishable from a good key |
+
+The refusal is by exact value and never echoes it. Widening the heuristics to
+catch the vectors key is not an option: a rule broad enough to reject that
+string would reject good keys too. `vizra-core` refuses the same value on its
+side — **a shared secret is only as strong as the weaker of the two loaders.**
+
+Two tests keep this honest, and neither duplicates a literal:
+
+- `TestTheVectorsPublishedKeyIsStillTheOneWeRefuse` reads `key_utf8` out of the
+  vendored file **at test time**, so re-vendoring a changed vectors file cannot
+  silently un-refuse the key.
+- `TestEveryKeyLiteralInThisRepositoryIsRefused` parses every `_test.go` with
+  `go/ast` and fails on any string bound to a key-shaped identifier that
+  production would accept. The refused list cannot rot.
+
+Consequently a test that needs a production-valid key **generates one** rather
+than hard-coding it, exactly as an operator is told to (`openssl rand -hex 32`).
+Development mode still accepts all of these keys — the conformance vectors have
+to be runnable and `make run` boots with the dev key. `validate()`
 collects **every** problem rather than returning the first (ADR-002 §
 Configuration ownership), and no error message ever echoes the rejected key.
 
@@ -269,7 +298,15 @@ enforces:
 - every manifest entry is a **bare job name** — no trailing comment, no
   `optional` marker, no colon-separated field — so a lane cannot be neutered in
   place instead of deleted;
-- no `continue-on-error` key anywhere in `.github/workflows/`;
+- no `continue-on-error` key anywhere in `.github/workflows/`, checked by
+  **parsing** the YAML (`scripts/check-workflows.py`) rather than grepping it.
+  A literal grep is evaded by a quoted key, a capitalised key, or a value that
+  is a `${{ }}` expression — and it trips over its own error message. The key
+  is matched after unquoting and case-folding, its **value is ignored** (`false`
+  is refused too: "currently false" is not a property CI can rely on), and an
+  unparseable workflow fails closed. The negative fixtures in
+  `scripts/testdata/` are exercised on every run, so a checker that stopped
+  matching is itself a red lane;
 - every pullable Dockerfile base image is pinned by `@sha256` digest
   (`scratch` is exempt: it is the reserved empty base and has no digest).
 

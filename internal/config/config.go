@@ -24,6 +24,57 @@ import (
 // that the refusal and the documentation can never drift apart.
 const DevHMACKey = "dev-insecure-hmac-key-do-not-use-in-production"
 
+// VectorsHMACKey is the shared secret published in the normative conformance
+// vectors, api/search-hmac-testvectors.json "key_utf8". It is exactly 32 bytes
+// of mixed-case alphanumerics with 32 distinct byte values, so it passes every
+// heuristic in this file — and it is the one key whose documentation is a
+// committed file an operator will actually read and copy.
+//
+// It is refused by EXACT VALUE. The heuristics cannot catch it, and must not be
+// widened until they could: a rule broad enough to reject this string would
+// reject good keys too.
+//
+// TestTheVectorsPublishedKeyIsStillTheOneWeRefuse reads the value out of the
+// vendored file at test time and fails if this constant drifts from it, so
+// re-vendoring a changed vectors file cannot silently un-refuse the key.
+// vizra-core refuses the same value on its side; a shared secret is only as
+// strong as the weaker of the two loaders.
+const VectorsHMACKey = "Ar4Lo8Cq2Ei6Uk0Wn3Sv7Yb1Md5Pt9Xz"
+
+// publishedTestKeys are the key literals committed to THIS repository's own
+// test sources. They are as public as the dev key, so production refuses them
+// too. TestEveryKeyLiteralInThisRepositoryIsRefused parses the test sources and
+// fails if a literal appears that is not listed here, so the list cannot rot.
+var publishedTestKeys = []string{
+	// internal/hmacauth, internal/httpapi, internal/config, cmd/vizra-search
+	"9f2c1d7a4b3e6f80c5a91d2e3f4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+	// the deliberately-wrong key used to forge signatures in tests
+	"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+}
+
+// IsPublishedKey reports whether a key is one this repository or the shared
+// contract publishes. Such a key is refused in production mode by exact value,
+// whatever its length or entropy looks like.
+func IsPublishedKey(key string) bool {
+	if key == DevHMACKey || key == VectorsHMACKey {
+		return true
+	}
+	for _, published := range publishedTestKeys {
+		if key == published {
+			return true
+		}
+	}
+	return false
+}
+
+// PublishedKeys returns every key value production refuses by exact value. It
+// exists so the tests can enumerate them without duplicating the literals.
+func PublishedKeys() []string {
+	out := make([]string, 0, len(publishedTestKeys)+2)
+	out = append(out, DevHMACKey, VectorsHMACKey)
+	return append(out, publishedTestKeys...)
+}
+
 // Defaults. Every one of them is safe to run with; none of them weakens a
 // check.
 const (
@@ -328,8 +379,17 @@ func (v *validator) hmacKey(mode Mode) []byte {
 
 	lower := strings.ToLower(key)
 
+	// Exact-value refusals come first: these keys are published — in this
+	// repository's own sources, or in the conformance vectors an operator is
+	// invited to read — and no heuristic would catch them. No message below
+	// ever echoes the value.
 	if key == DevHMACKey {
 		v.addf("%s is the documented development placeholder and is refused in %s mode", EnvHMACKey, ModeProduction)
+		return []byte(key)
+	}
+	if IsPublishedKey(key) {
+		v.addf("%s is a key published in this repository or in the shared conformance vectors and is refused in %s mode; generate a fresh secret (for example `openssl rand -hex 32`)",
+			EnvHMACKey, ModeProduction)
 		return []byte(key)
 	}
 	for _, exact := range placeholderExact {

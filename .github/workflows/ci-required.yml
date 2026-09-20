@@ -33,6 +33,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The workflow check parses the YAML rather than grepping it, so it
+      # needs a YAML parser. PyYAML ships in the runner image; the install is
+      # a fallback so the lane fails on a real violation rather than on a
+      # missing library.
+      - name: ensure a YAML parser is available
+        run: |
+          python3 -c 'import yaml' 2>/dev/null \
+            || python3 -m pip install --quiet --break-system-packages pyyaml
+          python3 -c 'import yaml; print("PyYAML", yaml.__version__)'
+
       - name: guard the manifest and the workflows
         run: ./scripts/ci-required-guard.sh
 

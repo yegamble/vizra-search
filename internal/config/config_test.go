@@ -9,12 +9,13 @@ import (
 	"github.com/yegamble/vizra-search/internal/config"
 )
 
-// strongKey is a 64-hex-character key: 32 bytes of entropy expressed as hex.
-const strongKey = "9f2c1d7a4b3e6f80c5a91d2e3f4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
-
-func envWith(overrides map[string]string) map[string]string {
+// envWith builds a candidate environment around a freshly generated key. The
+// key is NOT a literal: production refuses every key committed to this
+// repository, so a test that needs a production-valid configuration mints one.
+func envWith(t *testing.T, overrides map[string]string) map[string]string {
+	t.Helper()
 	base := map[string]string{
-		config.EnvHMACKey: strongKey,
+		config.EnvHMACKey: freshKey(t),
 	}
 	for k, v := range overrides {
 		if v == "" {
@@ -37,7 +38,7 @@ func TestLoadFromDefaultsToProductionWhenModeIsOmitted(t *testing.T) {
 	// Fail-secure: an env file that forgets to declare its mode is treated as
 	// production, so the production refusals apply (ADR-002, setup.Check
 	// precedent).
-	cfg, err := config.LoadFrom(lookupFrom(envWith(nil)))
+	cfg, err := config.LoadFrom(lookupFrom(envWith(t, nil)))
 	if err != nil {
 		t.Fatalf("LoadFrom: unexpected error: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestProductionRefusesUnsafeHMACKeys(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			env := envWith(map[string]string{config.EnvMode: "production"})
+			env := envWith(t, map[string]string{config.EnvMode: "production"})
 			if tc.key == "" {
 				delete(env, config.EnvHMACKey)
 			} else {
@@ -102,13 +103,12 @@ func TestProductionRefusesUnsafeHMACKeys(t *testing.T) {
 }
 
 func TestProductionAcceptsAStrongKey(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
-		config.EnvMode: "production",
-	})))
+	env := envWith(t, map[string]string{config.EnvMode: "production"})
+	cfg, err := config.LoadFrom(lookupFrom(env))
 	if err != nil {
 		t.Fatalf("LoadFrom: %v", err)
 	}
-	if string(cfg.HMACKey) != strongKey {
+	if string(cfg.HMACKey) != env[config.EnvHMACKey] {
 		t.Fatalf("HMACKey not carried through")
 	}
 	if !cfg.Mode.IsProduction() {
@@ -117,7 +117,7 @@ func TestProductionAcceptsAStrongKey(t *testing.T) {
 }
 
 func TestDevelopmentModeStillRefusesAnEmptyKey(t *testing.T) {
-	env := envWith(map[string]string{config.EnvMode: "development"})
+	env := envWith(t, map[string]string{config.EnvMode: "development"})
 	delete(env, config.EnvHMACKey)
 	if _, err := config.LoadFrom(lookupFrom(env)); err == nil {
 		t.Fatal("development mode accepted an empty HMAC key; unauthenticated internal endpoints must be impossible")
@@ -125,7 +125,7 @@ func TestDevelopmentModeStillRefusesAnEmptyKey(t *testing.T) {
 }
 
 func TestDevelopmentModeAcceptsTheDevKey(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+	cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 		config.EnvMode:    "development",
 		config.EnvHMACKey: config.DevHMACKey,
 	})))
@@ -138,7 +138,7 @@ func TestDevelopmentModeAcceptsTheDevKey(t *testing.T) {
 }
 
 func TestUnknownModeIsRefused(t *testing.T) {
-	_, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+	_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 		config.EnvMode: "staging",
 	})))
 	if err == nil {
@@ -181,7 +181,7 @@ func TestCheckEnvValidatesACandidateEnvFileWithTheBootCode(t *testing.T) {
 	// with the same code that boots the process.
 	if err := config.CheckEnv(map[string]string{
 		config.EnvMode:    "production",
-		config.EnvHMACKey: strongKey,
+		config.EnvHMACKey: freshKey(t),
 	}); err != nil {
 		t.Fatalf("CheckEnv rejected a valid production env: %v", err)
 	}
@@ -195,12 +195,13 @@ func TestCheckEnvValidatesACandidateEnvFileWithTheBootCode(t *testing.T) {
 
 func TestConfigNeverRendersTheKey(t *testing.T) {
 	// ADR-002 § Logging and redaction: no process ever logs credentials.
-	cfg, err := config.LoadFrom(lookupFrom(envWith(nil)))
+	env := envWith(t, nil)
+	cfg, err := config.LoadFrom(lookupFrom(env))
 	if err != nil {
 		t.Fatalf("LoadFrom: %v", err)
 	}
 	for _, rendered := range []string{cfg.String(), cfg.LogValue().String()} {
-		if strings.Contains(rendered, strongKey) {
+		if strings.Contains(rendered, env[config.EnvHMACKey]) {
 			t.Fatalf("rendered config leaks the HMAC key: %s", rendered)
 		}
 		if !strings.Contains(rendered, "[redacted]") {
@@ -210,7 +211,7 @@ func TestConfigNeverRendersTheKey(t *testing.T) {
 }
 
 func TestErrorsNeverEchoTheKeyValue(t *testing.T) {
-	secretish := "dev-" + strongKey
+	secretish := "dev-" + freshKey(t)
 	_, err := config.LoadFrom(lookupFrom(map[string]string{
 		config.EnvMode:    "production",
 		config.EnvHMACKey: secretish,
@@ -224,7 +225,7 @@ func TestErrorsNeverEchoTheKeyValue(t *testing.T) {
 }
 
 func TestDurationsAndSizesParse(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+	cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 		config.EnvMaxClockSkew:   "90s",
 		config.EnvMaxBodyBytes:   "4096",
 		config.EnvRequestTimeout: "2s",
@@ -275,7 +276,7 @@ func TestDefaultsMatchTheCanonicalContract(t *testing.T) {
 func TestProductionRefusesAnOverwideSkewWindow(t *testing.T) {
 	for _, skew := range []string{"301s", "10m", "1h", "8760h"} {
 		t.Run(skew, func(t *testing.T) {
-			_, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+			_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 				config.EnvMode:         "production",
 				config.EnvMaxClockSkew: skew,
 			})))
@@ -294,7 +295,7 @@ func TestProductionRefusesAnOverwideSkewWindow(t *testing.T) {
 
 func TestProductionAcceptsAWindowAtOrBelowTheCeiling(t *testing.T) {
 	for _, skew := range []string{"1s", "60s", "299s", "300s", "5m"} {
-		if _, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+		if _, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 			config.EnvMode:         "production",
 			config.EnvMaxClockSkew: skew,
 		}))); err != nil {
@@ -308,7 +309,7 @@ func TestProductionAcceptsAWindowAtOrBelowTheCeiling(t *testing.T) {
 func TestProductionRefusesAnOverlargeBodyCap(t *testing.T) {
 	for _, size := range []string{"8388609", "10737418240", "1099511627776"} {
 		t.Run(size, func(t *testing.T) {
-			_, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+			_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 				config.EnvMode:         "production",
 				config.EnvMaxBodyBytes: size,
 			})))
@@ -324,7 +325,7 @@ func TestProductionRefusesAnOverlargeBodyCap(t *testing.T) {
 
 func TestProductionAcceptsABodyCapAtOrBelowTheCeiling(t *testing.T) {
 	for _, size := range []string{"1024", "1048576", "8388608"} {
-		if _, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+		if _, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 			config.EnvMode:         "production",
 			config.EnvMaxBodyBytes: size,
 		}))); err != nil {
@@ -336,7 +337,7 @@ func TestProductionAcceptsABodyCapAtOrBelowTheCeiling(t *testing.T) {
 // Development may exceed both ceilings — and the boot path says so, which
 // TestDevelopmentBootWarnsAboutTheRelaxedMode in cmd/ checks end to end.
 func TestDevelopmentMayExceedTheProductionCeilings(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+	cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 		config.EnvMode:         "development",
 		config.EnvMaxClockSkew: "1h",
 		config.EnvMaxBodyBytes: "1073741824",
@@ -350,7 +351,7 @@ func TestDevelopmentMayExceedTheProductionCeilings(t *testing.T) {
 }
 
 func TestAConfigurationInsideTheCeilingsDoesNotClaimToExceedThem(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(envWith(nil)))
+	cfg, err := config.LoadFrom(lookupFrom(envWith(t, nil)))
 	if err != nil {
 		t.Fatalf("LoadFrom: %v", err)
 	}
@@ -361,7 +362,7 @@ func TestAConfigurationInsideTheCeilingsDoesNotClaimToExceedThem(t *testing.T) {
 
 // CheckEnv must report the same refusals, so doctor and CI agree with boot.
 func TestCheckEnvReportsTheCeilingRefusals(t *testing.T) {
-	base := map[string]string{config.EnvMode: "production", config.EnvHMACKey: strongKey}
+	base := map[string]string{config.EnvMode: "production", config.EnvHMACKey: freshKey(t)}
 
 	if err := config.CheckEnv(base); err != nil {
 		t.Fatalf("CheckEnv rejected a valid production env: %v", err)
@@ -389,16 +390,17 @@ func TestCheckEnvReportsTheCeilingRefusals(t *testing.T) {
 // The ceiling refusal must not turn into a disclosure channel for the rest of
 // the configuration.
 func TestCeilingRefusalsEchoNoOtherConfiguration(t *testing.T) {
+	key := freshKey(t)
 	_, err := config.LoadFrom(lookupFrom(map[string]string{
 		config.EnvMode:         "production",
-		config.EnvHMACKey:      strongKey,
+		config.EnvHMACKey:      key,
 		config.EnvMaxClockSkew: "24h",
 		config.EnvAddr:         "10.1.2.3:9999",
 	}))
 	if err == nil {
 		t.Fatal("expected a refusal")
 	}
-	for _, secret := range []string{strongKey, "10.1.2.3", "9999"} {
+	for _, secret := range []string{key, "10.1.2.3", "9999"} {
 		if strings.Contains(err.Error(), secret) {
 			t.Errorf("the ceiling refusal echoes %q: %s", secret, err.Error())
 		}

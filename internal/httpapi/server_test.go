@@ -16,8 +16,6 @@ import (
 	"github.com/yegamble/vizra-search/internal/httpapi"
 )
 
-const testKey = "9f2c1d7a4b3e6f80c5a91d2e3f4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
-
 // smallBodyLimit keeps the 413 case cheap. Production defaults to 1 MiB.
 const smallBodyLimit = 1024
 
