@@ -1,0 +1,42 @@
+=== The duplicate-target detection was platform-dependent; CI caught it ===
+generated: 2026-09-20T21:35:21Z
+
+Round-2 commit 562bb99 passed every lane locally and FAILED three lanes on CI
+(contract-drift, test, test-noskip), all on one subtest:
+
+  --- FAIL: TestTheLaneGuardRefusesEveryKnownBypass/a_duplicate_contract-drift_target
+      lane_selection_test.go:410: the guard refused the lane, but not for the expected reason.
+      CONTRACT-DRIFT LANE REFUSED: the contract-drift lane carries -run.
+
+Cause: the guard detected a duplicate target by matching make's warning text, and the
+wording differs by make version.
+
+  GNU Make 3.81 (macOS system make, what I develop on):
+    warning: overriding commands for target `contract-drift'
+  GNU Make 4.x (every ubuntu-24.04 runner, what actually gates merges):
+    warning: overriding recipe for target 'contract-drift'
+
+So on Linux the duplicate-target check never fired. The lane still went red in that
+test because the duplicate recipe also carried -run — but a duplicate target that was
+otherwise clean would have slipped past on the platform that matters. The test caught
+it precisely because it asserts the refusal REASON, not merely a non-zero exit.
+
+Fix: match both wordings, and refuse any other make warning while resolving the lane.
+
+$ python3 - (the regex against both make versions' literal strings)
+  make 3.81 'overriding commands'      match=True
+  make 3.81 'ignoring old commands'    match=True
+  make 4.x  'overriding recipe'        match=True
+  make 4.x  'ignoring old recipe'      match=True
+  a clean resolve (must NOT match)     match=False
+
+local make: GNU Make 3.81  — no make 4.x is installed on this machine, so
+the make-4 path is proven by the same subtest running on ubuntu-24.04 in CI, not here.
+
+$ make contract-drift
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 315 tests ran across 4 package(s), 0 failures, none deselected
+exit=0
+$ go test -count=1 -run 'TestTheLaneGuard|TestTheContractDriftLane' ./internal/httpapi/
+ok  	github.com/yegamble/vizra-search/internal/httpapi	3.217s
+exit=0

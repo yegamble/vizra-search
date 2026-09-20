@@ -38,6 +38,7 @@ loses either guard step — so escaping needs two edits, not one, and `make ci`,
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -117,14 +118,27 @@ def indent(text, prefix="    "):
 # ------------------------------------------------------------- recipe checks --
 
 
+# GNU make 3.81 (the macOS system make) says "overriding commands for target";
+# GNU make 4.x (every Linux runner) says "overriding recipe for target". Matching
+# only one wording is how this check silently stops working on the platform that
+# actually gates merges, so both are matched — and any other warning make emits
+# while resolving the lane is refused too, since a clean lane produces none.
+DUPLICATE_TARGET_RE = re.compile(r"(overriding|ignoring old)\s+(commands|recipe)\s+for\s+target", re.I)
+
+
 def check_make_warnings(stderr):
     """A duplicate target means the recipe a reader sees is not the one that runs."""
-    for marker in ("overriding commands for target", "ignoring old commands for target"):
-        if marker in stderr:
+    if DUPLICATE_TARGET_RE.search(stderr or ""):
+        fail(
+            "make reports a DUPLICATE `%s` target:\n%s\n"
+            "  make runs the LAST definition while a reader — and any text-based check —\n"
+            "  sees the first. The lane must have exactly one recipe." % (LANE, indent(stderr))
+        )
+    for line in (stderr or "").splitlines():
+        if "warning:" in line.lower():
             fail(
-                "make reports a DUPLICATE `%s` target:\n%s\n"
-                "  make runs the LAST definition while a reader — and any text-based check —\n"
-                "  sees the first. The lane must have exactly one recipe." % (LANE, indent(stderr))
+                "make emitted a warning while resolving the lane, so what it will run is not\n"
+                "  unambiguous:\n%s" % indent(stderr)
             )
 
 

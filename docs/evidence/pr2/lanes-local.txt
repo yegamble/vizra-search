@@ -5,8 +5,8 @@ make        : GNU Make 3.81
 bash        : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
 python3     : Python 3.9.6
 branch      : chore/revendor-core-main
-tree        : working tree on 17722700abf264813b7fa2f659e9cdccc922bfb7 + this round's changes
-date        : 2026-09-20T21:29:54Z
+tree        : working tree on 562bb994b9779d0dd518767aaf4b46760aed039d + this round's changes
+date        : 2026-09-20T21:35:38Z
 
 ------------------------------------------------------------------
 $ make fmt-check
@@ -22,7 +22,7 @@ echo-containment: Echo is confined to internal/httpapi
 exit=0
 ------------------------------------------------------------------
 $ make build
-CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=1772270-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=17722700abf264813b7fa2f659e9cdccc922bfb7 -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-20T21:29:54Z' -o bin/vizra-search ./cmd/vizra-search
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=562bb99-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=562bb994b9779d0dd518767aaf4b46760aed039d -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-20T21:35:39Z' -o bin/vizra-search ./cmd/vizra-search
 exit=0
 ------------------------------------------------------------------
 $ make contract-drift
@@ -35,12 +35,12 @@ exit=0
 ------------------------------------------------------------------
 $ make test
 go test -race -count=1 ./...
-ok  	github.com/yegamble/vizra-search/cmd/vizra-search	8.503s
-ok  	github.com/yegamble/vizra-search/internal/buildinfo	1.456s
-ok  	github.com/yegamble/vizra-search/internal/config	1.938s
-ok  	github.com/yegamble/vizra-search/internal/contract	2.420s
-ok  	github.com/yegamble/vizra-search/internal/hmacauth	2.089s
-ok  	github.com/yegamble/vizra-search/internal/httpapi	6.986s
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	8.279s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	1.741s
+ok  	github.com/yegamble/vizra-search/internal/config	1.300s
+ok  	github.com/yegamble/vizra-search/internal/contract	1.462s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	1.603s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	5.566s
 exit=0
 ------------------------------------------------------------------
 $ make test-noskip
@@ -89,14 +89,6 @@ make ci exit=0
 ------------------------------------------------------------------
 $ make clean && git status --short   (no stray report file left behind)
 rm -rf bin .test-report.json .contract-drift-report.json
- M .gitignore
- M AGENTS.md
- M Makefile
- M docs/evidence/pr2/README.md
  M docs/evidence/pr2/lanes-local.txt
- M internal/httpapi/lane_selection_test.go
- M scripts/check-workflows.py
- M scripts/ci-required-guard.sh
-?? docs/evidence/pr2/F7-round2-lane-guard-red-green.txt
-?? docs/evidence/pr2/F8-round2-fixture-rules-red-green.txt
-?? scripts/contract-drift-guard.py
+ M scripts/contract-drift-guard.py
+?? docs/evidence/pr2/F7-round2-make-version-portability.txt
