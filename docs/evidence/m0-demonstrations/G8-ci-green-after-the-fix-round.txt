@@ -1,0 +1,58 @@
+=== G8  ci-required GREEN after the fix round ===
+repo:   yegamble/vizra-search
+PR:     https://github.com/yegamble/vizra-search/pull/1
+head:   d1ca9a692699d5b1223eb4954672a93f3551e337
+prior:  7f483addd2fd3d3f7f0842defe5a06f15bdcd48a (verifier FAIL)
+runner: GitHub-hosted ubuntu-24.04 (linux/amd64)
+runs:   ci=35531558471  ci-required=35531558477
+date:   2026-09-20T19:14:48Z
+
+--- all 12 checks on d1ca9a6 ---
+  GitGuardian Security Checks      pass 8s
+  build                            pass 41s
+  ci-required                      pass 1m5s
+  contract-drift                   pass 49s
+  docker-build                     pass 47s
+  echo-containment                 pass 15s
+  fmt                              pass 17s
+  govulncheck                      pass 53s
+  test                             pass 1m2s
+  test-noskip                      pass 42s
+  tidy-check                       pass 18s
+  vet                              pass 45s
+
+--- test-noskip (linux/amd64) ---
+  test-noskip: 320 pass events, 0 skips
+
+--- contract-drift: both vendored digests and both vector halves ---
+
+--- govulncheck: what actually scanned ---
+  Go: go1.27.1
+  Scanner: govulncheck@v1.8.0
+  DB: https://vuln.go.dev
+  DB updated: 2026-09-16 18:00:43 +0000 UTC
+  No vulnerabilities found.
+
+--- docker-build on amd64: the image still serves the boundary ---
+  vizra-search: invalid vizra-search configuration:
+    - SEARCH_HMAC_KEY is the documented development placeholder and is refused in production mode
+  the image refused the development key, as required
+  --- /healthz ---
+  {"status":"ok"}
+  --- /readyz ---
+  {"status":"ok","components":[],"search_schema_version":null,"checked_at":"2026-09-20T19:13:34Z"}
+  --- /version ---
+  {"release":"8634f09","commit":"8634f099bf466f48fc23a82c3843fa18435fb901","built_at":"2026-09-20T19:12:52Z","go_version":"go1.27.1","image_digest":null,"search_schema_version":null}
+  search_schema_version is null, as Q-001 requires
+  an unsigned internal request was rejected with 401
+  the running image answered not_indexed
+
+--- ci-required guard: the new workflow parser and fixture self-check ---
+  PyYAML 6.0.1
+  workflows parsed: 2; no continue-on-error on any job or step
+  floor: every non-optional lane is present in the manifest
+  manifest entries are bare job names
+  every required check is defined by a job
+  every pullable Dockerfile base image is pinned by digest
+  the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+  ci-required: every required check succeeded on d1ca9a692699d5b1223eb4954672a93f3551e337
