@@ -185,7 +185,7 @@ func TestSignatureRemainsValidInsideTheWindow(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body))
 	nonce := "0123456789abcdef0123456789abcdef"
-	ts, sig := hmacauth.Sign([]byte(testKey), http.MethodPost, path, time.Now().Add(-4*time.Minute), nonce, body)
+	ts, sig := hmacauth.SignAt([]byte(testKey), http.MethodPost, path, time.Now().Add(-4*time.Minute), nonce, body)
 	req.Header.Set(hmacauth.HeaderTimestamp, ts)
 	req.Header.Set(hmacauth.HeaderNonce, nonce)
 	req.Header.Set(hmacauth.HeaderSignature, sig)

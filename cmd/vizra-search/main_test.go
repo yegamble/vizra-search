@@ -354,3 +354,85 @@ func TestUnknownSubcommandIsRefused(t *testing.T) {
 		t.Fatalf("output = %q", out)
 	}
 }
+
+// TestDevelopmentBootWarnsAboutTheRelaxedMode: development mode accepts the
+// documented public dev key, so it must never be a silent state. The warning
+// names the mode and what it relaxes, and never contains the key.
+func TestDevelopmentBootWarnsAboutTheRelaxedMode(t *testing.T) {
+	addr := freeAddr(t)
+	cmd := exec.Command(binary(t))
+	cmd.Env = append(os.Environ(),
+		config.EnvMode+"=development",
+		config.EnvHMACKey+"="+config.DevHMACKey,
+		config.EnvAddr+"="+addr,
+	)
+	var out syncBuffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+	})
+	waitForHealthy(t, "http://"+addr+"/healthz", &out)
+
+	log := out.String()
+	if !strings.Contains(log, "running in development mode") {
+		t.Fatalf("development boot logged no warning:\n%s", log)
+	}
+	if !strings.Contains(log, "relaxed") {
+		t.Fatalf("the warning does not say what is relaxed:\n%s", log)
+	}
+	if strings.Contains(log, config.DevHMACKey) {
+		t.Fatalf("the development warning contains the key:\n%s", log)
+	}
+}
+
+func TestProductionBootEmitsNoDevelopmentWarning(t *testing.T) {
+	addr := freeAddr(t)
+	cmd := exec.Command(binary(t))
+	cmd.Env = append(os.Environ(),
+		config.EnvMode+"=production",
+		config.EnvHMACKey+"="+strongKey,
+		config.EnvAddr+"="+addr,
+	)
+	var out syncBuffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+	})
+	waitForHealthy(t, "http://"+addr+"/healthz", &out)
+	if strings.Contains(out.String(), "running in development mode") {
+		t.Fatalf("a production boot claimed development mode:\n%s", out.String())
+	}
+}
+
+// TestMakeRunBindsLoopbackOnly: the development key is a published constant in
+// this repository, so a `make run` that bound every interface would let anyone
+// on the developer's network sign a valid request.
+func TestMakeRunBindsLoopbackOnly(t *testing.T) {
+	raw, err := os.ReadFile("../../Makefile")
+	if err != nil {
+		t.Fatalf("reading the Makefile: %v", err)
+	}
+	text := string(raw)
+	idx := strings.Index(text, "\nrun:")
+	if idx < 0 {
+		t.Fatal("the Makefile has no `run` target")
+	}
+	// The recipe runs to the next blank line followed by a non-tab line.
+	recipe := text[idx:]
+	if end := strings.Index(recipe, "\n.PHONY:"); end > 0 {
+		recipe = recipe[:end]
+	}
+	if !strings.Contains(recipe, config.EnvAddr+"=127.0.0.1:") {
+		t.Fatalf("`make run` does not bind loopback; the published development key would be reachable from the network:\n%s", recipe)
+	}
+}

@@ -43,9 +43,19 @@ holds that line.
 
 ### 2. This repository does not own the contract.
 
-`api/search-internal.openapi.yaml` is a **vendored, byte-identical copy** of the
-canonical file in `yegamble/vizra-core`. `api/CONTRACT-SOURCE.json` records the
-source repository, path, commit SHA and sha256 of the vendored bytes.
+Two files are **vendored, byte-identical copies** of canonical files in
+`yegamble/vizra-core`, and `api/CONTRACT-SOURCE.json` records the source
+repository, the commit SHA, and a **separate sha256 for each file**:
+
+| Vendored file | What it is |
+|---|---|
+| `api/search-internal.openapi.yaml` | the canonical OpenAPI contract |
+| `api/search-hmac-testvectors.json` | the **normative** HMAC conformance vectors — `vectors` are ACCEPT cases, `negative_vectors` are REJECT cases, and an implementation MUST consume both halves |
+
+The reject half matters more than the accept half. The contract says why:
+"agreeing on what is accepted while disagreeing on what is rejected is how two
+implementations of the same scheme diverge." That is not hypothetical — it had
+already happened here, and the vectors exist because of it.
 
 - Every `$ref` in the document must be local (`#/...`). A reference to another
   file or a URL is refused at parse time, before anything resolves it, so the
@@ -81,39 +91,92 @@ actually emit it, or write down why it cannot.
 ## HMAC boundary
 
 The scheme is fixed by the canonical contract
-(`components.securitySchemes.hmacSignature`), not by this repository.
+(`components.securitySchemes.hmacSignature`) and by the normative vectors, not
+by this repository.
 
 ```
-X-Vizra-Timestamp: <unix seconds, decimal digits>
-X-Vizra-Nonce:     <at least 16 bytes of randomness, lowercase hex>
-X-Vizra-Signature: v1=<lowercase hex HMAC-SHA256>
+X-Vizra-Timestamp: <unix seconds, BARE DECIMAL DIGITS>
+X-Vizra-Nonce:     <16..64 bytes of randomness, LOWERCASE hex>
+X-Vizra-Signature: v1=<LOWERCASE hex HMAC-SHA256>
 
-canonical = "v1\n<METHOD>\n<path>\n<timestamp>\n<nonce>\n<sha256-hex(raw body)>"
+canonical = "v1\n<METHOD>\n<path as sent>\n<timestamp>\n<nonce>\n<sha256-hex(raw body)>"
 ```
 
-Rules that are tested and must not be relaxed:
+### Every field enters the canonical string VERBATIM
 
-- Comparison is **constant time** (`hmac.Equal`).
-- A timestamp more than **300 s** from the verifier's clock, in either
-  direction, is refused.
+Nothing uppercases, trims, reparses or reformats any field. Non-canonical input
+is **refused, never rewritten**. This is the rule that had already been broken:
+one side rebuilt the timestamp through `ParseInt`→`FormatInt`, so
+`" 1789000000 "`, `"+1789000000"` and `"01789000000"` verified here and were
+refused by core.
+
+| Field | Rule |
+|---|---|
+| method | uppercase ASCII only, exactly as sent — a lowercase method is **rejected**, not uppercased |
+| path | `req.URL.EscapedPath()`, the request path as sent — **never** Echo's route template `c.Path()`, which would drop a concrete path segment out of the MAC the moment a parameterised route lands |
+| timestamp | `^[1-9][0-9]*$` — no sign, no leading zero, no whitespace, no separators, no other base |
+| nonce | 32–128 lowercase hex characters, even length — uppercase is **rejected**, not lowercased |
+| signature | `v1=` + exactly 64 **lowercase** hex characters |
+| headers | each of the three appears **exactly once**; a duplicate is rejected, not resolved to the first or the last |
+
+### The timestamp window actually closes
+
+The timestamp's **magnitude** is validated against an absolute range
+`[1000000000, 4102444800]` **before any arithmetic**, and the skew is then
+computed on plain `int64` seconds against ±300 s.
+
+This is not decoration. The previous implementation computed
+`now.Sub(time.Unix(ts, 0))` and folded the sign. `time.Time.Sub` **saturates at
+`math.MinInt64`** for a far-future argument, and negating `math.MinInt64` yields
+itself — still negative — so the comparison failed open and a validly signed
+request with a timestamp of `253402300799` was **accepted and never expired**.
+With no nonce store, that window is the only replay bound the service has.
+
+- No `time.Duration` in `internal/hmacauth` is ever derived from an unvalidated
+  header. `TestTheSkewArithmeticCannotSaturate` pins that as a source-level
+  property, and `TestTimestampWindowClosesAcrossTheWholeMagnitudeRange` drives
+  the whole magnitude range in both directions including min/max int64.
+- A verifier whose **own** clock falls outside the absolute range fails closed.
+
+### Other rules that are tested and must not be relaxed
+
+- Comparison is **constant time** (`hmac.Equal`), over the whole MAC.
 - A body above `MAX_INTERNAL_BODY_BYTES` (default **1 MiB**) is refused with
-  **413 before the body is read**. A declared `Content-Length` above the limit
-  is refused without reading a byte.
+  **413 before the body is read** — both for a declared `Content-Length` and
+  for an undeclared/chunked body, which stops after `limit+1` bytes.
+- A **query string** on an internal route is refused before verification. The
+  canonical string has no query field, so a query is unsigned and an attacker
+  could append one to a captured request without invalidating it.
+- The drain **503 sits after authentication**, so an unauthenticated caller
+  learns nothing about this service — not even whether it is draining.
 - Rejection is **always 401** with `{"error":{"code":"signature_rejected", …}}`
-  and **must not say which of the three headers was wrong**. The specific
-  reason goes to the log, never to the caller
-  (`wantSignatureRejected` enforces both halves).
+  and **must not say which rule was broken**. The specific reason goes to the
+  log, never to the caller.
+- The **refusal path** logs no request body. A 401 is most often core's own
+  clock skew or a rotated key, and that body is a real member's query text.
 - An unconfigured verifier — no key, or no skew bound — fails every request
   closed. It never defaults to accepting.
 
-### Known limitation, stated rather than implied
+### Known limitations, stated rather than implied
 
 **There is no nonce store at M0.** The timestamp window is the only replay
 bound, so an *identical* request can be replayed within 300 s. A *modified*
-replay is impossible, because the method, path, nonce and a digest of the exact
-body are all bound into the MAC. The canonical contract states the same
-limitation ("Nonce replay rejection is required once search owns storage"). When
-this service gains storage, nonce rejection lands with it.
+replay is impossible: the method, path, nonce and a digest of the exact body are
+all bound into the MAC. The contract states the same limitation. This is pinned
+by `TestIdenticalRequestsCanStillBeReplayedInsideTheWindowAtM0`, whose name *is*
+the limitation — so the day this service owns storage, that test must be
+rewritten to assert rejection rather than quietly kept passing.
+
+**There is no key rotation.** Exactly one key is read and one key verifies, so
+rotating `SEARCH_HMAC_KEY` requires core and search to change it in the **same
+instant**. In practice that is a window in which every internal call 401s —
+which by this contract's own rules means `search: degraded` and `vizra doctor`
+FAIL — and an operator who learns the key leaked has no clean remediation. The
+realistic consequence is that nobody ever rotates it. Multi-key verification
+(accept any configured key, each held to the same production validation, core
+signing with the first) turns rotation into two ordinary restarts; it is queued,
+not in this slice. Until it lands, an operator rotating the key should expect a
+brief degraded window and should schedule it deliberately.
 
 ## Configuration
 
@@ -123,10 +186,10 @@ still gets the production refusals. An unrecognised mode fails closed.
 | Variable | Default | Notes |
 |---|---|---|
 | `SEARCH_HMAC_KEY` | — | **Required in every mode.** Named by the contract. |
-| `MAX_INTERNAL_BODY_BYTES` | `1048576` | Named by the contract. |
+| `MAX_INTERNAL_BODY_BYTES` | `1048576` | Named by the contract. **Production refuses any value above 8 MiB.** |
 | `VIZRA_SEARCH_MODE` | `production` | `production` or `development`. |
 | `VIZRA_SEARCH_ADDR` | `:8081` | Never published off-host (ADR-002 / Q-017). |
-| `VIZRA_SEARCH_MAX_CLOCK_SKEW` | `300s` | The contract's window. |
+| `VIZRA_SEARCH_MAX_CLOCK_SKEW` | `300s` | The contract's window. **Production refuses any value above 300s.** |
 | `VIZRA_SEARCH_REQUEST_TIMEOUT` | `5s` | Bounds each handler. |
 | `VIZRA_SEARCH_SHUTDOWN_GRACE` | `15s` | Drain window. |
 
@@ -137,9 +200,22 @@ bytes, anything that looks like a placeholder (`dev-`, `test-`, `changeme`,
 collects **every** problem rather than returning the first (ADR-002 §
 Configuration ownership), and no error message ever echoes the rejected key.
 
+### Ceilings, not just defaults
+
+The contract fixes two numbers, and a default is not a bound. Production
+**refuses** a `VIZRA_SEARCH_MAX_CLOCK_SKEW` above 300 s and a
+`MAX_INTERNAL_BODY_BYTES` above 8 MiB, naming the offending variable and
+echoing no other configuration. With no nonce store, the skew is the replay
+bound: an operator debugging clock drift must not be able to widen it to an
+hour without being told. The body cap is the memory bound on a path that runs
+**before** any signature is verified.
+
+Development may exceed both, and the boot log says so in a warning that names
+the mode, what it relaxes, and never contains the key.
+
 `config.LoadFrom(lookup)` and `config.CheckEnv(map)` are the ADR-002 seam: setup,
 doctor and CI validate a candidate env file with the boot code itself, so they
-can never disagree with boot.
+can never disagree with boot — including these ceilings.
 
 ## Logging and redaction (ADR-002 § Logging and redaction)
 
@@ -161,7 +237,7 @@ including a check that never ran — as a failure.
 | `vet` | `go vet ./...` |
 | `echo-containment` | ADR-001: Echo is imported only by `internal/httpapi` |
 | `build` | the binary links and reports its identity |
-| `contract-drift` | the handlers and response bodies match the canonical contract |
+| `contract-drift` | the handlers, response bodies, HMAC scheme and both vendored digests match the canonical contract, and every normative vector — ACCEPT and REJECT — is consumed |
 | `test` | `go test -race -count=1 ./...` |
 | `test-noskip` | **0 skipped tests** and a non-trivial collected count (Q-001) |
 | `tidy-check` | `go.mod`/`go.sum` are tidy |
@@ -170,6 +246,9 @@ including a check that never ran — as a failure.
 
 `test-noskip` fails on **any** skip, including a package with no test files. If
 you add a package, add tests to it; do not loosen the guard.
+
+`make ci` includes `tidy-check`, so a local `make ci` covers the same lanes CI
+runs.
 
 ### The manifest is editable by the PR it gates
 
@@ -181,8 +260,12 @@ enforces:
 
 - a **floor** of lanes (`build`, `test`, `test-noskip`, `contract-drift`,
   `govulncheck`) that may never be removed from the manifest. The floor lives in
-  the guard script, which CODEOWNERS puts under owner review, not in the
-  manifest it guards;
+  `scripts/ci-required-guard.sh` — not in the workflow, and not in the manifest
+  it guards. Being one file away is a speed bump, not a control: that script is
+  also checked out from the PR under test. **What actually closes this is the
+  owner ruleset requiring CODEOWNERS review on `/.github/` and `/scripts/`,
+  which is an owner action after this PR lands and is not part of it. Until then
+  "ci-required is the gate" is a convention;**
 - every manifest entry is a **bare job name** — no trailing comment, no
   `optional` marker, no colon-separated field — so a lane cannot be neutered in
   place instead of deleted;

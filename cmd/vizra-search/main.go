@@ -108,6 +108,26 @@ func run() error {
 		MaxHeaderBytes:    16 << 10,
 	}
 
+	// Development mode is never a silent state: key validation is relaxed
+	// there, and a developer who forgot which mode they are in must be able to
+	// see it in the first lines of the log. The warning names the mode and what
+	// it relaxes; it never contains the key.
+	if !cfg.Mode.IsProduction() {
+		log.Warn("running in development mode",
+			"mode", string(cfg.Mode),
+			"hmac_key_validation", "relaxed: the documented development key and short keys are accepted",
+			"addr", cfg.Addr,
+			"note", "never expose this process outside the loopback interface",
+		)
+		if cfg.ExceedsProductionCeilings() {
+			log.Warn("configuration exceeds the limits a production process would refuse",
+				"max_clock_skew", cfg.MaxClockSkew,
+				"max_body_bytes", cfg.MaxBodyBytes,
+				"note", "production refuses these values; the replay window and the pre-authentication memory bound are both widened here",
+			)
+		}
+	}
+
 	// The configuration is logged with the shared secret redacted.
 	log.Info("starting", "config", cfg, "version", buildinfo.Version, "commit", buildinfo.Commit)
 

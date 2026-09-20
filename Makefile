@@ -30,7 +30,7 @@ help: ## List the targets
 # ------------------------------------------------------------------- lanes ---
 
 .PHONY: ci
-ci: fmt-check vet echo-containment build contract-drift test test-noskip ## Every required lane, in order
+ci: fmt-check vet echo-containment build contract-drift test test-noskip tidy-check ## Every required lane, in order
 
 .PHONY: fmt-check
 fmt-check: ## Fail if any file is not gofmt-clean
@@ -58,8 +58,9 @@ build: ## Build the binary
 	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/$(BINARY) ./cmd/$(BINARY)
 
 .PHONY: contract-drift
-contract-drift: ## Compare the handlers against the canonical contract owned by vizra-core
-	go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured' ./internal/httpapi/ ./internal/contract/
+contract-drift: ## Compare the handlers and the HMAC scheme against the canonical contract owned by vizra-core
+	go test -count=1 -run 'Contract|Drift|Schema|Q001|Secured|Vector|Shared|Negative|Window|RejectClass' \
+		./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/
 
 .PHONY: test
 test: ## Full test suite with the race detector
@@ -90,9 +91,14 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 
 # ------------------------------------------------------------------ extras ---
 
+# The development key is a published constant in this repository, so anyone on
+# the developer's network could sign a valid request against a process that
+# binds every interface. `run` therefore binds loopback explicitly rather than
+# inheriting the container default of ":8081".
 .PHONY: run
-run: ## Run locally in development mode with the documented dev key
+run: ## Run locally in development mode, on loopback only, with the documented dev key
 	VIZRA_SEARCH_MODE=development \
+	VIZRA_SEARCH_ADDR=127.0.0.1:8081 \
 	SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
 	go run ./cmd/$(BINARY)
 

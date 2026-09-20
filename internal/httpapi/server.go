@@ -266,9 +266,34 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
 			return s.refuseTooLarge(c, -1)
 		}
 
-		// 2. Authenticate over the exact bytes received. The response never
-		//    says which header was wrong — the contract forbids it.
-		if err := s.verifier.Verify(req.Method, c.Path(), req.Header, body); err != nil {
+		// 2. The canonical string has no query-string field: the contract's
+		//    third field is "request path, exactly as sent, no query string".
+		//    A query is therefore unsigned, and an attacker on the internal
+		//    network could append or alter one without invalidating a captured
+		//    signature. No handler reads one, so refusing it outright — before
+		//    verification, with the same uniform 401 — makes the contract's
+		//    "no query string" safe by construction rather than by everyone
+		//    remembering it.
+		if req.URL.RawQuery != "" || req.URL.ForceQuery {
+			s.log.Warn("request refused",
+				slog.String("method", req.Method),
+				slog.String("path", c.Path()),
+				slog.Int("status", http.StatusUnauthorized),
+				slog.String("reason", "query_string_not_permitted"),
+			)
+			return writeError(c, http.StatusUnauthorized, codeSignatureRejected, "request authentication failed")
+		}
+
+		// 3. Authenticate over the exact bytes received, and over the request
+		//    path AS SENT — req.URL.EscapedPath(), which is what vizra-core
+		//    signs — not Echo's route template c.Path(). For the six static
+		//    routes the two strings are identical today, but the moment a route
+		//    carries a parameter c.Path() becomes "/internal/v1/assets/:id" and
+		//    the concrete id would silently drop out of the MAC while core kept
+		//    signing it. The contract requires every field verbatim.
+		//    c.Path() stays in the LOG, where the route template is the useful
+		//    grouping key and carries no authentication weight.
+		if err := s.verifier.Verify(req.Method, req.URL.EscapedPath(), req.Header, body); err != nil {
 			var authErr *hmacauth.Error
 			reason := string(hmacauth.ReasonBadSignature)
 			if errors.As(err, &authErr) {
@@ -285,14 +310,20 @@ func (s *Server) authenticated(h func(*echo.Context, []byte) error) echo.Handler
 			return writeError(c, http.StatusUnauthorized, codeSignatureRejected, "request authentication failed")
 		}
 
-		// 3. A draining process is a fault from core's point of view, not an
+		// 4. A draining process is a fault from core's point of view, not an
 		//    empty index: core must fall back to SQL and report degraded,
 		//    which is exactly what a 5xx means in this contract.
+		//
+		//    This check sits AFTER authentication deliberately. The contract is
+		//    silent on the ordering, so the conservative reading applies: an
+		//    unauthenticated caller learns nothing about this service, not even
+		//    whether it is draining. TestADrainingServerStillRefusesAnUnsigned-
+		//    RequestFirst pins the order so it cannot be reversed unnoticed.
 		if s.draining.Load() {
 			return writeError(c, http.StatusServiceUnavailable, codeUnavailable, "the service is draining")
 		}
 
-		// 4. Bound the handler's own time and propagate cancellation.
+		// 5. Bound the handler's own time and propagate cancellation.
 		ctx, cancel := contextWithTimeout(req.Context(), s.cfg.RequestTimeout)
 		defer cancel()
 		if deadline, ok := ctx.Deadline(); ok {

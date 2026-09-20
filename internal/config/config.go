@@ -40,6 +40,21 @@ const (
 	// MinProductionKeyBytes is the shortest shared secret a production process
 	// will accept. 32 bytes is the HMAC-SHA256 block output size.
 	MinProductionKeyBytes = 32
+
+	// MaxProductionClockSkew is the widest replay window a production process
+	// will accept. It equals the contract's fixed 300 s: with no nonce store at
+	// M0 the timestamp window IS the replay bound, so an operator debugging
+	// clock drift must not be able to widen it silently. Development may
+	// exceed it and says so in the boot log.
+	MaxProductionClockSkew = DefaultMaxClockSkew
+
+	// MaxProductionBodyBytes is the largest request body a production process
+	// will buffer. The body is read into memory BEFORE the signature can be
+	// verified, so this is the memory bound on an unauthenticated code path.
+	// 8 MiB is eight times the contract's 1 MiB default, which leaves room for
+	// a larger event batch without turning the pre-auth read into a denial of
+	// service.
+	MaxProductionBodyBytes = int64(8 << 20)
 )
 
 // Environment variable names, in one place so the error messages and the
@@ -139,6 +154,7 @@ func LoadFrom(lookup Lookup) (*Config, error) {
 		ShutdownGrace:  v.duration(EnvShutdownGrace, DefaultShutdownGrace),
 	}
 	cfg.HMACKey = v.hmacKey(cfg.Mode)
+	v.ceilings(cfg)
 
 	if err := v.err(); err != nil {
 		return nil, err
@@ -242,6 +258,33 @@ func (v *validator) bytes(key string, def int64) int64 {
 		return def
 	}
 	return n
+}
+
+// ceilings refuses a production process that widens either of the two limits
+// the contract fixes. Development may exceed them — the boot log says so — but
+// production may not, because both sit on the unauthenticated path.
+//
+// The messages name the offending variable and the ceiling, and nothing else:
+// no other configuration value is echoed.
+func (v *validator) ceilings(cfg *Config) {
+	if !cfg.Mode.IsProduction() {
+		return
+	}
+	if cfg.MaxClockSkew > MaxProductionClockSkew {
+		v.addf("%s must not exceed %s in %s mode; the canonical contract fixes the replay window at %s and there is no nonce store to bound it otherwise",
+			EnvMaxClockSkew, MaxProductionClockSkew, ModeProduction, MaxProductionClockSkew)
+	}
+	if cfg.MaxBodyBytes > MaxProductionBodyBytes {
+		v.addf("%s must not exceed %d bytes in %s mode; the body is buffered before the signature can be verified, so this is the memory bound on an unauthenticated path",
+			EnvMaxBodyBytes, MaxProductionBodyBytes, ModeProduction)
+	}
+}
+
+// ExceedsProductionCeilings reports whether this configuration relies on limits
+// a production process would refuse. It is how the boot path knows to warn in
+// development mode.
+func (c Config) ExceedsProductionCeilings() bool {
+	return c.MaxClockSkew > MaxProductionClockSkew || c.MaxBodyBytes > MaxProductionBodyBytes
 }
 
 // placeholderMarkers are substrings that mark a key as a documentation or

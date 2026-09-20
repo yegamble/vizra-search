@@ -7,9 +7,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/yegamble/vizra-search/internal/config"
 	"github.com/yegamble/vizra-search/internal/contract"
+	"github.com/yegamble/vizra-search/internal/hmacauth"
 	"github.com/yegamble/vizra-search/internal/httpapi"
 )
 
@@ -18,16 +22,27 @@ import (
 // this check red until it is vendored again.
 const (
 	contractPath = "../../api/search-internal.openapi.yaml"
+	vectorsPath  = "../../api/search-hmac-testvectors.json"
 	manifestPath = "../../api/CONTRACT-SOURCE.json"
 )
 
+// contractManifest mirrors api/CONTRACT-SOURCE.json. It records EVERY vendored
+// file, because the contract is now two files — the OpenAPI document and the
+// normative HMAC conformance vectors — and a manifest that pinned only one of
+// them would leave the other editable in place.
 type contractManifest struct {
-	SourceRepository string `json:"source_repository"`
-	SourcePath       string `json:"source_path"`
-	SourceCommit     string `json:"source_commit"`
-	VendoredPath     string `json:"vendored_path"`
-	SHA256           string `json:"sha256"`
-	Bytes            int64  `json:"bytes"`
+	SourceRepository string         `json:"source_repository"`
+	SourceRef        string         `json:"source_ref"`
+	SourceCommit     string         `json:"source_commit"`
+	Files            []manifestFile `json:"files"`
+}
+
+type manifestFile struct {
+	SourcePath   string `json:"source_path"`
+	VendoredPath string `json:"vendored_path"`
+	SHA256       string `json:"sha256"`
+	Bytes        int64  `json:"bytes"`
+	Role         string `json:"role"`
 }
 
 func loadManifest(t *testing.T) contractManifest {
@@ -52,25 +67,13 @@ func loadContract(t *testing.T) *contract.Doc {
 	return doc
 }
 
-// TestVendoredContractMatchesItsManifest proves the vendored copy has not been
+// TestEveryVendoredFileMatchesItsManifest proves no vendored copy has been
 // edited in place. Without this, a developer could "fix" a drift failure by
 // changing the contract in this repository — which is exactly the failure mode
-// a two-repository drift check exists to prevent.
-func TestVendoredContractMatchesItsManifest(t *testing.T) {
+// a two-repository drift check exists to prevent. Both files are checked: the
+// OpenAPI document and the normative HMAC conformance vectors.
+func TestEveryVendoredFileMatchesItsManifest(t *testing.T) {
 	m := loadManifest(t)
-
-	raw, err := os.ReadFile(contractPath)
-	if err != nil {
-		t.Fatalf("reading the vendored contract: %v", err)
-	}
-	if got := contract.Digest(raw); got != m.SHA256 {
-		t.Fatalf("the vendored contract does not match its manifest.\n  manifest sha256: %s\n  file sha256:     %s\n"+
-			"This repository does not own %s. Re-vendor it from %s@%s instead of editing it.",
-			m.SHA256, got, m.SourcePath, m.SourceRepository, m.SourceCommit)
-	}
-	if int64(len(raw)) != m.Bytes {
-		t.Fatalf("the vendored contract is %d bytes, the manifest says %d", len(raw), m.Bytes)
-	}
 
 	if m.SourceRepository != "yegamble/vizra-core" {
 		t.Errorf("source_repository = %q; vizra-core owns this contract (ADR-002, Q-001)", m.SourceRepository)
@@ -78,8 +81,43 @@ func TestVendoredContractMatchesItsManifest(t *testing.T) {
 	if len(m.SourceCommit) != 40 {
 		t.Errorf("source_commit = %q, want a full 40-character commit SHA so the consumed version is unambiguous", m.SourceCommit)
 	}
-	if filepath.ToSlash(m.VendoredPath) != "api/search-internal.openapi.yaml" {
-		t.Errorf("vendored_path = %q", m.VendoredPath)
+
+	// Both files must be pinned. A manifest that silently stopped listing one
+	// of them would leave that file editable with CI green.
+	want := map[string]bool{
+		"api/search-internal.openapi.yaml": false,
+		"api/search-hmac-testvectors.json": false,
+	}
+	for _, f := range m.Files {
+		key := filepath.ToSlash(f.VendoredPath)
+		if _, expected := want[key]; expected {
+			want[key] = true
+		}
+		if f.SourcePath != key {
+			t.Errorf("%s: source_path %q differs from vendored_path %q; the vendored copy must sit at the same path as in core", key, f.SourcePath, key)
+		}
+
+		raw, err := os.ReadFile("../../" + key)
+		if err != nil {
+			t.Errorf("reading the vendored %s: %v", key, err)
+			continue
+		}
+		if got := contract.Digest(raw); got != f.SHA256 {
+			t.Errorf("the vendored %s does not match its manifest.\n  manifest sha256: %s\n  file sha256:     %s\n"+
+				"This repository does not own it. Re-vendor from %s@%s instead of editing it.",
+				key, f.SHA256, got, m.SourceRepository, m.SourceCommit)
+		}
+		if int64(len(raw)) != f.Bytes {
+			t.Errorf("the vendored %s is %d bytes, the manifest says %d", key, len(raw), f.Bytes)
+		}
+		if strings.TrimSpace(f.Role) == "" {
+			t.Errorf("%s carries no role in the manifest", key)
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("the manifest no longer pins %s, so that file could be edited in place with CI green", key)
+		}
 	}
 }
 
@@ -226,5 +264,77 @@ func TestRejectionBodiesUseTheContractErrorShape(t *testing.T) {
 				t.Fatalf("the %d body is not the contract's Error shape: %v\nbody: %s", rec.Code, err, rec.Body.String())
 			}
 		})
+	}
+}
+
+// TestTheContractsFixedNumbersMatchTheImplementation reads the two numbers the
+// contract owns out of the vendored document itself, rather than asserting a
+// constant against itself. A change to either number in vizra-core then turns
+// this repository red the way a renamed route already does.
+func TestTheContractsFixedNumbersMatchTheImplementation(t *testing.T) {
+	raw, err := os.ReadFile(contractPath)
+	if err != nil {
+		t.Fatalf("reading the vendored contract: %v", err)
+	}
+	text := string(raw)
+
+	// "the skew is then computed on plain int64 seconds against a window of
+	// ±300 s." — the phrase wraps in the YAML block scalar, so the token is
+	// matched rather than the sentence.
+	if !strings.Contains(text, "±300 s") {
+		t.Errorf("the contract no longer states a ±300 s window; config.DefaultMaxClockSkew is %v and may need to follow", config.DefaultMaxClockSkew)
+	}
+	if config.DefaultMaxClockSkew != 300*time.Second {
+		t.Errorf("DefaultMaxClockSkew = %v, the contract fixes 300 s", config.DefaultMaxClockSkew)
+	}
+
+	// "A body above `MAX_INTERNAL_BODY_BYTES` (default 1 MiB)"
+	if !strings.Contains(text, "`MAX_INTERNAL_BODY_BYTES` (default 1 MiB)") {
+		t.Errorf("the contract no longer states a 1 MiB default body cap; config.DefaultMaxBodyBytes is %d and may need to follow", config.DefaultMaxBodyBytes)
+	}
+	if config.DefaultMaxBodyBytes != 1<<20 {
+		t.Errorf("DefaultMaxBodyBytes = %d, the contract fixes 1 MiB", config.DefaultMaxBodyBytes)
+	}
+
+	// The absolute magnitude range, which is what closes the window.
+	for _, want := range []string{"1000000000", "4102444800"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the contract no longer names the absolute timestamp bound %s", want)
+		}
+	}
+	if hmacauth.MinTimestampUnix != 1000000000 || hmacauth.MaxTimestampUnix != 4102444800 {
+		t.Errorf("the implementation's absolute range is [%d, %d], the contract fixes [1000000000, 4102444800]",
+			hmacauth.MinTimestampUnix, hmacauth.MaxTimestampUnix)
+	}
+
+	// The nonce ceiling.
+	if !strings.Contains(text, "at most 128") {
+		t.Error("the contract no longer states the 128-character nonce ceiling")
+	}
+	if hmacauth.MaxNonceHexLen != 128 {
+		t.Errorf("MaxNonceHexLen = %d, the contract fixes 128", hmacauth.MaxNonceHexLen)
+	}
+}
+
+// The vendored vectors must parse and must still carry both halves. A vector
+// file trimmed to its ACCEPT cases would leave the reject set — the half the
+// contract says matters more — unchecked.
+func TestTheVendoredVectorsAreUsable(t *testing.T) {
+	raw, err := os.ReadFile(vectorsPath)
+	if err != nil {
+		t.Fatalf("reading the vendored vectors: %v", err)
+	}
+	var vf struct {
+		Vectors         []json.RawMessage `json:"vectors"`
+		NegativeVectors []json.RawMessage `json:"negative_vectors"`
+	}
+	if err := json.Unmarshal(raw, &vf); err != nil {
+		t.Fatalf("the vendored vectors are not JSON: %v", err)
+	}
+	if len(vf.Vectors) == 0 {
+		t.Error("the vendored vectors declare no ACCEPT cases")
+	}
+	if len(vf.NegativeVectors) < 20 {
+		t.Errorf("the vendored vectors declare only %d REJECT cases; the reject set is the half that catches divergence", len(vf.NegativeVectors))
 	}
 }

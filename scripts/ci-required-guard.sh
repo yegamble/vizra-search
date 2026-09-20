@@ -30,9 +30,17 @@ fi
 # PR being gated can edit it. Checking only that every name PRESENT
 # maps to a real job is not enough: deleting a lane's line would
 # leave this check green with that lane no longer required. These
-# lanes may not be removed from the manifest by any PR, and the list
-# lives in the workflow — which CODEOWNERS puts under owner review —
-# rather than in the manifest it guards.
+# lanes may not be removed from the manifest by any PR.
+#
+# The floor lives HERE, in scripts/ci-required-guard.sh — not in the
+# workflow and not in the manifest it guards. Being one file away
+# from the manifest is a speed bump, not a control: this script is
+# also checked out from the PR under test and could be edited in the
+# same commit. What actually closes it is the owner ruleset requiring
+# CODEOWNERS review on /.github/ and /scripts/, which is an owner
+# action after this PR lands (ADR-002 item 9) and is NOT part of it.
+# Until that ruleset is applied, "ci-required is the gate" is a
+# convention, and this comment says so rather than implying otherwise.
 floor="build
 test
 test-noskip

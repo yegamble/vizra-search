@@ -77,7 +77,7 @@ func signedAt(t *testing.T, key []byte, method, path string, at time.Time, body 
 	t.Helper()
 	req := httptest.NewRequest(method, path, bytes.NewReader(body))
 	nonce := "0123456789abcdef0123456789abcdef"
-	ts, sig := hmacauth.Sign(key, method, path, at, nonce, body)
+	ts, sig := hmacauth.SignAt(key, method, path, at, nonce, body)
 	req.Header.Set(hmacauth.HeaderTimestamp, ts)
 	req.Header.Set(hmacauth.HeaderNonce, nonce)
 	req.Header.Set(hmacauth.HeaderSignature, sig)
@@ -390,7 +390,7 @@ func TestTamperedBodiesAreRejected(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(tampered))
 			nonce := "0123456789abcdef0123456789abcdef"
 			// Sign the original body, send the tampered one.
-			ts, sig := hmacauth.Sign([]byte(testKey), http.MethodPost, path, time.Now(), nonce, signed)
+			ts, sig := hmacauth.SignAt([]byte(testKey), http.MethodPost, path, time.Now(), nonce, signed)
 			req.Header.Set(hmacauth.HeaderTimestamp, ts)
 			req.Header.Set(hmacauth.HeaderNonce, nonce)
 			req.Header.Set(hmacauth.HeaderSignature, sig)
@@ -404,7 +404,7 @@ func TestASignatureForOneEndpointDoesNotOpenAnother(t *testing.T) {
 	body := validBody("/internal/v1/events")
 	req := httptest.NewRequest(http.MethodPost, "/internal/v1/events", bytes.NewReader(body))
 	nonce := "0123456789abcdef0123456789abcdef"
-	ts, sig := hmacauth.Sign([]byte(testKey), http.MethodPost, "/internal/v1/search", time.Now(), nonce, body)
+	ts, sig := hmacauth.SignAt([]byte(testKey), http.MethodPost, "/internal/v1/search", time.Now(), nonce, body)
 	req.Header.Set(hmacauth.HeaderTimestamp, ts)
 	req.Header.Set(hmacauth.HeaderNonce, nonce)
 	req.Header.Set(hmacauth.HeaderSignature, sig)

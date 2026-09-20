@@ -246,3 +246,161 @@ func TestDurationsAndSizesParse(t *testing.T) {
 		t.Errorf("Addr = %q", cfg.Addr)
 	}
 }
+
+// TestDefaultsMatchTheCanonicalContract pins the two numbers the contract owns
+// against their LITERAL values, not against the constants themselves. The old
+// assertions compared cfg.MaxClockSkew to config.DefaultMaxClockSkew, which is
+// a tautology: changing the constant moved the expectation with it, so
+// widening the replay window from 5 minutes to 30 days left CI green.
+func TestDefaultsMatchTheCanonicalContract(t *testing.T) {
+	// Contract: "the skew is then computed on plain int64 seconds against a
+	// window of ±300 s" — api/search-internal.openapi.yaml,
+	// components.securitySchemes.hmacSignature.
+	if config.DefaultMaxClockSkew != 300*time.Second {
+		t.Errorf("DefaultMaxClockSkew = %v; the canonical contract fixes the window at 300s", config.DefaultMaxClockSkew)
+	}
+	// Contract: "A body above MAX_INTERNAL_BODY_BYTES (default 1 MiB)".
+	if config.DefaultMaxBodyBytes != 1<<20 {
+		t.Errorf("DefaultMaxBodyBytes = %d; the canonical contract fixes the default at 1 MiB (1048576)", config.DefaultMaxBodyBytes)
+	}
+	// The production ceiling may not be wider than the contract's window.
+	if config.MaxProductionClockSkew > 300*time.Second {
+		t.Errorf("MaxProductionClockSkew = %v; production must not accept a window wider than the contract's 300s", config.MaxProductionClockSkew)
+	}
+}
+
+// TestProductionRefusesAnOverwideSkewWindow: with no nonce store at M0 the
+// timestamp window IS the replay bound, so an operator must not be able to
+// widen it without noticing.
+func TestProductionRefusesAnOverwideSkewWindow(t *testing.T) {
+	for _, skew := range []string{"301s", "10m", "1h", "8760h"} {
+		t.Run(skew, func(t *testing.T) {
+			_, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+				config.EnvMode:         "production",
+				config.EnvMaxClockSkew: skew,
+			})))
+			if err == nil {
+				t.Fatalf("production accepted a %s replay window", skew)
+			}
+			if !strings.Contains(err.Error(), config.EnvMaxClockSkew) {
+				t.Fatalf("the refusal does not name the variable: %s", err.Error())
+			}
+			if !strings.Contains(err.Error(), "5m0s") {
+				t.Fatalf("the refusal does not state the ceiling: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestProductionAcceptsAWindowAtOrBelowTheCeiling(t *testing.T) {
+	for _, skew := range []string{"1s", "60s", "299s", "300s", "5m"} {
+		if _, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+			config.EnvMode:         "production",
+			config.EnvMaxClockSkew: skew,
+		}))); err != nil {
+			t.Errorf("production refused a %s window, which is at or below the ceiling: %v", skew, err)
+		}
+	}
+}
+
+// The body is buffered before the signature can be verified, so the cap is the
+// memory bound on an unauthenticated path.
+func TestProductionRefusesAnOverlargeBodyCap(t *testing.T) {
+	for _, size := range []string{"8388609", "10737418240", "1099511627776"} {
+		t.Run(size, func(t *testing.T) {
+			_, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+				config.EnvMode:         "production",
+				config.EnvMaxBodyBytes: size,
+			})))
+			if err == nil {
+				t.Fatalf("production accepted a %s-byte body cap", size)
+			}
+			if !strings.Contains(err.Error(), config.EnvMaxBodyBytes) {
+				t.Fatalf("the refusal does not name the variable: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestProductionAcceptsABodyCapAtOrBelowTheCeiling(t *testing.T) {
+	for _, size := range []string{"1024", "1048576", "8388608"} {
+		if _, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+			config.EnvMode:         "production",
+			config.EnvMaxBodyBytes: size,
+		}))); err != nil {
+			t.Errorf("production refused a %s-byte cap, which is at or below the ceiling: %v", size, err)
+		}
+	}
+}
+
+// Development may exceed both ceilings — and the boot path says so, which
+// TestDevelopmentBootWarnsAboutTheRelaxedMode in cmd/ checks end to end.
+func TestDevelopmentMayExceedTheProductionCeilings(t *testing.T) {
+	cfg, err := config.LoadFrom(lookupFrom(envWith(map[string]string{
+		config.EnvMode:         "development",
+		config.EnvMaxClockSkew: "1h",
+		config.EnvMaxBodyBytes: "1073741824",
+	})))
+	if err != nil {
+		t.Fatalf("development refused a widened configuration: %v", err)
+	}
+	if !cfg.ExceedsProductionCeilings() {
+		t.Fatal("ExceedsProductionCeilings() = false for a configuration production would refuse; the boot warning depends on this")
+	}
+}
+
+func TestAConfigurationInsideTheCeilingsDoesNotClaimToExceedThem(t *testing.T) {
+	cfg, err := config.LoadFrom(lookupFrom(envWith(nil)))
+	if err != nil {
+		t.Fatalf("LoadFrom: %v", err)
+	}
+	if cfg.ExceedsProductionCeilings() {
+		t.Fatal("ExceedsProductionCeilings() = true for the defaults")
+	}
+}
+
+// CheckEnv must report the same refusals, so doctor and CI agree with boot.
+func TestCheckEnvReportsTheCeilingRefusals(t *testing.T) {
+	base := map[string]string{config.EnvMode: "production", config.EnvHMACKey: strongKey}
+
+	if err := config.CheckEnv(base); err != nil {
+		t.Fatalf("CheckEnv rejected a valid production env: %v", err)
+	}
+
+	wide := map[string]string{}
+	for k, v := range base {
+		wide[k] = v
+	}
+	wide[config.EnvMaxClockSkew] = "24h"
+	if err := config.CheckEnv(wide); err == nil {
+		t.Fatal("CheckEnv accepted a production env with a 24h replay window; doctor would then disagree with boot")
+	}
+
+	big := map[string]string{}
+	for k, v := range base {
+		big[k] = v
+	}
+	big[config.EnvMaxBodyBytes] = "10737418240"
+	if err := config.CheckEnv(big); err == nil {
+		t.Fatal("CheckEnv accepted a production env with a 10 GiB body cap")
+	}
+}
+
+// The ceiling refusal must not turn into a disclosure channel for the rest of
+// the configuration.
+func TestCeilingRefusalsEchoNoOtherConfiguration(t *testing.T) {
+	_, err := config.LoadFrom(lookupFrom(map[string]string{
+		config.EnvMode:         "production",
+		config.EnvHMACKey:      strongKey,
+		config.EnvMaxClockSkew: "24h",
+		config.EnvAddr:         "10.1.2.3:9999",
+	}))
+	if err == nil {
+		t.Fatal("expected a refusal")
+	}
+	for _, secret := range []string{strongKey, "10.1.2.3", "9999"} {
+		if strings.Contains(err.Error(), secret) {
+			t.Errorf("the ceiling refusal echoes %q: %s", secret, err.Error())
+		}
+	}
+}
