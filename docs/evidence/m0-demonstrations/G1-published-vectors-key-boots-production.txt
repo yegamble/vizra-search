@@ -1,0 +1,48 @@
+=== G1-published-vectors-key-boots-production ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:11:56Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+Chair addendum: production must refuse the HMAC key published in the vendored
+conformance vectors. Mutation: remove the exact-value refusal, leaving only the
+heuristics — which the vectors key passes, because it is 32 bytes of mixed-case
+alphanumerics with 32 distinct byte values.
+This is the state the loader was in before this commit.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 660fd6d..88d2f26 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -389,7 +389,3 @@ func (v *validator) hmacKey(mode Mode) []byte {
+ 	}
+-	if IsPublishedKey(key) {
+-		v.addf("%s is a key published in this repository or in the shared conformance vectors and is refused in %s mode; generate a fresh secret (for example `openssl rand -hex 32`)",
+-			EnvHMACKey, ModeProduction)
+-		return []byte(key)
+-	}
++	// MUTATION: exact-value refusal of published keys removed
+ 	for _, exact := range placeholderExact {
+
+--- RED: go test -count=1 ./internal/config/ ---
+--- FAIL: TestProductionRefusesThePublishedVectorsKey (0.00s)
+    publishedkeys_test.go:75: production ACCEPTED the key published in the conformance vectors
+--- FAIL: TestProductionRefusesEveryPublishedKey (0.00s)
+    publishedkeys_test.go:110: production accepted a published key
+    publishedkeys_test.go:110: production accepted a published key
+    publishedkeys_test.go:110: production accepted a published key
+--- FAIL: TestCheckEnvRefusesThePublishedVectorsKey (0.00s)
+    publishedkeys_test.go:124: CheckEnv accepted a production env carrying the vectors' published key
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.440s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: go test -count=1 ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.537s
+[exit code: 0]

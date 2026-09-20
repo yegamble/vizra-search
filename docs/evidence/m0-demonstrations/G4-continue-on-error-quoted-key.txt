@@ -1,0 +1,59 @@
+=== G4-continue-on-error-quoted-key ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:12:00Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+Chair addendum: the continue-on-error check must parse the YAML, not grep it.
+Mutation: add the key to a floor lane with a QUOTED key — a spelling the old
+literal grep missed entirely.
+
+--- mutation applied ---
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c831daf..be36b9b 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -80,2 +80,3 @@ jobs:
+     runs-on: ubuntu-24.04
++    "continue-on-error": true
+     steps:
+
+--- RED: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+.github/workflows/ci.yml:jobs.contract-drift.continue-on-error: `continue-on-error` is not allowed on a required lane (found with value True; the value is irrelevant — the key makes the lane unable to fail the gate)
+continue-on-error is not allowed on a required lane
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: ./scripts/ci-required-guard.sh ---
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/
+[exit code: 0]

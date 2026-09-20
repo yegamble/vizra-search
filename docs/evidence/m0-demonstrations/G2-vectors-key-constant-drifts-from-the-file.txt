@@ -1,0 +1,44 @@
+=== G2-vectors-key-constant-drifts-from-the-file ===
+repo:      yegamble/vizra-search
+baseline:  efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+date:      2026-09-20T19:11:58Z
+toolchain: go version go1.27.1 darwin/arm64
+host:      Darwin arm64
+
+The refusal must track the vendored file. Mutation: change the constant so it
+no longer matches key_utf8 — as would happen if the vectors were re-vendored
+and the constant left behind. The test reads the value from the file at test
+time, so it catches the drift.
+
+--- mutation applied ---
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 660fd6d..a14e1ae 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -41,3 +41,3 @@ const DevHMACKey = "dev-insecure-hmac-key-do-not-use-in-production"
+ // strong as the weaker of the two loaders.
+-const VectorsHMACKey = "Ar4Lo8Cq2Ei6Uk0Wn3Sv7Yb1Md5Pt9Xz"
++const VectorsHMACKey = "Zz9Tp5Dm1By7Vs3Nw0Ku6Ie2Qc8Lo4rA" // MUTATION: stale constant
+ 
+
+--- RED: go test -count=1 ./internal/config/ ---
+--- FAIL: TestTheVectorsPublishedKeyIsStillTheOneWeRefuse (0.00s)
+    publishedkeys_test.go:43: the vendored vectors publish a key this loader does not refuse.
+          vectors key_utf8 : 32 bytes, 32 distinct
+          config.VectorsHMACKey : 32 bytes
+        Update config.VectorsHMACKey to the vendored value. Neither value is printed here.
+--- FAIL: TestProductionRefusesThePublishedVectorsKey (0.00s)
+    publishedkeys_test.go:75: production ACCEPTED the key published in the conformance vectors
+--- FAIL: TestCheckEnvRefusesThePublishedVectorsKey (0.00s)
+    publishedkeys_test.go:124: CheckEnv accepted a production env carrying the vectors' published key
+FAIL
+FAIL	github.com/yegamble/vizra-search/internal/config	0.273s
+FAIL
+[exit code: 1]
+
+--- restore ---
+source tree clean at efaa78ea0eaeb3b224104de4d93d40ad1d68d61d
+
+--- GREEN: go test -count=1 ./internal/config/ ---
+ok  	github.com/yegamble/vizra-search/internal/config	0.265s
+[exit code: 0]
