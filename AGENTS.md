@@ -359,7 +359,8 @@ in place, and each turns a required check red:
 - a test-selecting flag, whether written into the recipe, reached through a
   variable or an included makefile, or carried in `GOFLAGS`/`GOTESTFLAGS`; a
   wrapper script in place of `go test`; a lane defined inside a make
-  conditional; a listed package dropped from the lane;
+  conditional; a package holding a vendored-file guard dropped from the lane's
+  package list, or listed but running zero tests;
 - deleting the workflow anchor, making it conditional, marking it
   `continue-on-error`, or moving it after `make contract-drift` — red on
   `ci-required` and on the `test` lane, not on `contract-drift` itself.
