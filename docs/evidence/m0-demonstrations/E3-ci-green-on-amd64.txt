@@ -1,0 +1,84 @@
+=== E3  ci-required GREEN on the PR head, with the amd64 evidence ===
+repo:   yegamble/vizra-search
+PR:     https://github.com/yegamble/vizra-search/pull/1
+head:   a57aa7a02b05b09238e027fbecfe1d75b373b9c5
+runner: GitHub-hosted ubuntu-24.04 (linux/amd64) — the qualified target of ADR-009 / Q-027
+runs:   ci         https://github.com/yegamble/vizra-search/actions/runs/35528384451
+        ci-required https://github.com/yegamble/vizra-search/actions/runs/35528384428
+date:   2026-09-20T18:18:45Z
+
+This is the SECOND run. The first, on e1e76c2, failed govulncheck and
+correctly failed ci-required with it — see E2-govulncheck-pin-correction.txt.
+
+--- all 12 checks on a57aa7a ---
+  GitGuardian Security Checks      pass 14s
+  build                            pass 36s
+  ci-required                      pass 1m47s
+  contract-drift                   pass 45s
+  docker-build                     pass 51s
+  echo-containment                 pass 19s
+  fmt                              pass 17s
+  govulncheck                      pass 51s
+  test                             pass 1m28s
+  test-noskip                      pass 50s
+  tidy-check                       pass 18s
+  vet                              pass 47s
+
+--- ci-required: the aggregate polled every lane to a conclusion ---
+  required checks:
+    - fmt
+    - vet
+    - echo-containment
+    - build
+    - contract-drift
+    - test
+    - test-noskip
+    - tidy-check
+    - govulncheck
+    - docker-build
+  floor: every non-optional lane is present in the manifest
+  manifest entries are bare job names
+  every required check is defined by a job
+  every pullable Dockerfile base image is pinned by digest
+  evaluating a57aa7a02b05b09238e027fbecfe1d75b373b9c5
+  ci-required: every required check succeeded on a57aa7a02b05b09238e027fbecfe1d75b373b9c5
+  final poll round:
+    fmt: success
+    vet: success
+    echo-containment: success
+    build: success
+    contract-drift: success
+    test: success
+    test-noskip: success
+    tidy-check: success
+    govulncheck: success
+    docker-build: success
+
+--- docker-build on linux/amd64: the built image actually served the boundary ---
+NOTE: `release`/`commit` show the ephemeral pull_request merge commit
+(GITHUB_SHA), not the branch head a57aa7a. That is how GitHub evaluates a PR.
+  vizra-search: invalid vizra-search configuration:
+    - SEARCH_HMAC_KEY is the documented development placeholder and is refused in production mode
+  the image refused the development key, as required
+  --- /healthz ---
+  {"status":"ok"}
+  --- /readyz ---
+  {"status":"ok","components":[],"search_schema_version":null,"checked_at":"2026-09-20T18:14:44Z"}
+  --- /version ---
+  {"release":"e5f809f","commit":"e5f809feac511b78e8fb1709290e59a589c0bb52","built_at":"2026-09-20T18:13:58Z","go_version":"go1.27.1","image_digest":null,"search_schema_version":null}
+  search_schema_version is null, as Q-001 requires
+  an unsigned internal request was rejected with 401
+  the running image answered not_indexed
+  {"time":"2026-09-20T18:14:44.579128203Z","level":"INFO","msg":"starting","config":{"mode":"production","addr":":8081","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"e5f809f","commit":"e5f809feac511b78e8fb1709290e59a589c0bb52"}
+  {"time":"2026-09-20T18:14:44.680658235Z","level":"WARN","msg":"request refused","method":"POST","path":"/internal/v1/search","status":401,"reason":"missing_signature"}
+  {"time":"2026-09-20T18:14:44.722217669Z","level":"INFO","msg":"request","method":"POST","path":"/internal/v1/search","body_bytes":91}
+
+--- govulncheck on linux/amd64: what actually scanned ---
+  Go: go1.27.1
+  Scanner: govulncheck@v1.8.0
+  DB: https://vuln.go.dev
+  DB updated: 2026-09-16 18:00:43 +0000 UTC
+  No vulnerabilities found.
+
+--- test / test-noskip on linux/amd64 ---
+  test-noskip: 187 pass events, 0 skips
