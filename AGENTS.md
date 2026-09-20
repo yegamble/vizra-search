@@ -221,6 +221,7 @@ build is for development and carries no support claim.
 | Echo | `github.com/labstack/echo/v5 v5.3.1` | ADR-001 (≥ v5.3.1); Go module proxy |
 | yaml | `gopkg.in/yaml.v3 v3.0.1` | Go module proxy |
 | build image | `golang@sha256:69a7b978…f99195` (`1.27.1-bookworm`, OCI index covering amd64 and arm64) | Docker Hub registry, 2026-09-20 |
+| `govulncheck` | `golang.org/x/vuln/cmd/govulncheck@v1.8.0` | Go module proxy `@latest`, 2026-09-08. v1.1.4 predates Go 1.27 and crashes on the linux/amd64 runner. |
 | `actions/checkout` | `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1) | GitHub API tag → commit |
 | `actions/setup-go` | `b7ad1dad31e06c5925ef5d2fc7ad053ef454303e` (v7.0.0) | GitHub API tag → commit |
 
