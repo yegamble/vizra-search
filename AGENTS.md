@@ -259,11 +259,11 @@ value** — every key this project publishes.
 
 ### One operator-facing name per concept (2026-09-21)
 
-`VIZRA_SEARCH_MODE` means **search topology** product-wide, and it is **owned by
-`vizra-core`**, which is the only process that reads it. It says whether core
-talks to a search service at all, and to which one. Its vocabulary is core's,
-and this repository deliberately does not restate it. It is not this service's
-variable and never was a good name for this service's runtime mode.
+`VIZRA_SEARCH_MODE` means **search topology** product-wide, and it is **owned
+and read by `vizra-core`**. It says whether core talks to a search service at
+all, and to which one. Its vocabulary is core's, and this repository
+deliberately does not restate it. It is not this service's variable and was
+never a good name for this service's runtime mode.
 
 Until this date `vizra-search` read that same name as its own runtime mode with
 the vocabulary `development | production`: one operator-facing name, two
@@ -311,12 +311,28 @@ Both halves are deliberate and are not to be relaxed:
 
 No refusal message ever echoes the value an operator supplied — only variable
 names and this service's own runtime vocabulary, which are constants in
-`internal/config/config.go`. That sentence is a **test**, not a habit:
-`TestNoRefusalEchoesTheSuppliedValue` drives every refusal path in the loader
-with a marker assembled at run time and fails if the marker comes back (also
-from `Config.String()` and `Config.LogValue()` for an ignored value), and every
-refusal row of the boot matrix greps the process output for the value it
-supplied. `--mutate echo-the-value` turns both red.
+`internal/config/config.go`. That sentence is a **test**, not a habit, and the
+test's reach is itself a test:
+
+- `TestNoRefusalEchoesTheSuppliedValue` provokes **every `v.addf` site** in the
+  loader — 17 of them as of 2026-09-21, across 14 distinct messages, three of
+  which are emitted from more than one place — and fails if a value a probe
+  supplied comes back in the error. It also checks `Config.String()` and
+  `Config.LogValue()` for an **ignored** value. Six sites take a marker
+  assembled at run time; the rest fire
+  only for a constrained value (a parseable duration above the ceiling, a
+  placeholder-shaped key, the retired vocabulary), and each such row **says
+  which and why** next to the value it asserts absent.
+- `TestEveryRefusalSiteInTheLoaderHasANoEchoRow` parses
+  `internal/config/config.go`, counts every `v.addf` call, and fails unless the
+  table accounts for each one — so a refusal added to the loader without a row
+  is red, and "every refusal path" stays true as the loader grows. A format
+  string the guard cannot read is a failure, not a silent skip.
+- Every refusal row of the boot matrix greps the process output for the value it
+  supplied, exempting the two vocabulary words exactly as spelled.
+
+`--mutate echo-the-value` turns the first and the matrix red;
+`--mutate add-an-unrowed-refusal` turns the second red.
 
 The boot matrix behind this table runs against the **real binary**:
 `./scripts/boot-matrix.sh` (20 cases plus the focused suite), with five

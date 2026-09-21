@@ -32,7 +32,10 @@ every key this repository publishes.
 Two assertions run on every case:
 
 - **No refusal echoes the value the operator supplied.** Each refusal row greps
-  the process output for the exact value it set. The two runtime-vocabulary
+  the process output for the exact value it set. The unit-level counterpart
+  covers every `v.addf` site in the loader (17 as of 2026-09-21), with
+  `TestEveryRefusalSiteInTheLoaderHasANoEchoRow` parsing `config.go` so a
+  refusal added without a table row is red. The two runtime-vocabulary
   words are exempt *exactly as spelled*, because the message prints them as the
   vocabulary — which is why one row supplies `  DeVeLoPmEnT  `: that spelling is
   the operator's, and the message must not reproduce it.
@@ -52,6 +55,7 @@ the harness hang rather than go red, which is a harness that cannot fail.
 | `boot-matrix-mutation-default-to-development.txt` | red, as required |
 | `boot-matrix-mutation-unknown-value-as-development.txt` | red, as required |
 | `boot-matrix-mutation-echo-the-value.txt` | red, as required |
+| `boot-matrix-mutation-add-an-unrowed-refusal.txt` | red, as required |
 
 (The per-run counts are in each transcript's last two lines.)
 
@@ -79,6 +83,13 @@ ends with the restored digest.
    exists because a verifier applied exactly this change to the first round and
    `go test` exited 0 with the matrix at 14/0: the no-echo sentence in
    `AGENTS.md` was stronger than anything enforcing it.
+6. **`add-an-unrowed-refusal`** — a new `v.addf` refusal path is added to the
+   loader, firing only for a sentinel no case supplies, so **no behaviour
+   changes at all**: every boot row behaves exactly as it does unmutated. The
+   only thing that can object is
+   `TestEveryRefusalSiteInTheLoaderHasANoEchoRow`, and it does. That is round
+   2's finding in one mutation — the no-echo table claimed to reach every
+   refusal while reaching 6 of 17, so the reach is now itself a test.
 
 Each transcript lists the boot cases and the named Go tests that go red.
 

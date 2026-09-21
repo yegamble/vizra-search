@@ -3,6 +3,9 @@ package config_test
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"strconv"
 	"strings"
 	"testing"
@@ -152,8 +155,9 @@ func TestUnknownModeIsRefused(t *testing.T) {
 }
 
 // The runtime mode is VIZRA_MODE — the PLATFORM name, the one vizra-core reads
-// for the same concept. VIZRA_SEARCH_MODE is core's search TOPOLOGY variable
-// (off | managed | external) and means that, and only that, product-wide.
+// for the same concept. VIZRA_SEARCH_MODE is core's search TOPOLOGY variable,
+// owned and read by core alone; its vocabulary is core's and is deliberately
+// not restated in this repository.
 
 func TestTheRuntimeModeIsReadFromVizraMode(t *testing.T) {
 	if config.EnvMode != "VIZRA_MODE" {
@@ -337,70 +341,256 @@ func TestTheOldNameIsConsultedOnlyByTheRefusal(t *testing.T) {
 	}
 }
 
-// TestNoRefusalEchoesTheSuppliedValue drives EVERY refusal path in the loader
-// that names a variable, with a marker assembled at run time as that variable's
-// value, and fails if the marker comes back in the error or in anything the
-// config renders into a log.
+// refusalSite is one `v.addf` call in the loader — one way this process can
+// refuse to boot — together with the probes that provoke it and the values
+// those probes supply.
 //
-// AGENTS.md states the no-echo property absolutely. Until this test existed the
+// The table is exhaustive by construction:
+// TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses internal/config/config.go
+// and fails unless every `v.addf` call in it is accounted for here, and unless
+// every row here matches a call that exists. A refusal added to the loader
+// without a row is a red test, which is what makes the sentence "no refusal
+// message ever echoes a value" a property of the loader rather than of the
+// seven paths someone happened to think of.
+type refusalSite struct {
+	// format is a fragment of the addf FORMAT STRING, unique among them. It is
+	// how the AST guard pairs a row with the call sites it covers.
+	format string
+	// sites is how many addf calls share that format string. Three of the
+	// loader's messages are emitted from more than one place.
+	sites int
+	// rendered is a fragment of the MESSAGE as the operator sees it, asserted
+	// on every probe so a probe cannot silently provoke a different refusal.
+	rendered string
+	// why documents a value that cannot be an arbitrary marker, and what is
+	// asserted instead. Empty means the probe supplies a marker.
+	why string
+	// probes each build an environment and list the values supplied in it. All
+	// of them must be absent from the resulting error.
+	probes func(t *testing.T, marker func() string) []refusalProbe
+}
+
+type refusalProbe struct {
+	env      map[string]string
+	supplied []string
+}
+
+// one is the common shape: a single variable carrying a single value.
+func one(key, value string) []refusalProbe {
+	return []refusalProbe{{env: map[string]string{key: value}, supplied: []string{value}}}
+}
+
+func refusalSites() []refusalSite {
+	return []refusalSite{
+		{
+			format:   `must be %q or %q`,
+			sites:    1,
+			rendered: `must be "production" or "development"`,
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				return one(config.EnvMode, marker())
+			},
+		},
+		{
+			format:   `OLD runtime-mode vocabulary`,
+			sites:    1,
+			rendered: `OLD runtime-mode vocabulary`,
+			why: "this site fires only for the retired vocabulary, so its value cannot be an " +
+				"arbitrary marker. The SHAPE is the marker instead: an oddly-cased, space-padded " +
+				"spelling the message must not reproduce, even though it legitimately prints the " +
+				"vocabulary word in its canonical spelling.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				raw := "  DeVeLoPmEnT\t"
+				return []refusalProbe{{
+					env:      map[string]string{config.EnvSearchTopology: raw},
+					supplied: []string{raw, "DeVeLoPmEnT"},
+				}}
+			},
+		},
+		{
+			format:   `is not a host:port`,
+			sites:    1,
+			rendered: `is not a host:port listen address`,
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				return one(config.EnvAddr, marker())
+			},
+		},
+		{
+			format:   `is not a duration`,
+			sites:    1,
+			rendered: `is not a duration`,
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				// One site, reached through each of the three duration
+				// variables, each carrying its own marker.
+				skew, timeout, grace := marker(), marker(), marker()
+				return []refusalProbe{{
+					env: map[string]string{
+						config.EnvMaxClockSkew:   skew,
+						config.EnvRequestTimeout: timeout,
+						config.EnvShutdownGrace:  grace,
+					},
+					supplied: []string{skew, timeout, grace},
+				}}
+			},
+		},
+		{
+			format:   `must be greater than zero`,
+			sites:    2,
+			rendered: `must be greater than zero`,
+			why: "both sites fire only for a value that PARSES and is not positive, so the " +
+				"supplied value is constrained to that shape rather than free. One site is " +
+				"reached through a duration variable and the other through the byte count.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return []refusalProbe{
+					{
+						env:      map[string]string{config.EnvRequestTimeout: "-7h6m5s"},
+						supplied: []string{"-7h6m5s"},
+					},
+					{
+						env:      map[string]string{config.EnvMaxBodyBytes: "-765432"},
+						supplied: []string{"-765432"},
+					},
+				}
+			},
+		},
+		{
+			format:   `is not an integer number of bytes`,
+			sites:    1,
+			rendered: `is not an integer number of bytes`,
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				return one(config.EnvMaxBodyBytes, marker())
+			},
+		},
+		{
+			format:   `must not exceed %s in %s mode`,
+			sites:    1,
+			rendered: `must not exceed`,
+			why: "the ceiling fires only for a VALID duration above the contract's window, so " +
+				"the value must parse; a marker never reaches it.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return one(config.EnvMaxClockSkew, "3607s")
+			},
+		},
+		{
+			format:   `must not exceed %d bytes in %s mode`,
+			sites:    1,
+			rendered: `must not exceed`,
+			why: "the ceiling fires only for a VALID byte count above 8 MiB, so the value must " +
+				"parse; a marker never reaches it.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return one(config.EnvMaxBodyBytes, "16777217")
+			},
+		},
+		{
+			format:   `must be set`,
+			sites:    1,
+			rendered: `must be set`,
+			why: "this site fires only when the key is ABSENT or blank, so there is no supplied " +
+				"value that could be echoed. The probe supplies whitespace and asserts the " +
+				"message names the variable and carries nothing else.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return []refusalProbe{{
+					env:      map[string]string{config.EnvHMACKey: "   "},
+					supplied: nil,
+				}}
+			},
+		},
+		{
+			format:   `is the documented development placeholder`,
+			sites:    1,
+			rendered: `is the documented development placeholder`,
+			why: "fires only for one exact published constant, so the value is that constant. " +
+				"It is a key, so its absence from the message matters more here than anywhere.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return one(config.EnvHMACKey, config.DevHMACKey)
+			},
+		},
+		{
+			format:   `is a key published in this repository`,
+			sites:    1,
+			rendered: `is a key published in this repository`,
+			why:      "fires only for an exact published value, so the value is that constant.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return one(config.EnvHMACKey, config.VectorsHMACKey)
+			},
+		},
+		{
+			format:   `looks like a development placeholder`,
+			sites:    3,
+			rendered: `looks like a development placeholder`,
+			why: "three sites — an exact placeholder word, a placeholder PREFIX and a " +
+				"placeholder SUBSTRING — share one message. The exact site needs the whole " +
+				"value to be a placeholder word; the other two can carry a marker around one, " +
+				"and do.",
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				return []refusalProbe{
+					one(config.EnvHMACKey, "devkey")[0],
+					one(config.EnvHMACKey, "dev-"+marker()+marker())[0],
+					one(config.EnvHMACKey, marker()+"insecure"+marker())[0],
+				}
+			},
+		},
+		{
+			format:   `must be at least %d bytes in %s mode`,
+			sites:    1,
+			rendered: `must be at least`,
+			probes: func(_ *testing.T, marker func() string) []refusalProbe {
+				// Short enough to hit the length floor, and shaped so no
+				// placeholder rule catches it first.
+				return one(config.EnvHMACKey, marker())
+			},
+		},
+		{
+			format:   `must contain at least 8 distinct byte values`,
+			sites:    1,
+			rendered: `must contain at least 8 distinct byte values`,
+			why: "fires only for a key with almost no variety, so the value is a repeated " +
+				"character by construction.",
+			probes: func(_ *testing.T, _ func() string) []refusalProbe {
+				return one(config.EnvHMACKey, strings.Repeat("q", 48))
+			},
+		},
+	}
+}
+
+// TestNoRefusalEchoesTheSuppliedValue drives every refusal path in the loader —
+// all 17 `v.addf` sites, through the table above — and fails if the value a
+// probe supplied comes back in the error, or if an IGNORED value reaches
+// anything the config renders into a log.
+//
+// AGENTS.md states the no-echo property absolutely. Before this test the
 // property had no control at all: a verifier's mutation made a refusal print
-// the operator's value verbatim and every lane stayed green. The marker is
-// assembled rather than written as a literal so it cannot collide with a
-// vocabulary word a message legitimately prints, and so it cannot be mistaken
-// for a key literal by TestEveryKeyLiteralInThisRepositoryIsRefused.
+// the operator's value verbatim and every lane stayed green. The first version
+// of the test then drove 6 of the 17 paths while its comment said "every",
+// which is the same defect one level up — a sentence stronger than its test.
+// Markers are assembled at run time so they cannot collide with a word a
+// message legitimately prints, and so they are not key literals in this
+// repository's sources.
 func TestNoRefusalEchoesTheSuppliedValue(t *testing.T) {
 	marker := func() string {
-		return "zz" + strconv.FormatInt(time.Now().UnixNano(), 36) + "marker"
+		return "zz" + strconv.FormatInt(time.Now().UnixNano(), 36) + "mk"
 	}
 
-	// Each case supplies the marker as one variable's value and must produce a
-	// refusal that names the variable and not the value.
-	for _, tc := range []struct {
-		name string
-		key  string
-		// value wraps the marker when the refusal only fires for a particular
-		// shape of value.
-		value func(marker string) string
-	}{
-		{"unknown runtime mode", config.EnvMode, func(m string) string { return m }},
-		{"listen address", config.EnvAddr, func(m string) string { return m }},
-		{"clock skew", config.EnvMaxClockSkew, func(m string) string { return m }},
-		{"request timeout", config.EnvRequestTimeout, func(m string) string { return m }},
-		{"shutdown grace", config.EnvShutdownGrace, func(m string) string { return m }},
-		{"body bytes", config.EnvMaxBodyBytes, func(m string) string { return m }},
-		{"the shared secret", config.EnvHMACKey, func(m string) string { return m }},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			m := marker()
-			env := envWith(t, map[string]string{tc.key: tc.value(m)})
-			_, err := config.LoadFrom(lookupFrom(env))
-			if err == nil {
-				t.Fatalf("%s=<marker> was accepted; this case must drive a refusal", tc.key)
-			}
-			if !strings.Contains(err.Error(), tc.key) {
-				t.Fatalf("refusal %q does not name %s", err.Error(), tc.key)
-			}
-			if strings.Contains(err.Error(), m) {
-				t.Fatalf("the refusal for %s echoes the supplied value back: %q", tc.key, err.Error())
+	for _, site := range refusalSites() {
+		t.Run(site.rendered, func(t *testing.T) {
+			for i, probe := range site.probes(t, marker) {
+				env := envWith(t, probe.env)
+				_, err := config.LoadFrom(lookupFrom(env))
+				if err == nil {
+					t.Fatalf("probe %d did not provoke a refusal at all", i)
+				}
+				msg := err.Error()
+				if !strings.Contains(msg, site.rendered) {
+					t.Fatalf("probe %d provoked a different refusal (%q), not %q — the row no longer drives its site",
+						i, msg, site.rendered)
+				}
+				for _, supplied := range probe.supplied {
+					if strings.Contains(msg, supplied) {
+						t.Fatalf("probe %d: the refusal echoes the supplied value back: %q", i, msg)
+					}
+				}
 			}
 		})
 	}
-
-	// The retired name is refused only for the old vocabulary, so its value
-	// cannot be an arbitrary marker. The marker is the SHAPE instead: an
-	// oddly-cased, space-padded spelling that the message must not reproduce.
-	t.Run("the retired runtime-mode name", func(t *testing.T) {
-		raw := "  DeVeLoPmEnT\t"
-		_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
-			config.EnvSearchTopology: raw,
-		})))
-		if err == nil {
-			t.Fatal("the old vocabulary was accepted")
-		}
-		if strings.Contains(err.Error(), raw) || strings.Contains(err.Error(), "DeVeLoPmEnT") {
-			t.Fatalf("the refusal echoes the value as supplied: %q", err.Error())
-		}
-	})
 
 	// An IGNORED value must not surface either: nothing reads it, so nothing
 	// may render it into a log line.
@@ -419,6 +609,129 @@ func TestNoRefusalEchoesTheSuppliedValue(t *testing.T) {
 			t.Fatalf("Config.LogValue() carries the ignored value")
 		}
 	})
+}
+
+// TestEveryRefusalSiteInTheLoaderHasANoEchoRow is what makes "every refusal
+// path" true rather than asserted. It parses internal/config/config.go, finds
+// every `v.addf` call — every way this loader can refuse to boot — and requires
+// the table above to account for all of them, by format string and by count.
+//
+// A refusal added without a row is red. A row whose format string no longer
+// exists is red. A row that silently starts covering a second site is red.
+func TestEveryRefusalSiteInTheLoaderHasANoEchoRow(t *testing.T) {
+	found := addfFormatsIn(t, "config.go")
+	if len(found) == 0 {
+		t.Fatal("no v.addf calls found in config.go: the guard is not reading the loader")
+	}
+
+	total := 0
+	for _, n := range found {
+		total += n
+	}
+
+	matched := map[string]bool{}
+	declared := 0
+	for _, site := range refusalSites() {
+		declared += site.sites
+		var hits []string
+		for format := range found {
+			if strings.Contains(format, site.format) {
+				hits = append(hits, format)
+			}
+		}
+		if len(hits) != 1 {
+			t.Fatalf("row %q matches %d refusal format strings in config.go, want exactly 1 (found: %v)",
+				site.format, len(hits), hits)
+		}
+		if matched[hits[0]] {
+			t.Fatalf("two rows both claim the refusal %q", hits[0])
+		}
+		matched[hits[0]] = true
+		if got := found[hits[0]]; got != site.sites {
+			t.Fatalf("row %q declares %d site(s) but config.go emits that message from %d",
+				site.format, site.sites, got)
+		}
+	}
+
+	for format := range found {
+		if !matched[format] {
+			t.Fatalf("config.go can refuse with %q and no row in refusalSites() drives it; "+
+				"add a row (with a probe, or a written reason why its value cannot be a marker) "+
+				"so the no-echo property still covers every refusal", format)
+		}
+	}
+	if declared != total {
+		t.Fatalf("refusalSites() declares %d refusal sites, config.go has %d", declared, total)
+	}
+	t.Logf("no-echo coverage: %d refusal sites across %d distinct messages", total, len(found))
+}
+
+// addfFormatsIn returns every `v.addf` format string in a source file, mapped to
+// the number of call sites that use it. Concatenated literals are folded; a
+// non-literal format string is a failure rather than a silent skip, because a
+// format the guard cannot read is a refusal it cannot account for.
+func addfFormatsIn(t *testing.T, path string) map[string]int {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+
+	formats := map[string]int{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "addf" {
+			return true
+		}
+		if len(call.Args) == 0 {
+			t.Fatalf("%s: addf call with no format argument", fset.Position(call.Pos()))
+		}
+		format, ok := constantString(call.Args[0])
+		if !ok {
+			t.Fatalf("%s: addf called with a format string the guard cannot read; keep refusal "+
+				"messages literal so they can be accounted for", fset.Position(call.Pos()))
+		}
+		formats[format]++
+		return true
+	})
+	return formats
+}
+
+// constantString folds a string literal or a concatenation of them.
+func constantString(expr ast.Expr) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		if e.Kind != token.STRING {
+			return "", false
+		}
+		s, err := strconv.Unquote(e.Value)
+		if err != nil {
+			return "", false
+		}
+		return s, true
+	case *ast.BinaryExpr:
+		if e.Op != token.ADD {
+			return "", false
+		}
+		left, ok := constantString(e.X)
+		if !ok {
+			return "", false
+		}
+		right, ok := constantString(e.Y)
+		if !ok {
+			return "", false
+		}
+		return left + right, true
+	case *ast.ParenExpr:
+		return constantString(e.X)
+	default:
+		return "", false
+	}
 }
 
 func TestValidateCollectsEveryError(t *testing.T) {

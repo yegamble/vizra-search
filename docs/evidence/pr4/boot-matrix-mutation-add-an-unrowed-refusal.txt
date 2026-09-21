@@ -1,25 +1,36 @@
-boot-matrix: 2026-09-21T09:39:50Z
+boot-matrix: 2026-09-21T09:42:48Z
 repo        6a02ab2975a6f5c4da49b5af62b9822ead2e885e on chore/m0-vizra-mode-rename
 go          go version go1.27.1 darwin/arm64
 host        Darwin arm64
 source      internal/config/config.go sha256 b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c
 
+MUTATION    add-an-unrowed-refusal
+            a NEW refusal path is added to the loader with no no-echo table row covering it
+            config.go sha256 before b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c
+            config.go sha256 after  e1254d1f39aa788e11dd629375437d83264ac9894228f9096606104640368325
+            this run MUST go red; a green run means the control is gone
+
 --- building the binary under test
 
 === go-tests (internal/config, cmd/vizra-search)
-    ok: the suite passes
+    FAIL: the suite is red
+      | --- FAIL: TestEveryRefusalSiteInTheLoaderHasANoEchoRow (0.00s)
+      |     config_test.go:658: config.go can refuse with "%s was supplied and this loader now objects for a brand new reason" and no row in refusalSites() drives it; add a row (with a probe, or a written reason why its value cannot be a marker) so the no-echo property still covers every refusal
+      | FAIL
+      | FAIL	github.com/yegamble/vizra-search/internal/config	0.341s
+      | FAIL
 
 === unset-unset
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:61396, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62456, mode production, then drained on SIGTERM; the ignored value never appears
 
 === new-name-development
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=<unset>  → expect boots:development
-    ok: healthy on 127.0.0.1:61406, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62460, mode development, then drained on SIGTERM; the ignored value never appears
 
 === new-name-production
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:61408, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62462, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-old-vocabulary-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=development  → expect refuses:both-names
@@ -53,39 +64,39 @@ source      internal/config/config.go sha256 b88139cec44a9a441e5b75a0c3fc2c99ba1
 
 === old-name-core-value-plus-new-name
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=managed  → expect boots:development
-    ok: healthy on 127.0.0.1:61415, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62469, mode development, then drained on SIGTERM; the ignored value never appears
 
 === old-name-core-value-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=off  → expect boots:production
-    ok: healthy on 127.0.0.1:61417, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62471, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-core-value-external
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=external  → expect boots:production
-    ok: healthy on 127.0.0.1:61419, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62473, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-unknown-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:production
-    ok: healthy on 127.0.0.1:61421, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62475, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-typo-of-development
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=developmnt  → expect boots:production
-    ok: healthy on 127.0.0.1:61423, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62477, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-unknown-plus-new-name-dev
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:development
-    ok: healthy on 127.0.0.1:61425, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62479, mode development, then drained on SIGTERM; the ignored value never appears
 
 === old-name-whitespace-only
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=     → expect boots:production
-    ok: healthy on 127.0.0.1:61427, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62481, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-empty
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<empty>  → expect boots:production
-    ok: healthy on 127.0.0.1:61429, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62483, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-empty-plus-new-name-dev
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=<empty>  → expect boots:development
-    ok: healthy on 127.0.0.1:61431, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62485, mode development, then drained on SIGTERM; the ignored value never appears
 
 === garbage-new-name
     VIZRA_MODE=banana  VIZRA_SEARCH_MODE=<unset>  → expect refuses:new-name
@@ -105,5 +116,6 @@ source      internal/config/config.go sha256 b88139cec44a9a441e5b75a0c3fc2c99ba1
       | vizra-search: invalid vizra-search configuration:
       |   - VIZRA_MODE must be "production" or "development"
 
---- 21 passed, 0 failed, 21 checks (20 boot cases + the focused suite)
-RESULT: pass
+--- 20 passed, 1 failed, 21 checks (20 boot cases + the focused suite)
+RESULT: red under mutation add-an-unrowed-refusal, as required
+--- restored internal/config/config.go (sha256 b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c)

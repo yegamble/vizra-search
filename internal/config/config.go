@@ -329,9 +329,14 @@ func (v *validator) mode() Mode {
 // mode in which the check is skipped.
 //
 // The message names the two variables and the runtime vocabulary — all
-// constants in this file — and never the supplied value.
-// TestNoRefusalEchoesTheSuppliedValue drives this and every other refusal in
-// the loader with a runtime-assembled marker and fails if the marker comes back.
+// constants in this file — and never the supplied value. That holds for every
+// refusal this loader can emit, not only this one:
+// TestNoRefusalEchoesTheSuppliedValue provokes every `v.addf` site in this file
+// (17 as of 2026-09-21) and fails if a supplied value comes back, and
+// TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses this file to keep that
+// count honest — a refusal added here without a row in that table is red.
+// Where a site cannot take an arbitrary marker (this one fires only for the
+// retired vocabulary), the row says so and asserts the supplied SHAPE instead.
 func (v *validator) retiredModeName() {
 	raw, ok := v.raw(EnvSearchTopology)
 	if !ok {

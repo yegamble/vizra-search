@@ -181,9 +181,9 @@ jobs:
           fi
           echo "the image refused the development key, as required"
       # One operator-facing name per concept: VIZRA_SEARCH_MODE is core's search
-      # TOPOLOGY (off|managed|external) product-wide. The image must refuse it
-      # when it carries this service's OLD runtime vocabulary rather than
-      # silently booting in a mode the env file never named.
+      # TOPOLOGY product-wide, and core owns its vocabulary. The image must
+      # refuse that name when it carries this service's OLD runtime vocabulary
+      # rather than silently booting in a mode the env file never named.
       # The key is valid, so a regressed control would make the container SERVE
       # rather than exit — and an unbounded `docker run` would then hang this
       # job until its timeout instead of failing. `timeout` bounds it and 124

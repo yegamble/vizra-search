@@ -1,13 +1,13 @@
-boot-matrix: 2026-09-21T08:57:00Z
-repo        852b38291c3ec8109f27ebd924ef48eec3b11a9d on chore/m0-vizra-mode-rename
+boot-matrix: 2026-09-21T09:42:12Z
+repo        6a02ab2975a6f5c4da49b5af62b9822ead2e885e on chore/m0-vizra-mode-rename
 go          go version go1.27.1 darwin/arm64
 host        Darwin arm64
-source      internal/config/config.go sha256 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73
+source      internal/config/config.go sha256 b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c
 
 MUTATION    unknown-value-as-development
             an UNKNOWN VIZRA_SEARCH_MODE value selects development instead of being ignored
-            config.go sha256 before 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73
-            config.go sha256 after  4ff73168120e93c337776b870ac528addc9c4d937ce2cd77252db4fdce825d70
+            config.go sha256 before b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c
+            config.go sha256 after  48445dd2a70baeb4558965c06525f0a3175023b559a35f2951c519b1a6ccd3f1
             this run MUST go red; a green run means the control is gone
 
 --- building the binary under test
@@ -16,42 +16,42 @@ MUTATION    unknown-value-as-development
     FAIL: the suite is red
       | --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored (0.00s)
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/off (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/managed (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/external (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/staging (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/dev (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/prod (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/developmnt (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       |     --- FAIL: TestEveryValueButTheOldVocabularyIsIgnored/1 (0.00s)
-      |         config_test.go:278: mode = "development", want "production": this variable must not influence the mode
+      |         config_test.go:282: mode = "development", want "production": this variable must not influence the mode
       | --- FAIL: TestNoValueInTheOldNameCanEverProduceDevelopment (0.00s)
-      |     config_test.go:310: VIZRA_SEARCH_MODE="developmnt" booted in mode "development" with the published development key
+      |     config_test.go:314: VIZRA_SEARCH_MODE="developmnt" booted in mode "development" with the published development key
       | FAIL
-      | FAIL	github.com/yegamble/vizra-search/internal/config	0.345s
+      | FAIL	github.com/yegamble/vizra-search/internal/config	0.329s
       | --- FAIL: TestAnUnknownRetiredNameValueBootsProduction (10.01s)
       |     main_test.go:222: the process did not exit within 10s; it should have refused to boot.
       | FAIL
-      | FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	12.361s
+      | FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	11.944s
       | FAIL
 
 === unset-unset
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:63982, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62281, mode production, then drained on SIGTERM; the ignored value never appears
 
 === new-name-development
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=<unset>  → expect boots:development
-    ok: healthy on 127.0.0.1:64017, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62296, mode development, then drained on SIGTERM; the ignored value never appears
 
 === new-name-production
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:64019, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62298, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-old-vocabulary-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=development  → expect refuses:both-names
@@ -85,55 +85,55 @@ MUTATION    unknown-value-as-development
 
 === old-name-core-value-plus-new-name
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=managed  → expect boots:development
-    ok: healthy on 127.0.0.1:64038, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62325, mode development, then drained on SIGTERM; the ignored value never appears
 
 === old-name-core-value-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=off  → expect boots:production
     FAIL: booted in DEVELOPMENT mode; production is the default
-      | {"time":"2026-09-21T04:57:16.848805-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:64040","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:57:16.848915-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:64040","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
-      | {"time":"2026-09-21T04:57:16.85374-04:00","level":"INFO","msg":"draining","grace":15000000000}
-      | {"time":"2026-09-21T04:57:16.853799-04:00","level":"INFO","msg":"stopped"}
+      | {"time":"2026-09-21T05:42:29.890563-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:62327","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T05:42:29.890767-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:62327","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T05:42:29.91022-04:00","level":"INFO","msg":"draining","grace":15000000000}
+      | {"time":"2026-09-21T05:42:29.910304-04:00","level":"INFO","msg":"stopped"}
 
 === old-name-core-value-external
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=external  → expect boots:production
     FAIL: booted in DEVELOPMENT mode; production is the default
-      | {"time":"2026-09-21T04:57:16.921031-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:64042","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:57:16.921128-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:64042","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
-      | {"time":"2026-09-21T04:57:16.925767-04:00","level":"INFO","msg":"draining","grace":15000000000}
-      | {"time":"2026-09-21T04:57:16.925819-04:00","level":"INFO","msg":"stopped"}
+      | {"time":"2026-09-21T05:42:30.02622-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:62329","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T05:42:30.026429-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:62329","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T05:42:30.033666-04:00","level":"INFO","msg":"draining","grace":15000000000}
+      | {"time":"2026-09-21T05:42:30.03378-04:00","level":"INFO","msg":"stopped"}
 
 === old-name-unknown-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:production
     FAIL: booted in DEVELOPMENT mode; production is the default
-      | {"time":"2026-09-21T04:57:16.993642-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:64044","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:57:16.993739-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:64044","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
-      | {"time":"2026-09-21T04:57:16.998881-04:00","level":"INFO","msg":"draining","grace":15000000000}
-      | {"time":"2026-09-21T04:57:16.998937-04:00","level":"INFO","msg":"stopped"}
+      | {"time":"2026-09-21T05:42:30.136944-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:62336","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T05:42:30.137107-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:62336","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T05:42:30.147954-04:00","level":"INFO","msg":"draining","grace":15000000000}
+      | {"time":"2026-09-21T05:42:30.148075-04:00","level":"INFO","msg":"stopped"}
 
 === old-name-typo-of-development
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=developmnt  → expect boots:production
     FAIL: booted in DEVELOPMENT mode; production is the default
-      | {"time":"2026-09-21T04:57:17.067586-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:64046","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:57:17.067677-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:64046","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
-      | {"time":"2026-09-21T04:57:17.073235-04:00","level":"INFO","msg":"draining","grace":15000000000}
-      | {"time":"2026-09-21T04:57:17.073307-04:00","level":"INFO","msg":"stopped"}
+      | {"time":"2026-09-21T05:42:30.249562-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:62338","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T05:42:30.249862-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:62338","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T05:42:30.25819-04:00","level":"INFO","msg":"draining","grace":15000000000}
+      | {"time":"2026-09-21T05:42:30.258281-04:00","level":"INFO","msg":"stopped"}
 
 === old-name-unknown-plus-new-name-dev
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:development
-    ok: healthy on 127.0.0.1:64048, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62340, mode development, then drained on SIGTERM; the ignored value never appears
 
 === old-name-whitespace-only
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=     → expect boots:production
-    ok: healthy on 127.0.0.1:64050, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62342, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-empty
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<empty>  → expect boots:production
-    ok: healthy on 127.0.0.1:64052, mode production, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62344, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-empty-plus-new-name-dev
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=<empty>  → expect boots:development
-    ok: healthy on 127.0.0.1:64054, mode development, then drained on SIGTERM; the ignored value never appears
+    ok: healthy on 127.0.0.1:62346, mode development, then drained on SIGTERM; the ignored value never appears
 
 === garbage-new-name
     VIZRA_MODE=banana  VIZRA_SEARCH_MODE=<unset>  → expect refuses:new-name
@@ -149,11 +149,11 @@ MUTATION    unknown-value-as-development
 
 === garbage-both
     VIZRA_MODE=banana  VIZRA_SEARCH_MODE=zzunknownvalue  → expect refuses:new-name
-./scripts/boot-matrix.sh: line 303: 55663 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
+./scripts/boot-matrix.sh: line 323: 32503 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
     FAIL: still running after 10s where a refusal was required — it booted
-      | {"time":"2026-09-21T04:57:17.645263-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:64058","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:57:17.645357-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:64058","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T05:42:31.007375-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:62350","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T05:42:31.007553-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:62350","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
 
 --- 15 passed, 6 failed, 21 checks (20 boot cases + the focused suite)
 RESULT: red under mutation unknown-value-as-development, as required
---- restored internal/config/config.go (sha256 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73)
+--- restored internal/config/config.go (sha256 b88139cec44a9a441e5b75a0c3fc2c99ba10a8ba80cbcae77295baa7b31fcb3c)

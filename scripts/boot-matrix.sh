@@ -64,7 +64,7 @@ trap cleanup EXIT
 # digest must change. Both are what stops a demonstration that never happened.
 
 mutation_names() {
-  echo "fallback-to-the-old-name drop-the-refusal default-to-development unknown-value-as-development echo-the-value"
+  echo "fallback-to-the-old-name drop-the-refusal default-to-development unknown-value-as-development echo-the-value add-an-unrowed-refusal"
 }
 
 mutation_describes() {
@@ -79,6 +79,8 @@ mutation_describes() {
       echo "an UNKNOWN ${ENV_TOPOLOGY} value selects development instead of being ignored" ;;
     echo-the-value)
       echo "the refusal echoes the operator's ${ENV_TOPOLOGY} value back" ;;
+    add-an-unrowed-refusal)
+      echo "a NEW refusal path is added to the loader with no no-echo table row covering it" ;;
     *) return 1 ;;
   esac
 }
@@ -136,6 +138,24 @@ PATCHES = {
     "echo-the-value": (
         "\t\t\tv.addf(\"%s carries a value from this service's OLD runtime-mode vocabulary",
         "\t\t\tv.addf(\"%s=\"+raw+\" carries a value from this service's OLD runtime-mode vocabulary",
+    ),
+    # A NEW way to refuse a boot, with nothing in the no-echo table covering it.
+    # The property it breaks is not the no-echo rule itself but the claim that
+    # the table reaches EVERY refusal — which is what round 2 exists to fix, and
+    # is exactly how a real refusal would be added without one.
+    # It fires only for a sentinel no case supplies, so NOTHING else changes:
+    # every boot case behaves exactly as it does unmutated, and the only thing
+    # that can object is the guard that counts refusal sites. That is the point
+    # — a new refusal path is invisible to behaviour and must not be invisible
+    # to the no-echo table.
+    "add-an-unrowed-refusal": (
+        "func (v *validator) addr() string {\n"
+        "\traw, ok := v.raw(EnvAddr)",
+        "func (v *validator) addr() string {\n"
+        "\tif unrowed, ok := v.raw(EnvAddr); ok && unrowed == \"zz-no-case-supplies-this\" {\n"
+        "\t\tv.addf(\"%s was supplied and this loader now objects for a brand new reason\", EnvAddr)\n"
+        "\t}\n"
+        "\traw, ok := v.raw(EnvAddr)",
     ),
     # Production is no longer the default.
     "default-to-development": (
