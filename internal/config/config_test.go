@@ -149,6 +149,209 @@ func TestUnknownModeIsRefused(t *testing.T) {
 	}
 }
 
+// The runtime mode is VIZRA_MODE — the PLATFORM name, the one vizra-core reads
+// for the same concept. VIZRA_SEARCH_MODE is core's search TOPOLOGY variable
+// (off | managed | external) and means that, and only that, product-wide.
+
+func TestTheRuntimeModeIsReadFromVizraMode(t *testing.T) {
+	if config.EnvMode != "VIZRA_MODE" {
+		t.Fatalf("EnvMode = %q, want %q: one operator-facing name per concept", config.EnvMode, "VIZRA_MODE")
+	}
+	if config.EnvSearchTopology != "VIZRA_SEARCH_MODE" {
+		t.Fatalf("EnvSearchTopology = %q, want %q", config.EnvSearchTopology, "VIZRA_SEARCH_MODE")
+	}
+	for _, tc := range []struct {
+		value string
+		want  config.Mode
+	}{
+		{"development", config.ModeDevelopment},
+		{"production", config.ModeProduction},
+		{"  Production  ", config.ModeProduction},
+	} {
+		cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{config.EnvMode: tc.value})))
+		if err != nil {
+			t.Fatalf("%s=%q: %v", config.EnvMode, tc.value, err)
+		}
+		if cfg.Mode != tc.want {
+			t.Fatalf("%s=%q gave mode %q, want %q", config.EnvMode, tc.value, cfg.Mode, tc.want)
+		}
+	}
+}
+
+// TestTheOldRuntimeModeNameIsRefusedByName is the rename's central control. The
+// old name is NOT read as a mode any more and there is no compatibility alias,
+// so a value from the old vocabulary must be refused rather than ignored: an
+// operator who carried `VIZRA_SEARCH_MODE=development` forward has a file that
+// LOOKS configured while the process picked a mode the file never named.
+func TestTheOldRuntimeModeNameIsRefusedByName(t *testing.T) {
+	for _, value := range []string{
+		"development",
+		"production",
+		"Development",
+		"PRODUCTION",
+		"  development  ",
+	} {
+		t.Run(value, func(t *testing.T) {
+			_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+				config.EnvSearchTopology: value,
+			})))
+			if err == nil {
+				t.Fatalf("%s=%q booted; the old runtime vocabulary must be refused by name", config.EnvSearchTopology, value)
+			}
+			if !errors.Is(err, config.ErrInvalidConfig) {
+				t.Fatalf("error %v is not ErrInvalidConfig", err)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, config.EnvSearchTopology) {
+				t.Fatalf("error %q does not name the offending variable", msg)
+			}
+			if !strings.Contains(msg, config.EnvMode) {
+				t.Fatalf("error %q does not name %s as the replacement", msg, config.EnvMode)
+			}
+		})
+	}
+}
+
+// The special danger the chair named: an operator with the old name set to the
+// old vocabulary and no new name must NOT silently end up in production (with a
+// development key they believe is being accepted) or in development. Either
+// silent outcome is worse than not booting.
+func TestTheOldNameAloneNeverSilentlySelectsAMode(t *testing.T) {
+	env := envWith(t, map[string]string{config.EnvSearchTopology: "development"})
+	env[config.EnvHMACKey] = config.DevHMACKey
+	delete(env, config.EnvMode)
+
+	cfg, err := config.LoadFrom(lookupFrom(env))
+	if err == nil {
+		t.Fatalf("booted in mode %q instead of refusing", cfg.Mode)
+	}
+	if !strings.Contains(err.Error(), config.EnvSearchTopology) {
+		t.Fatalf("error %q does not name %s", err.Error(), config.EnvSearchTopology)
+	}
+}
+
+// Refused in EVERY mode, not only in production: unlike a retired secret, the
+// wrong name here changes the MODE ITSELF, so development cannot be the mode in
+// which the check is skipped.
+func TestTheOldRuntimeModeNameIsRefusedInDevelopmentToo(t *testing.T) {
+	_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+		config.EnvMode:           "development",
+		config.EnvSearchTopology: "development",
+	})))
+	if err == nil {
+		t.Fatal("development mode ignored the old runtime-mode name")
+	}
+	if !strings.Contains(err.Error(), config.EnvSearchTopology) {
+		t.Fatalf("error %q does not name %s", err.Error(), config.EnvSearchTopology)
+	}
+}
+
+// A topology value in that variable is core's, and core's alone. A shared env
+// file carrying it is CORRECT, so it must be ignored in silence — a refusal
+// here would make the shared file unusable, which is the failure this rename
+// exists to prevent.
+func TestATopologyValueInTheOldNameIsIgnored(t *testing.T) {
+	for _, topology := range config.SearchTopologyValues {
+		t.Run(topology, func(t *testing.T) {
+			cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+				config.EnvSearchTopology: topology,
+			})))
+			if err != nil {
+				t.Fatalf("%s=%q refused: %v", config.EnvSearchTopology, topology, err)
+			}
+			if cfg.Mode != config.ModeProduction {
+				t.Fatalf("mode = %q, want %q: the topology value must not influence the mode", cfg.Mode, config.ModeProduction)
+			}
+
+			cfg, err = config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+				config.EnvMode:           "development",
+				config.EnvSearchTopology: topology,
+			})))
+			if err != nil {
+				t.Fatalf("%s=development + %s=%q refused: %v", config.EnvMode, config.EnvSearchTopology, topology, err)
+			}
+			if cfg.Mode != config.ModeDevelopment {
+				t.Fatalf("mode = %q, want %q: the new name decides the mode", cfg.Mode, config.ModeDevelopment)
+			}
+		})
+	}
+}
+
+// Neither vocabulary is a refusal, because it is neither core's topology nor
+// anything this service understands — and `dev`, `prod` or `staging` in that
+// variable is exactly the operator who meant a mode.
+func TestANonVocabularyValueInTheOldNameIsRefused(t *testing.T) {
+	for _, value := range []string{"staging", "dev", "prod", "1", "   "} {
+		t.Run(value, func(t *testing.T) {
+			_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+				config.EnvSearchTopology: value,
+			})))
+			if err == nil {
+				t.Fatalf("%s=%q was ignored; a value in neither vocabulary must be refused", config.EnvSearchTopology, value)
+			}
+			if !strings.Contains(err.Error(), config.EnvSearchTopology) {
+				t.Fatalf("error %q does not name %s", err.Error(), config.EnvSearchTopology)
+			}
+		})
+	}
+}
+
+// A completely empty value is a template tombstone — the name carried forward
+// with nothing after the `=`. Core tolerates exactly that for its retired keys,
+// and so do we. Whitespace is NOT empty: `KEY= ` is ambiguous and is refused
+// above, because the fail-secure reading of an ambiguous env file is that the
+// value is set.
+func TestAnEmptyOldNameIsToleratedAsATombstone(t *testing.T) {
+	cfg, err := config.LoadFrom(lookupFrom(map[string]string{
+		config.EnvHMACKey:        freshKey(t),
+		config.EnvSearchTopology: "",
+	}))
+	if err != nil {
+		t.Fatalf("%s= (empty) refused: %v", config.EnvSearchTopology, err)
+	}
+	if cfg.Mode != config.ModeProduction {
+		t.Fatalf("mode = %q, want %q", cfg.Mode, config.ModeProduction)
+	}
+}
+
+// The old name is consulted exactly once, by the refusal. A second lookup is a
+// compatibility alias growing back — the thing core's RetiredKeys comment says
+// must not exist, because a value that has no effect must be refused, not read.
+func TestTheOldNameIsConsultedOnlyByTheRefusal(t *testing.T) {
+	env := envWith(t, map[string]string{config.EnvMode: "production"})
+	lookups := 0
+	_, err := config.LoadFrom(func(key string) (string, bool) {
+		if key == config.EnvSearchTopology {
+			lookups++
+		}
+		v, ok := env[key]
+		return v, ok
+	})
+	if err != nil {
+		t.Fatalf("LoadFrom: %v", err)
+	}
+	if lookups != 1 {
+		t.Fatalf("%s was looked up %d times, want exactly 1 (the refusal)", config.EnvSearchTopology, lookups)
+	}
+}
+
+// The topology vocabulary is CORE's, pinned here so that core extending it is a
+// red test in this repository rather than a search instance that refuses to
+// boot on an operator's machine. If this list is wrong, fix it here — do not
+// widen the refusal to "ignore anything".
+func TestTheTopologyVocabularyIsPinnedToCore(t *testing.T) {
+	want := []string{"off", "managed", "external"}
+	got := config.SearchTopologyValues
+	if len(got) != len(want) {
+		t.Fatalf("SearchTopologyValues = %v, want %v (vizra-core internal/config/keys.go)", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("SearchTopologyValues = %v, want %v (vizra-core internal/config/keys.go)", got, want)
+		}
+	}
+}
+
 func TestValidateCollectsEveryError(t *testing.T) {
 	// ADR-002: "validate() collects all errors rather than returning the first."
 	_, err := config.LoadFrom(lookupFrom(map[string]string{

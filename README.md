@@ -45,3 +45,9 @@ make docker-build
 Production mode is the default, and it refuses an empty key, the documented
 development key, a short key or a placeholder. Configuration is documented in
 `AGENTS.md`.
+
+The runtime mode is **`VIZRA_MODE`** (`development` | `production`) — the same
+name `vizra-core` reads for the same concept. `VIZRA_SEARCH_MODE` is core's
+search **topology** (`off` | `managed` | `external`) and is not read here; if it
+carries this service's old runtime vocabulary the process refuses to boot and
+says so by name. See `AGENTS.md` § "One operator-facing name per concept".

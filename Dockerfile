@@ -71,8 +71,11 @@ EXPOSE 8081
 
 # No port is published by the base compose file (ADR-002 / Q-017); this is the
 # in-network listen address only.
+#
+# VIZRA_MODE is the platform-wide runtime mode, the same name vizra-core reads.
+# VIZRA_SEARCH_MODE is core's search TOPOLOGY and is never a mode here.
 ENV VIZRA_SEARCH_ADDR=:8081 \
-    VIZRA_SEARCH_MODE=production
+    VIZRA_MODE=production
 
 # The runtime stage is `scratch`, so there is no shell and no curl for a
 # healthcheck. The binary probes itself instead.

@@ -173,19 +173,34 @@ jobs:
         run: |
           set -euo pipefail
           if docker run --rm \
-              -e VIZRA_SEARCH_MODE=production \
+              -e VIZRA_MODE=production \
               -e SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
               vizra-search:ci; then
             echo "the image booted with the development key in production mode"
             exit 1
           fi
           echo "the image refused the development key, as required"
+      # One operator-facing name per concept: VIZRA_SEARCH_MODE is core's search
+      # TOPOLOGY (off|managed|external) product-wide. The image must refuse it
+      # when it carries this service's OLD runtime vocabulary rather than
+      # silently booting in a mode the env file never named.
+      - name: the image refuses the retired runtime-mode name
+        run: |
+          set -euo pipefail
+          if docker run --rm \
+              -e VIZRA_SEARCH_MODE=development \
+              -e SEARCH_HMAC_KEY="$(openssl rand -hex 32)" \
+              vizra-search:ci; then
+            echo "the image booted with VIZRA_SEARCH_MODE carrying the old runtime vocabulary"
+            exit 1
+          fi
+          echo "the image refused the retired name, as required"
       - name: the image serves the probes and answers not_indexed
         run: |
           set -euo pipefail
           KEY="$(openssl rand -hex 32)"
           docker run -d --name search-ci \
-            -e VIZRA_SEARCH_MODE=production \
+            -e VIZRA_MODE=production \
             -e SEARCH_HMAC_KEY="$KEY" \
             -p 127.0.0.1:8081:8081 \
             vizra-search:ci

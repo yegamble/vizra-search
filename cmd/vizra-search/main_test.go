@@ -156,6 +156,56 @@ func TestBootRefusesTheDevKeyWhenTheModeIsOmitted(t *testing.T) {
 	}
 }
 
+// TestBootRefusesTheRetiredRuntimeModeName runs the real binary against the
+// danger the rename exists to close: an operator whose env file still says
+// `VIZRA_SEARCH_MODE=development` and says nothing about `VIZRA_MODE`. Neither
+// silent outcome is acceptable — not production (where their development key is
+// refused for a reason they will misread) and not development (where the
+// production refusals they believe in do not apply). The process refuses, by
+// name, and names the replacement.
+func TestBootRefusesTheRetiredRuntimeModeName(t *testing.T) {
+	_, stderr, code := runWithEnv(t, map[string]string{
+		config.EnvSearchTopology: "development",
+		config.EnvHMACKey:        strongKey,
+	})
+	if code == 0 {
+		t.Fatal("the process booted with the retired runtime-mode name set")
+	}
+	if !strings.Contains(stderr, config.EnvSearchTopology) {
+		t.Fatalf("stderr does not name the offending variable: %q", stderr)
+	}
+	if !strings.Contains(stderr, config.EnvMode) {
+		t.Fatalf("stderr does not name %s as the replacement: %q", config.EnvMode, stderr)
+	}
+}
+
+// The inverse, on the real binary: core's topology value in that variable is
+// correct and is ignored, and the mode comes from the new name alone.
+func TestBootAcceptsCoreTopologyAlongsideTheRuntimeMode(t *testing.T) {
+	addr := freeAddr(t)
+	cmd := exec.Command(binary(t))
+	cmd.Env = append(os.Environ(),
+		config.EnvMode+"=development",
+		config.EnvSearchTopology+"=managed",
+		config.EnvHMACKey+"="+config.DevHMACKey,
+		config.EnvAddr+"="+addr,
+	)
+	var out syncBuffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+	})
+	waitForHealthy(t, "http://"+addr+"/healthz", &out)
+	if !strings.Contains(out.String(), "running in development mode") {
+		t.Fatalf("the new name did not decide the mode:\n%s", out.String())
+	}
+}
+
 func TestVersionSubcommandReportsIdentity(t *testing.T) {
 	cmd := exec.Command(binary(t), "version")
 	out, err := cmd.CombinedOutput()

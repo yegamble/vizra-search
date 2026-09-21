@@ -238,14 +238,15 @@ brief degraded window and should schedule it deliberately.
 
 ## Configuration
 
-Production is the **default** mode: an env file that forgets `VIZRA_SEARCH_MODE`
+Production is the **default** mode: an env file that forgets `VIZRA_MODE`
 still gets the production refusals. An unrecognised mode fails closed.
 
 | Variable | Default | Notes |
 |---|---|---|
 | `SEARCH_HMAC_KEY` | — | **Required in every mode.** Named by the contract. |
 | `MAX_INTERNAL_BODY_BYTES` | `1048576` | Named by the contract. **Production refuses any value above 8 MiB.** |
-| `VIZRA_SEARCH_MODE` | `production` | `production` or `development`. |
+| `VIZRA_MODE` | `production` | `production` or `development`. The **platform** name — `vizra-core` reads it for the same concept. |
+| `VIZRA_SEARCH_MODE` | — | **Not read here.** `vizra-core`'s search **topology** (`off`/`managed`/`external`). Refused by name if it carries this service's old runtime vocabulary — see below. |
 | `VIZRA_SEARCH_ADDR` | `:8081` | Never published off-host (ADR-002 / Q-017). |
 | `VIZRA_SEARCH_MAX_CLOCK_SKEW` | `300s` | The contract's window. **Production refuses any value above 300s.** |
 | `VIZRA_SEARCH_REQUEST_TIMEOUT` | `5s` | Bounds each handler. |
@@ -255,6 +256,57 @@ In production mode the boot refuses: an empty key; anything shorter than 32
 bytes; anything that looks like a placeholder (`dev-`, `test-`, `changeme`,
 `insecure`, …); a key with fewer than 8 distinct byte values; and — **by exact
 value** — every key this project publishes.
+
+### One operator-facing name per concept (2026-09-21)
+
+`VIZRA_SEARCH_MODE` means **search topology** — `off | managed | external` —
+**product-wide**, and it is **owned by `vizra-core`**, which is the only process
+that reads it. It says whether core talks to a search service at all, and to
+which one. It is not this service's variable and never was a good name for this
+service's runtime mode.
+
+Until this date `vizra-search` read that same name as its own runtime mode with
+the vocabulary `development | production`: one operator-facing name, two
+incompatible vocabularies. A shared env file — which is the deployment shape the
+meta repository actually ships — would therefore either stop search booting or,
+worse, silently pick a mode. **The runtime mode here is now `VIZRA_MODE`**, the
+name core already uses for it, with core's vocabulary and core's meaning.
+
+Nothing is deployed, so there is **no compatibility alias**: the old name is not
+read as a mode, its value has no effect, and that is exactly why it cannot be
+ignored. What `VIZRA_SEARCH_MODE` does at boot now:
+
+| Value in `VIZRA_SEARCH_MODE` | Result |
+|---|---|
+| `off`, `managed`, `external` | **ignored in silence** — core's variable, core's value, and a shared env file must stay usable |
+| `development`, `production` (any case, surrounding whitespace ignored) | **boot refusal, by name, in every mode**, naming `VIZRA_MODE` as the replacement |
+| completely empty (`VIZRA_SEARCH_MODE=`) | tolerated — a template may carry the name as a tombstone, exactly as core tolerates for its retired keys |
+| anything else, whitespace-only included | **boot refusal** — it is in neither vocabulary, so it is either core's misconfiguration or an operator who meant a mode (`dev`, `prod`, `staging`) |
+
+Two properties of that table are deliberate and are not to be relaxed:
+
+- The refusal applies in **every mode**, not only in production. `vizra-core`
+  refuses its retired key names inside its production block, and that is right
+  for a secret; this name decides the **mode itself**, so development cannot be
+  the mode in which the check is skipped. The concrete danger is an operator
+  with `VIZRA_SEARCH_MODE=development` and no `VIZRA_MODE`: silently they get
+  production (and misread the refusal of their development key) or silently they
+  get development (believing the production refusals still apply). Neither
+  silence is acceptable; not booting is.
+- Refusing **everything in neither vocabulary** costs forward compatibility:
+  `config.SearchTopologyValues` is core's list, and core adding a topology value
+  must update it here in the same release. That cost is paid deliberately,
+  because the alternative is `VIZRA_SEARCH_MODE=dev` meaning nothing at all.
+  `TestTheTopologyVocabularyIsPinnedToCore` is where the list is pinned.
+
+No refusal message ever echoes a value — only the two variable names and the two
+vocabularies, which are constants in `internal/config/config.go`.
+
+The boot matrix behind this table runs against the **real binary**:
+`./scripts/boot-matrix.sh` (13 cases), with three controlled mutations —
+`--mutate fallback-to-the-old-name`, `--mutate drop-the-refusal`,
+`--mutate default-to-development` — each of which must turn it red. The
+transcripts are in `docs/evidence/pr4/`.
 
 ### Published keys are refused by exact value
 
