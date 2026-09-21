@@ -64,11 +64,25 @@ take_pristine() {
 	trap restore_all EXIT
 }
 
+# The EXIT trap. Restore FIRST, then drop the pristine copy — in that order, so
+# an interrupt between the two leaves the repository correct and only a stray
+# temp directory behind, never the reverse. The `case` guard is there because
+# this line deletes a directory recursively: if PRISTINE is ever not the path
+# mktemp handed us, delete nothing and say so.
 restore_all() {
 	[ -n "$PRISTINE" ] || return 0
 	cp "$PRISTINE/api/$(basename "$YAML")" "$YAML"
 	cp "$PRISTINE/api/$(basename "$JSON")" "$JSON"
 	cp "$PRISTINE/api/$(basename "$MANIFEST")" "$MANIFEST"
+	case "$PRISTINE" in
+	*/revendor-demo-pristine-??????)
+		rm -rf "$PRISTINE"
+		;;
+	*)
+		echo "not removing unexpected pristine path: $PRISTINE" >&2
+		;;
+	esac
+	PRISTINE=""
 }
 
 # mutate_one_byte <file> <needle> <replacement>
