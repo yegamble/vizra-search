@@ -1,0 +1,102 @@
+==============================================================================
+THE RE-VENDOR ITSELF — run through this repository's own command
+Host: Darwin 25.5.0 arm64   date: 2026-09-21T07:09:07Z
+search branch: chore/revendor-core-4a80a1e at 808a5499dae1d58971d740f34749c2f35149fa4d
+==============================================================================
+
+No vendored file and no manifest field is typed by hand. scripts/vendor-contract.py
+resolves the commit, reads bytes with `git show`, writes them, reads them BACK off
+disk and digests what it read.
+
+------------------------------------------------------------------------------
+BEFORE — the pin is stale, and the command says so
+$ ./scripts/vendor-contract.py --check --core <core clone> --ref origin/main
+vendor-contract: FAIL: the manifest pins 415a6d19cfc0acedd8ad84c1857c95db0ed63627, but the current last api/ commit on origin/main is 4a80a1e3f36b8001c2954d0568bea29268e739fe — re-vendor
+vendor-contract: 1 problem(s). This repository does not own these files; re-vendor with `make vendor-contract CORE=<path>` instead of editing them.
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : main
+manifest source_commit     : 415a6d19cfc0acedd8ad84c1857c95db0ed63627
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3 bytes=22327  OK
+
+core origin/main tip              : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+core commit this script would pin : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+exit=1
+
+------------------------------------------------------------------------------
+THE RE-VENDOR
+$ make vendor-contract CORE=<core clone> CORE_REF=origin/main
+./scripts/vendor-contract.py --core '/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T//vizra-search-revendor-iRDp2o/core-ref' --ref 'origin/main'
+source repository : yegamble/vizra-core
+source ref        : origin/main (tip 4a80a1e3f36b8001c2954d0568bea29268e739fe)
+source commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe   <- pinned (last commit on origin/main touching api/)
+subject           : chore(ci,config): hardening sweep A — make-integrity guard, direct unit lane, CI provenance, SEARCH_HMAC_KEY rename, fixture-tree strictness (#6)
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  unchanged
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  UPDATED  (was ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3, 22327 bytes)
+
+manifest          : api/CONTRACT-SOURCE.json
+  source_commit   : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+  source_ref      : main
+  vendored_at     : 2026-09-21
+
+re-vendored 1 file(s): api/search-hmac-testvectors.json
+exit=0
+
+------------------------------------------------------------------------------
+THE SAME COMMAND AGAIN, carrying this re-vendor's $provenance_note.
+The note is prose, so it is passed IN to the single writer rather than typed
+into the manifest afterwards; the script still recomputes every digest.
+$ ./scripts/vendor-contract.py --core <core clone> --ref origin/main --note ... (x7)
+source repository : yegamble/vizra-core
+source ref        : origin/main (tip 4a80a1e3f36b8001c2954d0568bea29268e739fe)
+source commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe   <- pinned (last commit on origin/main touching api/)
+subject           : chore(ci,config): hardening sweep A — make-integrity guard, direct unit lane, CI provenance, SEARCH_HMAC_KEY rename, fixture-tree strictness (#6)
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  unchanged
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  unchanged
+
+manifest          : api/CONTRACT-SOURCE.json
+  source_commit   : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+  source_ref      : main
+  vendored_at     : 2026-09-21
+
+no vendored file changed; only the manifest's pin was refreshed
+exit=0
+
+------------------------------------------------------------------------------
+AFTER — the tree is vendored from core main, verified against core's own bytes
+$ ./scripts/vendor-contract.py --check --core <core clone> --ref origin/main
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : main
+manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+
+core origin/main tip              : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+core commit this script would pin : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+vendor-contract: OK — every vendored file matches the manifest and core's bytes.
+exit=0
+
+------------------------------------------------------------------------------
+DIGESTS SIDE BY SIDE — core main vs the vendored copy, measured independently
+of the script (git blob ids and shasum, on both sides)
+
+file                               side      sha256                                                           bytes
+api/search-internal.openapi.yaml   core@4a80a1e a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+api/search-internal.openapi.yaml   vendored  a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+api/search-internal.openapi.yaml   manifest  a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+
+api/search-hmac-testvectors.json   core@4a80a1e f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+api/search-hmac-testvectors.json   vendored  f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+api/search-hmac-testvectors.json   manifest  f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+
+git agrees too — the vendored blob id equals core's blob id at 4a80a1e:
+  core     api/search-hmac-testvectors.json  1509da859954f65fd5542053332b8417fe4eb8da
+  vendored api/search-hmac-testvectors.json  1509da859954f65fd5542053332b8417fe4eb8da
+  core     api/search-internal.openapi.yaml  848503cca45dc427fede810d3ab30e73e07bd392
+  vendored api/search-internal.openapi.yaml  848503cca45dc427fede810d3ab30e73e07bd392

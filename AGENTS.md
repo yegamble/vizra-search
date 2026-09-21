@@ -67,6 +67,34 @@ already happened here, and the vectors exist because of it.
 - If the contract is wrong, say so to the chair. The change lands in
   `vizra-core` first; this repository then re-vendors it and updates the
   manifest's `source_commit` in the same PR.
+
+**Re-vendor with the command, never by hand.**
+
+```
+make vendor-contract CORE=<path-to-a-vizra-core-checkout>   # writes both files + the manifest
+make vendor-contract-check                                  # verify; needs no core checkout
+```
+
+`scripts/vendor-contract.py` is the **single writer** of the two vendored files
+and of `api/CONTRACT-SOURCE.json`. Hand-vendoring is how the manifest and the
+bytes come apart, and both ways it can happen have already happened here:
+
+- PR #1 hand-recorded a commit on core's *feature branch*. Core squash-merged
+  and deleted the branch, so the recorded provenance pointed at an object no
+  reviewer could fetch. The script resolves the commit itself — the last commit
+  on `origin/main` touching `api/` — and **refuses** a commit that is not an
+  ancestor of that branch tip, and a `--ref` that is not a `main` branch.
+- A hand-typed `sha256` is a checksum of someone's attention. The script writes
+  the bytes, reads them **back off disk**, and digests what it read.
+
+It only ever reads the core checkout (`rev-parse`, `log`, `merge-base`, `show`),
+so it is safe to point at a checkout someone else is working in, and it reads
+committed objects rather than that working tree.
+
+It is deliberately **not** a CI lane: CI has no core checkout, and
+`contract-drift` already fails on any drift between the vendored bytes and the
+manifest. `--check` is the local self-check; `--check --core <path>` also
+compares against core's bytes and reports a stale pin.
 - `internal/httpapi.Routes()` is compared against the contract in both
   directions, and every response body is validated against the contract's
   schemas, all of which set `additionalProperties: false`. A renamed field is a

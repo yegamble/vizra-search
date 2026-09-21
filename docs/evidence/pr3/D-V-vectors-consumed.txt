@@ -1,0 +1,173 @@
+==============================================================================
+D-V  ALL 5 ACCEPT + 24 REJECT VECTORS CONSUMED FROM THE RE-VENDORED FILE
+Host: Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64   date: 2026-09-21T07:12:26Z
+branch chore/revendor-core-4a80a1e   tree digests:
+a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448  api/search-internal.openapi.yaml
+f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862  api/search-hmac-testvectors.json
+==============================================================================
+
+The file under test is the RE-VENDORED one (sha256 f95623b0…, 22321 bytes,
+core main 4a80a1e). What the file itself declares:
+  $ jq '{scheme, vectors: (.vectors|length), negative_vectors: (.negative_vectors|length)}' api/search-hmac-testvectors.json
+{
+  "scheme": "v1",
+  "vectors": 5,
+  "negative_vectors": 24
+}
+
+------------------------------------------------------------------------------
+1. The verifier reproduces every ACCEPT vector, and refuses every REJECT vector.
+   -v, so every subtest is named and its verdict is visible. A SKIP is not a PASS:
+   the skip count is taken from the run below and from make test-noskip.
+
+$ go test -count=1 -v -run '^(TestVerifierReproducesTheSharedVectors|TestVerifierRefusesEveryNegativeVector|TestEveryNamedRejectClassIsCovered|TestTheVendoredVectorsCoverTheContractsWindow)$' ./internal/hmacauth/
+=== RUN   TestTheVendoredVectorsCoverTheContractsWindow
+--- PASS: TestTheVendoredVectorsCoverTheContractsWindow (0.00s)
+=== RUN   TestVerifierReproducesTheSharedVectors
+=== RUN   TestVerifierReproducesTheSharedVectors/search-empty-body
+=== RUN   TestVerifierReproducesTheSharedVectors/search-simple
+=== RUN   TestVerifierReproducesTheSharedVectors/suggestions
+=== RUN   TestVerifierReproducesTheSharedVectors/events-batch
+=== RUN   TestVerifierReproducesTheSharedVectors/unicode-body
+--- PASS: TestVerifierReproducesTheSharedVectors (0.00s)
+    --- PASS: TestVerifierReproducesTheSharedVectors/search-empty-body (0.00s)
+    --- PASS: TestVerifierReproducesTheSharedVectors/search-simple (0.00s)
+    --- PASS: TestVerifierReproducesTheSharedVectors/suggestions (0.00s)
+    --- PASS: TestVerifierReproducesTheSharedVectors/events-batch (0.00s)
+    --- PASS: TestVerifierReproducesTheSharedVectors/unicode-body (0.00s)
+=== RUN   TestVerifierRefusesEveryNegativeVector
+=== RUN   TestVerifierRefusesEveryNegativeVector/method-lowercase
+=== RUN   TestVerifierRefusesEveryNegativeVector/method-mixed-case
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-plus
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-zero
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-zeros
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-leading-space
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-trailing-space
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-underscores
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-empty
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-stale-past-window
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-future-past-window
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-zero
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-one
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-year-10000
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-ahead
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-far
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-max-int64
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-max-int64-overflow
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-uppercase-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-not-hex
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-too-short
+=== RUN   TestVerifierRefusesEveryNegativeVector/nonce-empty
+=== RUN   TestVerifierRefusesEveryNegativeVector/timestamp-duplicated-header
+--- PASS: TestVerifierRefusesEveryNegativeVector (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/method-lowercase (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/method-mixed-case (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-leading-plus (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-leading-zero (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-leading-zeros (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-leading-space (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-trailing-space (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-underscores (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-hex (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-empty (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-stale-past-window (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-future-past-window (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-zero (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-one (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-year-10000 (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-ahead (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-duration-overflow-far (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-max-int64 (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-max-int64-overflow (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/nonce-uppercase-hex (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/nonce-not-hex (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/nonce-too-short (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/nonce-empty (0.00s)
+    --- PASS: TestVerifierRefusesEveryNegativeVector/timestamp-duplicated-header (0.00s)
+=== RUN   TestEveryNamedRejectClassIsCovered
+--- PASS: TestEveryNamedRejectClassIsCovered (0.00s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.277s
+exit=0
+
+------------------------------------------------------------------------------
+2. Counted from the machine-readable run, not from reading the text above.
+
+$ go test -count=1 -json -run '^(TestVerifierReproducesTheSharedVectors|TestVerifierRefusesEveryNegativeVector)$' ./internal/hmacauth/ | jq -r ...
+   ACCEPT vectors PASSED : 5
+       + search-empty-body
+       + search-simple
+       + suggestions
+       + events-batch
+       + unicode-body
+   REJECT vectors PASSED : 24
+       - method-lowercase
+       - method-mixed-case
+       - timestamp-leading-plus
+       - timestamp-leading-zero
+       - timestamp-leading-zeros
+       - timestamp-leading-space
+       - timestamp-trailing-space
+       - timestamp-underscores
+       - timestamp-hex
+       - timestamp-empty
+       - timestamp-stale-past-window
+       - timestamp-future-past-window
+       - timestamp-zero
+       - timestamp-one
+       - timestamp-year-10000
+       - timestamp-duration-overflow-ahead
+       - timestamp-duration-overflow-far
+       - timestamp-max-int64
+       - timestamp-max-int64-overflow
+       - nonce-uppercase-hex
+       - nonce-not-hex
+       - nonce-too-short
+       - nonce-empty
+       - timestamp-duplicated-header
+   SKIPS  : 0  
+   FAILS  : 0  
+
+   OK: 5/5 ACCEPT and 24/24 REJECT consumed, 0 skips, 0 failures.
+
+------------------------------------------------------------------------------
+3. The loader has not quietly narrowed. These tests fail if a vector in the file
+   is not exercised, or if a declared reject class has no case.
+
+$ go test -count=1 -v -run '^(TestTheVendoredVectorsAreUsable|TestEveryVendoredFileMatchesItsManifest)$' ./internal/httpapi/
+=== RUN   TestEveryVendoredFileMatchesItsManifest
+--- PASS: TestEveryVendoredFileMatchesItsManifest (0.00s)
+=== RUN   TestTheVendoredVectorsAreUsable
+--- PASS: TestTheVendoredVectorsAreUsable (0.00s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.263s
+exit=0
+
+------------------------------------------------------------------------------
+4. The published-key refusal still reads key_utf8 out of the RE-VENDORED file and
+   still refuses it. (The prose beside it changed; the key itself did not.)
+
+$ go test -count=1 -v ./internal/config/ -run '^(TestTheVectorsPublishedKeyIsStillTheOneWeRefuse|TestProductionRefusesThePublishedVectorsKey|TestCheckEnvRefusesThePublishedVectorsKey|TestProductionRefusesEveryPublishedKey|TestDevelopmentStillAcceptsThePublishedKeys|TestEveryKeyLiteralInThisRepositoryIsRefused)$'
+=== RUN   TestTheVectorsPublishedKeyIsStillTheOneWeRefuse
+--- PASS: TestTheVectorsPublishedKeyIsStillTheOneWeRefuse (0.00s)
+=== RUN   TestProductionRefusesThePublishedVectorsKey
+--- PASS: TestProductionRefusesThePublishedVectorsKey (0.00s)
+=== RUN   TestDevelopmentStillAcceptsThePublishedKeys
+--- PASS: TestDevelopmentStillAcceptsThePublishedKeys (0.00s)
+=== RUN   TestProductionRefusesEveryPublishedKey
+--- PASS: TestProductionRefusesEveryPublishedKey (0.00s)
+=== RUN   TestCheckEnvRefusesThePublishedVectorsKey
+--- PASS: TestCheckEnvRefusesThePublishedVectorsKey (0.00s)
+=== RUN   TestEveryKeyLiteralInThisRepositoryIsRefused
+    publishedkeys_test.go:189: scanned 3 key literals in _test.go sources; every one is refused in production
+--- PASS: TestEveryKeyLiteralInThisRepositoryIsRefused (0.01s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/config	0.194s
+exit=0
+
+------------------------------------------------------------------------------
+5. Whole-suite skip count — make test-noskip fails if ANY test reports a skip.
+$ make test-noskip
+test-noskip: 347 pass events, 0 skips
+exit=0

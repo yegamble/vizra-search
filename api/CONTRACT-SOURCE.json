@@ -7,15 +7,16 @@
   ],
   "source_repository": "yegamble/vizra-core",
   "source_ref": "main",
-  "source_commit": "415a6d19cfc0acedd8ad84c1857c95db0ed63627",
-  "vendored_at": "2026-09-20",
+  "source_commit": "4a80a1e3f36b8001c2954d0568bea29268e739fe",
+  "vendored_at": "2026-09-21",
   "$provenance_note": [
-    "Re-vendored from core's DEFAULT BRANCH. The first vendoring recorded a commit on",
-    "core's feature branch feat/m0-foundation (2b9c540e81960954ee39e6a2aeec027e0f764a67).",
-    "Core squash-merged that PR and deleted the branch, so the recorded commit is no longer",
-    "reachable from any ref in yegamble/vizra-core and a reviewer could not fetch it to",
-    "check these digests. A source_ref a squash-merge can delete is not provenance, so this",
-    "manifest pins a commit on main. Evidence: docs/evidence/pr2/revendor-provenance.txt"
+    "Always pin a commit on core's DEFAULT BRANCH. The first vendoring (PR #1) recorded a",
+    "commit on core's feature branch feat/m0-foundation; core squash-merged and deleted the",
+    "branch, so the recorded commit was no longer reachable from any ref in yegamble/vizra-core",
+    "and a reviewer could not fetch it to check these digests. A source_ref a squash-merge can",
+    "delete is not provenance. scripts/vendor-contract.py enforces this: it refuses a commit",
+    "that is not an ancestor of the branch tip, and refuses a --ref that is not main.",
+    "Evidence: docs/evidence/pr2/revendor-provenance.txt and docs/evidence/pr3/provenance.txt"
   ],
   "authority": "ADR-002 (Accepted 2026-09-20) and the Q-001 ruling: the internal contract is written in core's canonical OpenAPI and drift-checked in both repos. The vectors file declares itself normative for both repositories.",
   "files": [
@@ -29,8 +30,8 @@
     {
       "source_path": "api/search-hmac-testvectors.json",
       "vendored_path": "api/search-hmac-testvectors.json",
-      "sha256": "ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3",
-      "bytes": 22327,
+      "sha256": "f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862",
+      "bytes": 22321,
       "role": "normative HMAC conformance vectors: `vectors` are ACCEPT cases, `negative_vectors` are REJECT cases, and an implementation MUST consume both halves"
     }
   ]

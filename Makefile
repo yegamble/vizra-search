@@ -145,6 +145,27 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 
 # ------------------------------------------------------------------ extras ---
 
+# The two files under api/ that this repository does NOT own are vendored from
+# vizra-core. Re-vendoring them by hand is how the manifest and the bytes drift
+# apart: PR #1 hand-recorded a commit that a squash-merge then deleted, and a
+# hand-typed sha256 is a checksum of someone's attention. scripts/vendor-contract.py
+# is therefore the single writer of api/search-internal.openapi.yaml,
+# api/search-hmac-testvectors.json and api/CONTRACT-SOURCE.json.
+#
+# CORE points at a vizra-core checkout, which the script only ever reads
+# (rev-parse / log / merge-base / show). It is NOT run in CI: CI has no core
+# checkout, and `contract-drift` already fails on any drift from the manifest.
+CORE ?= ../vizra-core
+CORE_REF ?= origin/main
+
+.PHONY: vendor-contract
+vendor-contract: ## Re-vendor the core contract + HMAC vectors and rewrite api/CONTRACT-SOURCE.json (CORE=<path>)
+	./scripts/vendor-contract.py --core '$(CORE)' --ref '$(CORE_REF)'
+
+.PHONY: vendor-contract-check
+vendor-contract-check: ## Verify every vendored file still matches api/CONTRACT-SOURCE.json
+	./scripts/vendor-contract.py --check
+
 # The development key is a published constant in this repository, so anyone on
 # the developer's network could sign a valid request against a process that
 # binds every interface. `run` therefore binds loopback explicitly rather than
