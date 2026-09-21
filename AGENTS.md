@@ -246,7 +246,7 @@ still gets the production refusals. An unrecognised mode fails closed.
 | `SEARCH_HMAC_KEY` | — | **Required in every mode.** Named by the contract. |
 | `MAX_INTERNAL_BODY_BYTES` | `1048576` | Named by the contract. **Production refuses any value above 8 MiB.** |
 | `VIZRA_MODE` | `production` | `production` or `development`. The **platform** name — `vizra-core` reads it for the same concept. |
-| `VIZRA_SEARCH_MODE` | — | **Not read here.** `vizra-core`'s search **topology** (`off`/`managed`/`external`). Refused by name if it carries this service's old runtime vocabulary — see below. |
+| `VIZRA_SEARCH_MODE` | — | **Not read here.** `vizra-core`'s search **topology**, owned by core. Refused by name **only** when it carries this service's old runtime vocabulary; every other value is ignored in silence — see below. |
 | `VIZRA_SEARCH_ADDR` | `:8081` | Never published off-host (ADR-002 / Q-017). |
 | `VIZRA_SEARCH_MAX_CLOCK_SKEW` | `300s` | The contract's window. **Production refuses any value above 300s.** |
 | `VIZRA_SEARCH_REQUEST_TIMEOUT` | `5s` | Bounds each handler. |
@@ -259,11 +259,11 @@ value** — every key this project publishes.
 
 ### One operator-facing name per concept (2026-09-21)
 
-`VIZRA_SEARCH_MODE` means **search topology** — `off | managed | external` —
-**product-wide**, and it is **owned by `vizra-core`**, which is the only process
-that reads it. It says whether core talks to a search service at all, and to
-which one. It is not this service's variable and never was a good name for this
-service's runtime mode.
+`VIZRA_SEARCH_MODE` means **search topology** product-wide, and it is **owned by
+`vizra-core`**, which is the only process that reads it. It says whether core
+talks to a search service at all, and to which one. Its vocabulary is core's,
+and this repository deliberately does not restate it. It is not this service's
+variable and never was a good name for this service's runtime mode.
 
 Until this date `vizra-search` read that same name as its own runtime mode with
 the vocabulary `development | production`: one operator-facing name, two
@@ -272,18 +272,16 @@ meta repository actually ships — would therefore either stop search booting or
 worse, silently pick a mode. **The runtime mode here is now `VIZRA_MODE`**, the
 name core already uses for it, with core's vocabulary and core's meaning.
 
-Nothing is deployed, so there is **no compatibility alias**: the old name is not
-read as a mode, its value has no effect, and that is exactly why it cannot be
-ignored. What `VIZRA_SEARCH_MODE` does at boot now:
+Nothing is deployed, so there is **no compatibility alias**. What
+`VIZRA_SEARCH_MODE` does at boot now — one refused class, everything else
+ignored:
 
 | Value in `VIZRA_SEARCH_MODE` | Result |
 |---|---|
-| `off`, `managed`, `external` | **ignored in silence** — core's variable, core's value, and a shared env file must stay usable |
 | `development`, `production` (any case, surrounding whitespace ignored) | **boot refusal, by name, in every mode**, naming `VIZRA_MODE` as the replacement |
-| completely empty (`VIZRA_SEARCH_MODE=`) | tolerated — a template may carry the name as a tombstone, exactly as core tolerates for its retired keys |
-| anything else, whitespace-only included | **boot refusal** — it is in neither vocabulary, so it is either core's misconfiguration or an operator who meant a mode (`dev`, `prod`, `staging`) |
+| **anything else** — core's topology values, values this service has never heard of, whitespace-only, empty | **ignored in silence**: never read, never logged, never echoed |
 
-Two properties of that table are deliberate and are not to be relaxed:
+Both halves are deliberate and are not to be relaxed:
 
 - The refusal applies in **every mode**, not only in production. `vizra-core`
   refuses its retired key names inside its production block, and that is right
@@ -292,21 +290,40 @@ Two properties of that table are deliberate and are not to be relaxed:
   with `VIZRA_SEARCH_MODE=development` and no `VIZRA_MODE`: silently they get
   production (and misread the refusal of their development key) or silently they
   get development (believing the production refusals still apply). Neither
-  silence is acceptable; not booting is.
-- Refusing **everything in neither vocabulary** costs forward compatibility:
-  `config.SearchTopologyValues` is core's list, and core adding a topology value
-  must update it here in the same release. That cost is paid deliberately,
-  because the alternative is `VIZRA_SEARCH_MODE=dev` meaning nothing at all.
-  `TestTheTopologyVocabularyIsPinnedToCore` is where the list is pinned.
+  silence is acceptable; not booting is. That exact spelling is an operator
+  **asking for a mode**, which is why it alone is refused.
+- **Everything else is ignored, including values this service does not
+  recognise.** `VIZRA_SEARCH_MODE` is core's variable, and validating core's
+  vocabulary here would buy no safety while coupling two repositories: the day
+  core extended its vocabulary, every search instance reading a shared env file
+  would refuse to boot. So this repository holds no copy of core's vocabulary
+  and no test pretending to pin one.
 
-No refusal message ever echoes a value — only the two variable names and the two
-vocabularies, which are constants in `internal/config/config.go`.
+  **The accepted cost, stated plainly:** a typo such as
+  `VIZRA_SEARCH_MODE=developmnt` with no `VIZRA_MODE` boots **production** — the
+  strict mode — and the operator finds out because the development affordances
+  they wanted (the published dev key, the relaxed ceilings) are refused. That is
+  the fail-safe direction. Production is the **default**, and the only dangerous
+  outcome — running development without asking for it — requires an explicit
+  `VIZRA_MODE=development` and can never come from this variable.
+  `TestNoValueInTheOldNameCanEverProduceDevelopment` and the matrix rows
+  `old-name-typo-of-development` and `old-name-unknown-alone` hold that line.
+
+No refusal message ever echoes the value an operator supplied — only variable
+names and this service's own runtime vocabulary, which are constants in
+`internal/config/config.go`. That sentence is a **test**, not a habit:
+`TestNoRefusalEchoesTheSuppliedValue` drives every refusal path in the loader
+with a marker assembled at run time and fails if the marker comes back (also
+from `Config.String()` and `Config.LogValue()` for an ignored value), and every
+refusal row of the boot matrix greps the process output for the value it
+supplied. `--mutate echo-the-value` turns both red.
 
 The boot matrix behind this table runs against the **real binary**:
-`./scripts/boot-matrix.sh` (13 cases), with three controlled mutations —
-`--mutate fallback-to-the-old-name`, `--mutate drop-the-refusal`,
-`--mutate default-to-development` — each of which must turn it red. The
-transcripts are in `docs/evidence/pr4/`.
+`./scripts/boot-matrix.sh` (20 cases plus the focused suite), with five
+controlled mutations — `--mutate fallback-to-the-old-name`,
+`--mutate drop-the-refusal`, `--mutate default-to-development`,
+`--mutate unknown-value-as-development`, `--mutate echo-the-value` — each of
+which must turn it red. The transcripts are in `docs/evidence/pr4/`.
 
 ### Published keys are refused by exact value
 
@@ -605,9 +622,10 @@ ci`, the Dockerfile and the workflows.
 Deliberately **not** here, and not to be added without a dispatched slice:
 indexing, PostgreSQL, migrations, ranking, event storage, compose wiring, the
 `/admin/search` surface, and search **topology** selection —
-`VIZRA_SEARCH_MODE` is core's configuration, not this service's, and since
-2026-09-21 this service reads it as nothing at all (see § "One operator-facing
-name per concept").
+`VIZRA_SEARCH_MODE` is core's configuration, not this service's. Since
+2026-09-21 this service reads it as nothing at all and validates nothing about
+it beyond refusing its own retired runtime vocabulary (see § "One
+operator-facing name per concept").
 
 `vizra-search` never writes core tables, and core never reads schema `search`.
 When this service gains tables they live in PostgreSQL schema `search` of the

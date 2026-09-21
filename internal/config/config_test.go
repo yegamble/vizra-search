@@ -2,6 +2,8 @@ package config_test
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -246,29 +248,42 @@ func TestTheOldRuntimeModeNameIsRefusedInDevelopmentToo(t *testing.T) {
 	}
 }
 
-// A topology value in that variable is core's, and core's alone. A shared env
-// file carrying it is CORRECT, so it must be ignored in silence — a refusal
-// here would make the shared file unusable, which is the failure this rename
-// exists to prevent.
-func TestATopologyValueInTheOldNameIsIgnored(t *testing.T) {
-	for _, topology := range config.SearchTopologyValues {
-		t.Run(topology, func(t *testing.T) {
+// EVERY value but the old runtime vocabulary is ignored in silence. The
+// variable is core's; validating core's vocabulary here would buy no safety and
+// would make this service refuse to boot the day core extends it. So core's
+// topology values, values this service has never heard of, whitespace-only and
+// empty are all the same thing to this loader: nothing.
+func TestEveryValueButTheOldVocabularyIsIgnored(t *testing.T) {
+	for _, value := range []string{
+		// core's topology values, which a shared env file legitimately carries
+		"off", "managed", "external",
+		// values this service has never heard of, including the ones an
+		// operator who meant a mode would reach for
+		"staging", "dev", "prod", "developmnt", "1",
+		// whitespace-only and empty
+		"   ", "",
+	} {
+		name := value
+		if strings.TrimSpace(name) == "" {
+			name = "blank" + strconv.Itoa(len(value))
+		}
+		t.Run(name, func(t *testing.T) {
 			cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
-				config.EnvSearchTopology: topology,
+				config.EnvSearchTopology: value,
 			})))
 			if err != nil {
-				t.Fatalf("%s=%q refused: %v", config.EnvSearchTopology, topology, err)
+				t.Fatalf("%s=%q was refused: %v", config.EnvSearchTopology, value, err)
 			}
 			if cfg.Mode != config.ModeProduction {
-				t.Fatalf("mode = %q, want %q: the topology value must not influence the mode", cfg.Mode, config.ModeProduction)
+				t.Fatalf("mode = %q, want %q: this variable must not influence the mode", cfg.Mode, config.ModeProduction)
 			}
 
 			cfg, err = config.LoadFrom(lookupFrom(envWith(t, map[string]string{
 				config.EnvMode:           "development",
-				config.EnvSearchTopology: topology,
+				config.EnvSearchTopology: value,
 			})))
 			if err != nil {
-				t.Fatalf("%s=development + %s=%q refused: %v", config.EnvMode, config.EnvSearchTopology, topology, err)
+				t.Fatalf("%s=development + %s=%q refused: %v", config.EnvMode, config.EnvSearchTopology, value, err)
 			}
 			if cfg.Mode != config.ModeDevelopment {
 				t.Fatalf("mode = %q, want %q: the new name decides the mode", cfg.Mode, config.ModeDevelopment)
@@ -277,40 +292,27 @@ func TestATopologyValueInTheOldNameIsIgnored(t *testing.T) {
 	}
 }
 
-// Neither vocabulary is a refusal, because it is neither core's topology nor
-// anything this service understands — and `dev`, `prod` or `staging` in that
-// variable is exactly the operator who meant a mode.
-func TestANonVocabularyValueInTheOldNameIsRefused(t *testing.T) {
-	for _, value := range []string{"staging", "dev", "prod", "1", "   "} {
-		t.Run(value, func(t *testing.T) {
-			_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
-				config.EnvSearchTopology: value,
-			})))
-			if err == nil {
-				t.Fatalf("%s=%q was ignored; a value in neither vocabulary must be refused", config.EnvSearchTopology, value)
-			}
-			if !strings.Contains(err.Error(), config.EnvSearchTopology) {
-				t.Fatalf("error %q does not name %s", err.Error(), config.EnvSearchTopology)
-			}
-		})
-	}
-}
-
-// A completely empty value is a template tombstone — the name carried forward
-// with nothing after the `=`. Core tolerates exactly that for its retired keys,
-// and so do we. Whitespace is NOT empty: `KEY= ` is ambiguous and is refused
-// above, because the fail-secure reading of an ambiguous env file is that the
-// value is set.
-func TestAnEmptyOldNameIsToleratedAsATombstone(t *testing.T) {
-	cfg, err := config.LoadFrom(lookupFrom(map[string]string{
-		config.EnvHMACKey:        freshKey(t),
-		config.EnvSearchTopology: "",
-	}))
-	if err != nil {
-		t.Fatalf("%s= (empty) refused: %v", config.EnvSearchTopology, err)
-	}
-	if cfg.Mode != config.ModeProduction {
-		t.Fatalf("mode = %q, want %q", cfg.Mode, config.ModeProduction)
+// The accepted cost of ignoring what we do not own, stated as a test: a typo in
+// the old name can never produce development. It produces PRODUCTION — the
+// strict mode — and the operator finds out because the development affordances
+// they wanted are refused. Running development without asking for it requires
+// an explicit VIZRA_MODE=development and can never come from this variable.
+func TestNoValueInTheOldNameCanEverProduceDevelopment(t *testing.T) {
+	for _, value := range []string{
+		"developmnt", "DEVELOPMENT_", "dev", "development-mode", "off", "managed", "external", "   ", "",
+	} {
+		env := envWith(t, map[string]string{config.EnvSearchTopology: value})
+		// The dev key makes the point sharper: if this value ever selected
+		// development, the key would be ACCEPTED and nothing would say so.
+		env[config.EnvHMACKey] = config.DevHMACKey
+		cfg, err := config.LoadFrom(lookupFrom(env))
+		if err == nil {
+			t.Fatalf("%s=%q booted in mode %q with the published development key", config.EnvSearchTopology, value, cfg.Mode)
+		}
+		if !strings.Contains(err.Error(), "development placeholder") {
+			t.Fatalf("%s=%q: refusal was %q, not the production key refusal — the mode was not production",
+				config.EnvSearchTopology, value, err.Error())
+		}
 	}
 }
 
@@ -335,21 +337,88 @@ func TestTheOldNameIsConsultedOnlyByTheRefusal(t *testing.T) {
 	}
 }
 
-// The topology vocabulary is CORE's, pinned here so that core extending it is a
-// red test in this repository rather than a search instance that refuses to
-// boot on an operator's machine. If this list is wrong, fix it here — do not
-// widen the refusal to "ignore anything".
-func TestTheTopologyVocabularyIsPinnedToCore(t *testing.T) {
-	want := []string{"off", "managed", "external"}
-	got := config.SearchTopologyValues
-	if len(got) != len(want) {
-		t.Fatalf("SearchTopologyValues = %v, want %v (vizra-core internal/config/keys.go)", got, want)
+// TestNoRefusalEchoesTheSuppliedValue drives EVERY refusal path in the loader
+// that names a variable, with a marker assembled at run time as that variable's
+// value, and fails if the marker comes back in the error or in anything the
+// config renders into a log.
+//
+// AGENTS.md states the no-echo property absolutely. Until this test existed the
+// property had no control at all: a verifier's mutation made a refusal print
+// the operator's value verbatim and every lane stayed green. The marker is
+// assembled rather than written as a literal so it cannot collide with a
+// vocabulary word a message legitimately prints, and so it cannot be mistaken
+// for a key literal by TestEveryKeyLiteralInThisRepositoryIsRefused.
+func TestNoRefusalEchoesTheSuppliedValue(t *testing.T) {
+	marker := func() string {
+		return "zz" + strconv.FormatInt(time.Now().UnixNano(), 36) + "marker"
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("SearchTopologyValues = %v, want %v (vizra-core internal/config/keys.go)", got, want)
+
+	// Each case supplies the marker as one variable's value and must produce a
+	// refusal that names the variable and not the value.
+	for _, tc := range []struct {
+		name string
+		key  string
+		// value wraps the marker when the refusal only fires for a particular
+		// shape of value.
+		value func(marker string) string
+	}{
+		{"unknown runtime mode", config.EnvMode, func(m string) string { return m }},
+		{"listen address", config.EnvAddr, func(m string) string { return m }},
+		{"clock skew", config.EnvMaxClockSkew, func(m string) string { return m }},
+		{"request timeout", config.EnvRequestTimeout, func(m string) string { return m }},
+		{"shutdown grace", config.EnvShutdownGrace, func(m string) string { return m }},
+		{"body bytes", config.EnvMaxBodyBytes, func(m string) string { return m }},
+		{"the shared secret", config.EnvHMACKey, func(m string) string { return m }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := marker()
+			env := envWith(t, map[string]string{tc.key: tc.value(m)})
+			_, err := config.LoadFrom(lookupFrom(env))
+			if err == nil {
+				t.Fatalf("%s=<marker> was accepted; this case must drive a refusal", tc.key)
+			}
+			if !strings.Contains(err.Error(), tc.key) {
+				t.Fatalf("refusal %q does not name %s", err.Error(), tc.key)
+			}
+			if strings.Contains(err.Error(), m) {
+				t.Fatalf("the refusal for %s echoes the supplied value back: %q", tc.key, err.Error())
+			}
+		})
+	}
+
+	// The retired name is refused only for the old vocabulary, so its value
+	// cannot be an arbitrary marker. The marker is the SHAPE instead: an
+	// oddly-cased, space-padded spelling that the message must not reproduce.
+	t.Run("the retired runtime-mode name", func(t *testing.T) {
+		raw := "  DeVeLoPmEnT\t"
+		_, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+			config.EnvSearchTopology: raw,
+		})))
+		if err == nil {
+			t.Fatal("the old vocabulary was accepted")
 		}
-	}
+		if strings.Contains(err.Error(), raw) || strings.Contains(err.Error(), "DeVeLoPmEnT") {
+			t.Fatalf("the refusal echoes the value as supplied: %q", err.Error())
+		}
+	})
+
+	// An IGNORED value must not surface either: nothing reads it, so nothing
+	// may render it into a log line.
+	t.Run("an ignored value never reaches a log", func(t *testing.T) {
+		m := marker()
+		cfg, err := config.LoadFrom(lookupFrom(envWith(t, map[string]string{
+			config.EnvSearchTopology: m,
+		})))
+		if err != nil {
+			t.Fatalf("an ignored value was refused: %v", err)
+		}
+		if strings.Contains(cfg.String(), m) {
+			t.Fatalf("Config.String() carries the ignored value: %s", cfg.String())
+		}
+		if strings.Contains(fmt.Sprintf("%v", cfg.LogValue()), m) {
+			t.Fatalf("Config.LogValue() carries the ignored value")
+		}
+	})
 }
 
 func TestValidateCollectsEveryError(t *testing.T) {

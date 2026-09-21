@@ -124,15 +124,17 @@ const (
 	// and one name means one thing across the product.
 	EnvMode = "VIZRA_MODE"
 
-	// EnvSearchTopology is vizra-core's search TOPOLOGY variable
-	// (off | managed | external): whether core talks to a search service at
-	// all, and to which one. It is NOT read by this service — the topology is
-	// core's decision, not ours (AGENTS.md § Scope at M0).
+	// EnvSearchTopology is vizra-core's search TOPOLOGY variable: whether core
+	// talks to a search service at all, and to which one. Its vocabulary is
+	// core's and is deliberately not restated here. It is NOT read by this
+	// service — the topology is core's decision, not ours (AGENTS.md § Scope
+	// at M0).
 	//
 	// This service used to read this very name as its runtime mode, with the
 	// incompatible vocabulary development | production. That is why the name
 	// appears here at all: it is checked so it can be REFUSED when it carries
-	// the old vocabulary, never read. See searchTopology below.
+	// the old vocabulary, never read, and every other value is ignored in
+	// silence — core's vocabulary is core's business. See retiredModeName.
 	EnvSearchTopology = "VIZRA_SEARCH_MODE"
 
 	EnvAddr           = "VIZRA_SEARCH_ADDR"
@@ -155,18 +157,6 @@ const (
 
 // IsProduction reports whether the strict refusals apply.
 func (m Mode) IsProduction() bool { return m == ModeProduction }
-
-// SearchTopologyValues is vizra-core's topology vocabulary for
-// EnvSearchTopology, in core's order (vizra-core internal/config/keys.go:
-// "off | managed | external"). This service does not read the variable; it
-// knows the vocabulary only so that a legitimate shared env file carrying
-// core's value is ignored in silence rather than refused.
-//
-// It is CORE's list, pinned by TestTheTopologyVocabularyIsPinnedToCore. If core
-// adds a topology value, this list must learn it in the same release — the cost
-// of refusing everything that is in neither vocabulary, which is what stops
-// `VIZRA_SEARCH_MODE=dev` being read as nothing at all.
-var SearchTopologyValues = []string{"off", "managed", "external"}
 
 // retiredModeValues is THIS service's OLD runtime-mode vocabulary, which used
 // to live in EnvSearchTopology. Nothing is deployed, so there is no
@@ -241,7 +231,7 @@ func LoadFrom(lookup Lookup) (*Config, error) {
 	}
 	cfg.HMACKey = v.hmacKey(cfg.Mode)
 	v.ceilings(cfg)
-	v.searchTopology()
+	v.retiredModeName()
 
 	if err := v.err(); err != nil {
 		return nil, err
@@ -300,74 +290,65 @@ func (v *validator) mode() Mode {
 	}
 }
 
-// searchTopology checks the one variable whose MEANING changed under this
-// service's feet, and never reads it as anything.
+// retiredModeName refuses the one spelling that used to mean something here and
+// no longer does. It reads nothing, validates nothing that belongs to another
+// service, and is silent about every value it does not refuse.
 //
-// `VIZRA_SEARCH_MODE` is vizra-core's search topology (off | managed |
-// external). This service used to read that same name as its runtime mode with
-// the vocabulary development | production — the same operator-facing name for
-// two incompatible concepts, so a shared env file either stopped search booting
-// or, worse, silently picked a mode. The runtime mode is now `VIZRA_MODE`, the
-// name core already uses for it.
+// `VIZRA_SEARCH_MODE` is vizra-core's search topology variable, owned and read
+// by core alone. This service used to read that same name as its runtime mode
+// with the vocabulary development | production — the same operator-facing name
+// for two incompatible concepts, so a shared env file either stopped search
+// booting or, worse, silently picked a mode. The runtime mode is now
+// `VIZRA_MODE`, the name core already uses for it.
 //
-// Three outcomes, and the reason each is what it is:
+// Exactly one value class is refused, and everything else is IGNORED:
 //
-//   - a TOPOLOGY value is core's and correct. Ignored in silence: refusing it
-//     would break the shared env file this rename exists to make possible.
-//   - a value from the OLD RUNTIME vocabulary is refused BY NAME. There is no
-//     compatibility alias, so the value has no effect — and a value with no
-//     effect must be refused rather than ignored. An operator who carried
-//     `VIZRA_SEARCH_MODE=development` forward would otherwise get production
-//     silently (the default), believing their development key is accepted, or
-//     development silently, believing the production refusals still apply.
-//     Both are the failure this check exists to prevent.
-//   - anything else is refused too. It is in neither vocabulary, so it is
-//     either core's misconfiguration or — `dev`, `prod`, `staging` — an
-//     operator who meant a mode. Ignoring it silently would leave exactly the
-//     silence the first bullet forbids. The cost is stated in
-//     SearchTopologyValues: core extending its vocabulary must update that
-//     list.
+//   - a value from the OLD RUNTIME vocabulary (development | production, after
+//     TrimSpace and ToLower) is refused BY NAME, in every mode. There is no
+//     compatibility alias, so the value has no effect — and here a value with
+//     no effect must be refused rather than ignored, because this exact
+//     spelling is an operator ASKING FOR A MODE. Ignored, it would hand them
+//     production silently while they believe they asked for development (and
+//     misread the refusal of their development key), or development silently
+//     while they believe the production refusals still apply.
+//   - ANY other value is ignored in silence — never read, never logged, never
+//     echoed. That includes core's topology values, values this service has
+//     never heard of, whitespace-only and empty. It is core's variable, and
+//     validating core's vocabulary here would buy no safety while making this
+//     service refuse to boot the day core extends it. The accepted cost is a
+//     typo: `VIZRA_SEARCH_MODE=developmnt` with no `VIZRA_MODE` boots
+//     PRODUCTION, the strict mode, and the operator finds out because the
+//     development affordances they wanted are refused. That is the fail-safe
+//     direction — production is the default, and the only dangerous outcome,
+//     running development without asking for it, requires an explicit
+//     `VIZRA_MODE=development` and can never come from this variable.
 //
 // Unlike vizra-core's retired-key refusal, which sits in the production block,
 // this one runs in EVERY mode. A retired secret matters only where secrets are
 // validated; this name decides the MODE ITSELF, so development cannot be the
 // mode in which the check is skipped.
 //
-// No message echoes the value — only the two variable names and the two
-// vocabularies, which are constants in this file.
-func (v *validator) searchTopology() {
+// The message names the two variables and the runtime vocabulary — all
+// constants in this file — and never the supplied value.
+// TestNoRefusalEchoesTheSuppliedValue drives this and every other refusal in
+// the loader with a runtime-assembled marker and fails if the marker comes back.
+func (v *validator) retiredModeName() {
 	raw, ok := v.raw(EnvSearchTopology)
-	if !ok || raw == "" {
-		// Absent, or present with a completely empty value: a template may
-		// carry the name as a tombstone, exactly as core tolerates for its
-		// retired keys. Whitespace is NOT empty and falls through below,
-		// because `KEY= ` is ambiguous and the fail-secure reading of an
-		// ambiguous env file is that the value is set.
+	if !ok {
 		return
 	}
 	value := strings.ToLower(strings.TrimSpace(raw))
 
-	for _, topology := range SearchTopologyValues {
-		if value == topology {
-			return
-		}
-	}
-
 	for _, retired := range retiredModeValues {
 		if value == retired {
 			v.addf("%s carries a value from this service's OLD runtime-mode vocabulary and is NO LONGER READ as a mode. "+
-				"The runtime mode is %s (%s | %s); %s now means vizra-core's search topology (%s) product-wide and is owned by core. "+
+				"The runtime mode is %s (%s | %s). %s is vizra-core's search topology variable, owned and read by core alone. "+
 				"There is no compatibility alias, so this value has no effect — rename the variable rather than let this process "+
 				"boot in a mode your env file never named.",
-				EnvSearchTopology, EnvMode, ModeDevelopment, ModeProduction, EnvSearchTopology,
-				strings.Join(SearchTopologyValues, " | "))
+				EnvSearchTopology, EnvMode, ModeDevelopment, ModeProduction, EnvSearchTopology)
 			return
 		}
 	}
-
-	v.addf("%s is vizra-core's search topology variable (%s) and is not read by this service, but its value is none of those. "+
-		"If you meant this process's runtime mode, that is %s (%s | %s).",
-		EnvSearchTopology, strings.Join(SearchTopologyValues, " | "), EnvMode, ModeDevelopment, ModeProduction)
 }
 
 func (v *validator) addr() string {

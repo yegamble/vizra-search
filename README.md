@@ -48,6 +48,7 @@ development key, a short key or a placeholder. Configuration is documented in
 
 The runtime mode is **`VIZRA_MODE`** (`development` | `production`) — the same
 name `vizra-core` reads for the same concept. `VIZRA_SEARCH_MODE` is core's
-search **topology** (`off` | `managed` | `external`) and is not read here; if it
-carries this service's old runtime vocabulary the process refuses to boot and
-says so by name. See `AGENTS.md` § "One operator-facing name per concept".
+search **topology** and is not read here: if it carries this service's *old*
+runtime vocabulary the process refuses to boot and says so by name, and any
+other value is ignored in silence. See `AGENTS.md` § "One operator-facing name
+per concept".

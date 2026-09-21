@@ -63,7 +63,9 @@ trap cleanup EXIT
 # one is checked twice: the search text must occur exactly once, and the file
 # digest must change. Both are what stops a demonstration that never happened.
 
-mutation_names() { echo "fallback-to-the-old-name drop-the-refusal default-to-development"; }
+mutation_names() {
+  echo "fallback-to-the-old-name drop-the-refusal default-to-development unknown-value-as-development echo-the-value"
+}
 
 mutation_describes() {
   case "$1" in
@@ -73,6 +75,10 @@ mutation_describes() {
       echo "the old name is ignored instead of refused" ;;
     default-to-development)
       echo "an unset ${ENV_MODE} defaults to development instead of production" ;;
+    unknown-value-as-development)
+      echo "an UNKNOWN ${ENV_TOPOLOGY} value selects development instead of being ignored" ;;
+    echo-the-value)
+      echo "the refusal echoes the operator's ${ENV_TOPOLOGY} value back" ;;
     *) return 1 ;;
   esac
 }
@@ -103,12 +109,33 @@ PATCHES = {
         "\t\t\t}\n"
         "\t\t\tv.addf(",
     ),
-    # The old name is simply ignored, whatever it carries.
+    # The old name is simply ignored, whatever it carries — including the old
+    # runtime vocabulary, which is the one class that must be refused.
     "drop-the-refusal": (
         "\traw, ok := v.raw(EnvSearchTopology)\n"
-        "\tif !ok || raw == \"\" {",
+        "\tif !ok {",
         "\traw, ok := v.raw(EnvSearchTopology)\n"
-        "\tif true || !ok || raw == \"\" {",
+        "\tif true || !ok {",
+    ),
+    # An unknown value stops being ignored and selects development: the exact
+    # inversion of the fail-safe direction the policy rests on.
+    "unknown-value-as-development": (
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tv.addf(",
+        "\tif value != \"\" && value != string(ModeDevelopment) && value != string(ModeProduction) {\n"
+        "\t\tv.mutationFallbackMode = ModeDevelopment\n"
+        "\t\treturn\n"
+        "\t}\n"
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tv.addf(",
+    ),
+    # The refusal prints the operator's value verbatim, breaking the no-echo
+    # property AGENTS.md states absolutely.
+    "echo-the-value": (
+        "\t\t\tv.addf(\"%s carries a value from this service's OLD runtime-mode vocabulary",
+        "\t\t\tv.addf(\"%s=\"+raw+\" carries a value from this service's OLD runtime-mode vocabulary",
     ),
     # Production is no longer the default.
     "default-to-development": (
@@ -131,9 +158,10 @@ if count != 1:
     sys.exit(f"mutation {name}: anchor text occurs {count} times, want exactly 1 — the harness refuses to guess")
 src = src.replace(search, replace)
 
-if name == "fallback-to-the-old-name":
-    # The fallback needs somewhere to put the mode it stole, and mode() must
-    # honour it, or the mutation would not be the mutation it claims to be.
+if name in ("fallback-to-the-old-name", "unknown-value-as-development"):
+    # Both mutations steal the mode from the retired name, so both need
+    # somewhere to put it and a mode() that honours it — otherwise neither
+    # would be the mutation it claims to be.
     src = src.replace(
         "type validator struct {\n\tlookup   Lookup",
         "type validator struct {\n\tmutationFallbackMode Mode\n\tlookup   Lookup",
@@ -146,14 +174,14 @@ if name == "fallback-to-the-old-name":
         "\traw, ok := v.raw(EnvMode)",
         1,
     )
-    # searchTopology runs after mode() in LoadFrom, so the stolen mode has to be
-    # taken before the Config is built for the mutation to be observable.
+    # retiredModeName runs after mode() in LoadFrom, so the stolen mode has to
+    # be taken before the Config is built for the mutation to be observable.
     src = src.replace(
         "\tv := &validator{lookup: lookup}\n\tcfg := &Config{",
-        "\tv := &validator{lookup: lookup}\n\tv.searchTopology()\n\tcfg := &Config{",
+        "\tv := &validator{lookup: lookup}\n\tv.retiredModeName()\n\tcfg := &Config{",
         1,
     )
-    src = src.replace("\tv.ceilings(cfg)\n\tv.searchTopology()", "\tv.ceilings(cfg)", 1)
+    src = src.replace("\tv.ceilings(cfg)\n\tv.retiredModeName()", "\tv.ceilings(cfg)", 1)
 
 open(path, "w", encoding="utf-8").write(src)
 PY
@@ -162,21 +190,35 @@ PY
 # -------------------------------------------------------------------- cases --
 #
 # name | VIZRA_MODE | VIZRA_SEARCH_MODE | expectation
-#   <unset> is written as the literal @unset.
+#   <unset> is written as the literal @unset, and a present-but-empty value as
+#   @empty. Refusal cases additionally assert that the supplied value is absent
+#   from the process output, unless the value IS a runtime-vocabulary word the
+#   message legitimately prints.
 readonly CASES=(
   "unset-unset|@unset|@unset|boots:production"
   "new-name-development|development|@unset|boots:development"
   "new-name-production|production|@unset|boots:production"
+  # the one refused class: the old runtime vocabulary in the old name
   "old-name-old-vocabulary-alone|@unset|development|refuses:both-names"
   "old-name-old-vocabulary-production-alone|@unset|production|refuses:both-names"
   "both-set-old-vocabulary|production|development|refuses:both-names"
   "both-set-old-vocabulary-dev|development|production|refuses:both-names"
-  "old-name-topology-plus-new-name|development|managed|boots:development"
-  "old-name-topology-alone|@unset|off|boots:production"
-  "old-name-topology-external|production|external|boots:production"
+  "old-name-old-vocabulary-odd-case|@unset|  DeVeLoPmEnT  |refuses:both-names"
+  # everything else in the old name is ignored: core's values and values this
+  # service has never heard of are the same thing to this process — nothing.
+  "old-name-core-value-plus-new-name|development|managed|boots:development"
+  "old-name-core-value-alone|@unset|off|boots:production"
+  "old-name-core-value-external|production|external|boots:production"
+  "old-name-unknown-alone|@unset|zzunknownvalue|boots:production"
+  "old-name-typo-of-development|@unset|developmnt|boots:production"
+  "old-name-unknown-plus-new-name-dev|development|zzunknownvalue|boots:development"
+  "old-name-whitespace-only|@unset|   |boots:production"
+  "old-name-empty|@unset|@empty|boots:production"
+  "old-name-empty-plus-new-name-dev|development|@empty|boots:development"
+  # the new name is this service's own, so IT is validated
   "garbage-new-name|banana|@unset|refuses:new-name"
-  "garbage-old-name|@unset|banana|refuses:old-name"
-  "garbage-both|banana|banana|refuses:both-names"
+  "garbage-new-name-marker|zzmarkervalue|@unset|refuses:new-name"
+  "garbage-both|banana|zzunknownvalue|refuses:new-name"
 )
 
 FAILURES=0
@@ -197,10 +239,14 @@ run_case() {
   local name="$1" mode="$2" topology="$3" expect="$4"
   local port; port="$(free_port)"
   local env=(env "SEARCH_HMAC_KEY=${KEY}" "VIZRA_SEARCH_ADDR=127.0.0.1:${port}")
-  [[ "$mode"     != "@unset" ]] && env+=("${ENV_MODE}=${mode}")
-  [[ "$topology" != "@unset" ]] && env+=("${ENV_TOPOLOGY}=${topology}")
+  local mode_value="${mode}" topology_value="${topology}"
+  [[ "${mode_value}"     == "@empty" ]] && mode_value=""
+  [[ "${topology_value}" == "@empty" ]] && topology_value=""
+  [[ "$mode"     != "@unset" ]] && env+=("${ENV_MODE}=${mode_value}")
+  [[ "$topology" != "@unset" ]] && env+=("${ENV_TOPOLOGY}=${topology_value}")
 
   local shown_mode="${mode/@unset/<unset>}" shown_topology="${topology/@unset/<unset>}"
+  shown_mode="${shown_mode/@empty/<empty>}"; shown_topology="${shown_topology/@empty/<empty>}"
   echo
   echo "=== ${name}"
   echo "    ${ENV_MODE}=${shown_mode}  ${ENV_TOPOLOGY}=${shown_topology}  → expect ${expect}"
@@ -232,7 +278,15 @@ run_case() {
     if [[ "${want_mode}" == "production" && "${saw_dev_warning}" == "yes" ]]; then
       echo "    FAIL: booted in DEVELOPMENT mode; production is the default"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
     fi
-    echo "    ok: healthy on 127.0.0.1:${port}, mode ${want_mode}, then drained on SIGTERM"
+    # An IGNORED value is never read, so it must never surface in a log line.
+    # Only values long enough not to collide with ordinary log text are
+    # checked, so the assertion means what it says.
+    if [[ "${topology}" != "@unset" && "${topology}" != "@empty" && ${#topology_value} -ge 6 ]] \
+       && grep -qF -- "${topology_value}" "${log}"; then
+      echo "    FAIL: the ignored ${ENV_TOPOLOGY} value reached the log"
+      sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+    fi
+    echo "    ok: healthy on 127.0.0.1:${port}, mode ${want_mode}, then drained on SIGTERM; the ignored value never appears"
     PASSES=$((PASSES+1))
     return
   fi
@@ -271,7 +325,21 @@ run_case() {
   if grep -q "${KEY}" "${log}"; then
     echo "    FAIL: the refusal echoed the shared secret"; FAILURES=$((FAILURES+1)); return
   fi
-  echo "    ok: refused with exit ${code}, naming${want_names:+ }${want_names//-/ }"
+  # No refusal echoes the value the operator supplied. The two runtime
+  # vocabulary words are exempt EXACTLY as spelled, because the message prints
+  # them as the vocabulary — which is why a case supplies "  DeVeLoPmEnT  ":
+  # that spelling is the operator's, and the message must not reproduce it.
+  local echoed=""
+  for supplied in "${mode_value}" "${topology_value}"; do
+    [[ -z "${supplied}" ]] && continue
+    [[ "${supplied}" == "development" || "${supplied}" == "production" ]] && continue
+    grep -qF -- "${supplied}" "${log}" && echoed+=" '${supplied}'"
+  done
+  if [[ -n "${echoed}" ]]; then
+    echo "    FAIL: the refusal echoes the supplied value back:${echoed}"
+    sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+  fi
+  echo "    ok: refused with exit ${code}, naming${want_names:+ }${want_names//-/ }, echoing no supplied value"
   sed 's/^/      | /' "${log}"
   PASSES=$((PASSES+1))
 }
@@ -348,7 +416,7 @@ for spec in "${CASES[@]}"; do
 done
 
 echo
-echo "--- ${PASSES} passed, ${FAILURES} failed, $(( PASSES + FAILURES )) checks (13 boot cases + the focused suite)"
+echo "--- ${PASSES} passed, ${FAILURES} failed, $(( PASSES + FAILURES )) checks (${#CASES[@]} boot cases + the focused suite)"
 if [[ -n "${MUTATION}" ]]; then
   if [[ "${FAILURES}" -eq 0 ]]; then
     echo "RESULT: GREEN UNDER MUTATION ${MUTATION} — the control does not hold"

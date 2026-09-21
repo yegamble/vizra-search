@@ -179,30 +179,55 @@ func TestBootRefusesTheRetiredRuntimeModeName(t *testing.T) {
 	}
 }
 
-// The inverse, on the real binary: core's topology value in that variable is
-// correct and is ignored, and the mode comes from the new name alone.
-func TestBootAcceptsCoreTopologyAlongsideTheRuntimeMode(t *testing.T) {
-	addr := freeAddr(t)
-	cmd := exec.Command(binary(t))
-	cmd.Env = append(os.Environ(),
-		config.EnvMode+"=development",
-		config.EnvSearchTopology+"=managed",
-		config.EnvHMACKey+"="+config.DevHMACKey,
-		config.EnvAddr+"="+addr,
-	)
-	var out syncBuffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start: %v", err)
+// The inverse, on the real binary: any value in that variable other than the
+// old runtime vocabulary is ignored — core's own topology value and a value
+// this service has never heard of alike — and the mode comes from the new name.
+func TestBootIgnoresEveryOtherValueOfTheRetiredName(t *testing.T) {
+	for _, value := range []string{"managed", "zz-not-a-value-this-service-knows"} {
+		t.Run(value, func(t *testing.T) {
+			addr := freeAddr(t)
+			cmd := exec.Command(binary(t))
+			cmd.Env = append(os.Environ(),
+				config.EnvMode+"=development",
+				config.EnvSearchTopology+"="+value,
+				config.EnvHMACKey+"="+config.DevHMACKey,
+				config.EnvAddr+"="+addr,
+			)
+			var out syncBuffer
+			cmd.Stdout = &out
+			cmd.Stderr = &out
+			if err := cmd.Start(); err != nil {
+				t.Fatalf("start: %v", err)
+			}
+			t.Cleanup(func() {
+				_ = cmd.Process.Kill()
+				_, _ = cmd.Process.Wait()
+			})
+			waitForHealthy(t, "http://"+addr+"/healthz", &out)
+			log := out.String()
+			if !strings.Contains(log, "running in development mode") {
+				t.Fatalf("the new name did not decide the mode:\n%s", log)
+			}
+			if strings.Contains(log, value) {
+				t.Fatalf("the ignored value reached the log:\n%s", log)
+			}
+		})
 	}
-	t.Cleanup(func() {
-		_ = cmd.Process.Kill()
-		_, _ = cmd.Process.Wait()
+}
+
+// The same variable with an unknown value and NO runtime mode boots production:
+// the strict default. A typo in a variable this service does not own can never
+// hand an operator development.
+func TestAnUnknownRetiredNameValueBootsProduction(t *testing.T) {
+	_, stderr, code := runWithEnv(t, map[string]string{
+		config.EnvSearchTopology: "developmnt",
+		config.EnvHMACKey:        config.DevHMACKey,
 	})
-	waitForHealthy(t, "http://"+addr+"/healthz", &out)
-	if !strings.Contains(out.String(), "running in development mode") {
-		t.Fatalf("the new name did not decide the mode:\n%s", out.String())
+	if code == 0 {
+		t.Fatal("the process booted with the published development key; the mode was not production")
+	}
+	if !strings.Contains(stderr, "development placeholder") {
+		t.Fatalf("stderr = %q: the refusal is not production's key refusal", stderr)
 	}
 }
 

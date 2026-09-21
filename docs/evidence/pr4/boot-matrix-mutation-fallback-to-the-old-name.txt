@@ -1,13 +1,13 @@
-boot-matrix: 2026-09-21T08:21:19Z
-repo        3619fed873fc194130f02cc85577de10414ade39 on chore/m0-vizra-mode-rename
+boot-matrix: 2026-09-21T08:54:33Z
+repo        852b38291c3ec8109f27ebd924ef48eec3b11a9d on chore/m0-vizra-mode-rename
 go          go version go1.27.1 darwin/arm64
 host        Darwin arm64
-source      internal/config/config.go sha256 538ba2729e53b66fcc83e9e5416dfa49637a0a92f37182ceb410d98c935b631d
+source      internal/config/config.go sha256 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73
 
 MUTATION    fallback-to-the-old-name
             the refusal becomes a compatibility alias: the OLD name is read as the mode when VIZRA_MODE is unset
-            config.go sha256 before 538ba2729e53b66fcc83e9e5416dfa49637a0a92f37182ceb410d98c935b631d
-            config.go sha256 after  2b201e3843aa771feab2ffa9ef00ae381ec57635f9264b700f80f2a8d512504e
+            config.go sha256 before 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73
+            config.go sha256 after  e8e21d83c585a2118d5779002926ca59a2900eb646aad1e2e6b65629d0fe43d0
             this run MUST go red; a green run means the control is gone
 
 --- building the binary under test
@@ -16,93 +16,126 @@ MUTATION    fallback-to-the-old-name
     FAIL: the suite is red
       | --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName (0.00s)
       |     --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName/development (0.00s)
-      |         config_test.go:199: VIZRA_SEARCH_MODE="development" booted; the old runtime vocabulary must be refused by name
+      |         config_test.go:201: VIZRA_SEARCH_MODE="development" booted; the old runtime vocabulary must be refused by name
       |     --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName/production (0.00s)
-      |         config_test.go:199: VIZRA_SEARCH_MODE="production" booted; the old runtime vocabulary must be refused by name
+      |         config_test.go:201: VIZRA_SEARCH_MODE="production" booted; the old runtime vocabulary must be refused by name
       |     --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName/Development (0.00s)
-      |         config_test.go:199: VIZRA_SEARCH_MODE="Development" booted; the old runtime vocabulary must be refused by name
+      |         config_test.go:201: VIZRA_SEARCH_MODE="Development" booted; the old runtime vocabulary must be refused by name
       |     --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName/PRODUCTION (0.00s)
-      |         config_test.go:199: VIZRA_SEARCH_MODE="PRODUCTION" booted; the old runtime vocabulary must be refused by name
+      |         config_test.go:201: VIZRA_SEARCH_MODE="PRODUCTION" booted; the old runtime vocabulary must be refused by name
       |     --- FAIL: TestTheOldRuntimeModeNameIsRefusedByName/__development__ (0.00s)
-      |         config_test.go:199: VIZRA_SEARCH_MODE="  development  " booted; the old runtime vocabulary must be refused by name
+      |         config_test.go:201: VIZRA_SEARCH_MODE="  development  " booted; the old runtime vocabulary must be refused by name
       | --- FAIL: TestTheOldNameAloneNeverSilentlySelectsAMode (0.00s)
-      |     config_test.go:226: booted in mode "development" instead of refusing
+      |     config_test.go:228: booted in mode "development" instead of refusing
+      | --- FAIL: TestNoRefusalEchoesTheSuppliedValue (0.00s)
+      |     --- FAIL: TestNoRefusalEchoesTheSuppliedValue/the_retired_runtime-mode_name (0.00s)
+      |         config_test.go:398: the old vocabulary was accepted
       | FAIL
-      | FAIL	github.com/yegamble/vizra-search/internal/config	0.257s
+      | FAIL	github.com/yegamble/vizra-search/internal/config	2.116s
       | --- FAIL: TestBootRefusesTheRetiredRuntimeModeName (10.00s)
       |     main_test.go:167: the process did not exit within 10s; it should have refused to boot.
       | FAIL
-      | FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	11.479s
+      | FAIL	github.com/yegamble/vizra-search/cmd/vizra-search	15.178s
       | FAIL
 
 === unset-unset
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:55118, mode production, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:62986, mode production, then drained on SIGTERM; the ignored value never appears
 
 === new-name-development
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=<unset>  → expect boots:development
-    ok: healthy on 127.0.0.1:55122, mode development, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:62996, mode development, then drained on SIGTERM; the ignored value never appears
 
 === new-name-production
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=<unset>  → expect boots:production
-    ok: healthy on 127.0.0.1:55124, mode production, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:62998, mode production, then drained on SIGTERM; the ignored value never appears
 
 === old-name-old-vocabulary-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=development  → expect refuses:both-names
-./scripts/boot-matrix.sh: line 248:  5347 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
+./scripts/boot-matrix.sh: line 303: 47132 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
     FAIL: still running after 10s where a refusal was required — it booted
-      | {"time":"2026-09-21T04:21:33.174259-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:55126","note":"never expose this process outside the loopback interface"}
-      | {"time":"2026-09-21T04:21:33.174472-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:55126","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T04:54:51.75039-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:63000","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T04:54:51.75062-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:63000","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
 
 === old-name-old-vocabulary-production-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=production  → expect refuses:both-names
-./scripts/boot-matrix.sh: line 248:  6266 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
+./scripts/boot-matrix.sh: line 303: 47791 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
     FAIL: still running after 10s where a refusal was required — it booted
-      | {"time":"2026-09-21T04:21:43.231674-04:00","level":"INFO","msg":"starting","config":{"mode":"production","addr":"127.0.0.1:55191","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+      | {"time":"2026-09-21T04:55:01.786016-04:00","level":"INFO","msg":"starting","config":{"mode":"production","addr":"127.0.0.1:63118","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
 
 === both-set-old-vocabulary
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=development  → expect refuses:both-names
-    ok: refused with exit 1, naming both names
+    ok: refused with exit 1, naming both names, echoing no supplied value
       | vizra-search: invalid vizra-search configuration:
-      |   - VIZRA_SEARCH_MODE carries a value from this service's OLD runtime-mode vocabulary and is NO LONGER READ as a mode. The runtime mode is VIZRA_MODE (development | production); VIZRA_SEARCH_MODE now means vizra-core's search topology (off | managed | external) product-wide and is owned by core. There is no compatibility alias, so this value has no effect — rename the variable rather than let this process boot in a mode your env file never named.
+      |   - VIZRA_SEARCH_MODE carries a value from this service's OLD runtime-mode vocabulary and is NO LONGER READ as a mode. The runtime mode is VIZRA_MODE (development | production). VIZRA_SEARCH_MODE is vizra-core's search topology variable, owned and read by core alone. There is no compatibility alias, so this value has no effect — rename the variable rather than let this process boot in a mode your env file never named.
 
 === both-set-old-vocabulary-dev
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=production  → expect refuses:both-names
-    ok: refused with exit 1, naming both names
+    ok: refused with exit 1, naming both names, echoing no supplied value
       | vizra-search: invalid vizra-search configuration:
-      |   - VIZRA_SEARCH_MODE carries a value from this service's OLD runtime-mode vocabulary and is NO LONGER READ as a mode. The runtime mode is VIZRA_MODE (development | production); VIZRA_SEARCH_MODE now means vizra-core's search topology (off | managed | external) product-wide and is owned by core. There is no compatibility alias, so this value has no effect — rename the variable rather than let this process boot in a mode your env file never named.
+      |   - VIZRA_SEARCH_MODE carries a value from this service's OLD runtime-mode vocabulary and is NO LONGER READ as a mode. The runtime mode is VIZRA_MODE (development | production). VIZRA_SEARCH_MODE is vizra-core's search topology variable, owned and read by core alone. There is no compatibility alias, so this value has no effect — rename the variable rather than let this process boot in a mode your env file never named.
 
-=== old-name-topology-plus-new-name
+=== old-name-old-vocabulary-odd-case
+    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=  DeVeLoPmEnT    → expect refuses:both-names
+./scripts/boot-matrix.sh: line 303: 48161 Killed: 9               "${env[@]}" "${BIN}" > "${log}" 2>&1
+    FAIL: still running after 10s where a refusal was required — it booted
+      | {"time":"2026-09-21T04:55:11.952587-04:00","level":"WARN","msg":"running in development mode","mode":"development","hmac_key_validation":"relaxed: the documented development key and short keys are accepted","addr":"127.0.0.1:63129","note":"never expose this process outside the loopback interface"}
+      | {"time":"2026-09-21T04:55:11.95267-04:00","level":"INFO","msg":"starting","config":{"mode":"development","addr":"127.0.0.1:63129","hmac_key":"[redacted]","max_clock_skew":300000000000,"max_body_bytes":1048576,"request_timeout":5000000000,"shutdown_grace":15000000000},"version":"unknown","commit":"unknown"}
+
+=== old-name-core-value-plus-new-name
     VIZRA_MODE=development  VIZRA_SEARCH_MODE=managed  → expect boots:development
-    ok: healthy on 127.0.0.1:55270, mode development, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:63138, mode development, then drained on SIGTERM; the ignored value never appears
 
-=== old-name-topology-alone
+=== old-name-core-value-alone
     VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=off  → expect boots:production
-    ok: healthy on 127.0.0.1:55272, mode production, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:63140, mode production, then drained on SIGTERM; the ignored value never appears
 
-=== old-name-topology-external
+=== old-name-core-value-external
     VIZRA_MODE=production  VIZRA_SEARCH_MODE=external  → expect boots:production
-    ok: healthy on 127.0.0.1:55274, mode production, then drained on SIGTERM
+    ok: healthy on 127.0.0.1:63142, mode production, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-unknown-alone
+    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:production
+    ok: healthy on 127.0.0.1:63144, mode production, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-typo-of-development
+    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=developmnt  → expect boots:production
+    ok: healthy on 127.0.0.1:63146, mode production, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-unknown-plus-new-name-dev
+    VIZRA_MODE=development  VIZRA_SEARCH_MODE=zzunknownvalue  → expect boots:development
+    ok: healthy on 127.0.0.1:63148, mode development, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-whitespace-only
+    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=     → expect boots:production
+    ok: healthy on 127.0.0.1:63150, mode production, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-empty
+    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=<empty>  → expect boots:production
+    ok: healthy on 127.0.0.1:63152, mode production, then drained on SIGTERM; the ignored value never appears
+
+=== old-name-empty-plus-new-name-dev
+    VIZRA_MODE=development  VIZRA_SEARCH_MODE=<empty>  → expect boots:development
+    ok: healthy on 127.0.0.1:63154, mode development, then drained on SIGTERM; the ignored value never appears
 
 === garbage-new-name
     VIZRA_MODE=banana  VIZRA_SEARCH_MODE=<unset>  → expect refuses:new-name
-    ok: refused with exit 1, naming new name
+    ok: refused with exit 1, naming new name, echoing no supplied value
       | vizra-search: invalid vizra-search configuration:
       |   - VIZRA_MODE must be "production" or "development"
 
-=== garbage-old-name
-    VIZRA_MODE=<unset>  VIZRA_SEARCH_MODE=banana  → expect refuses:old-name
-    ok: refused with exit 1, naming old name
+=== garbage-new-name-marker
+    VIZRA_MODE=zzmarkervalue  VIZRA_SEARCH_MODE=<unset>  → expect refuses:new-name
+    ok: refused with exit 1, naming new name, echoing no supplied value
       | vizra-search: invalid vizra-search configuration:
-      |   - VIZRA_SEARCH_MODE is vizra-core's search topology variable (off | managed | external) and is not read by this service, but its value is none of those. If you meant this process's runtime mode, that is VIZRA_MODE (development | production).
+      |   - VIZRA_MODE must be "production" or "development"
 
 === garbage-both
-    VIZRA_MODE=banana  VIZRA_SEARCH_MODE=banana  → expect refuses:both-names
-    ok: refused with exit 1, naming both names
+    VIZRA_MODE=banana  VIZRA_SEARCH_MODE=zzunknownvalue  → expect refuses:new-name
+    ok: refused with exit 1, naming new name, echoing no supplied value
       | vizra-search: invalid vizra-search configuration:
       |   - VIZRA_MODE must be "production" or "development"
-      |   - VIZRA_SEARCH_MODE is vizra-core's search topology variable (off | managed | external) and is not read by this service, but its value is none of those. If you meant this process's runtime mode, that is VIZRA_MODE (development | production).
 
---- 11 passed, 3 failed, 14 checks (13 boot cases + the focused suite)
+--- 17 passed, 4 failed, 21 checks (20 boot cases + the focused suite)
 RESULT: red under mutation fallback-to-the-old-name, as required
---- restored internal/config/config.go (sha256 538ba2729e53b66fcc83e9e5416dfa49637a0a92f37182ceb410d98c935b631d)
+--- restored internal/config/config.go (sha256 84f2c1fe25e5c49dd46d6428bb530f92c6c1c64d1891b45572938c19e226fc73)
