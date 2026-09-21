@@ -604,8 +604,10 @@ ci`, the Dockerfile and the workflows.
 
 Deliberately **not** here, and not to be added without a dispatched slice:
 indexing, PostgreSQL, migrations, ranking, event storage, compose wiring, the
-`/admin/search` surface, and `SEARCH_MODE` selection (that is core's
-configuration, not this service's).
+`/admin/search` surface, and search **topology** selection —
+`VIZRA_SEARCH_MODE` is core's configuration, not this service's, and since
+2026-09-21 this service reads it as nothing at all (see § "One operator-facing
+name per concept").
 
 `vizra-search` never writes core tables, and core never reads schema `search`.
 When this service gains tables they live in PostgreSQL schema `search` of the
