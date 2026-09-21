@@ -145,6 +145,37 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 
 # ------------------------------------------------------------------ extras ---
 
+# The two files under api/ that this repository does NOT own are vendored from
+# vizra-core. Re-vendoring them by hand is how the manifest and the bytes drift
+# apart: PR #1 hand-recorded a commit that a squash-merge then deleted, and a
+# hand-typed sha256 is a checksum of someone's attention. scripts/vendor-contract.py
+# is therefore the single writer of api/search-internal.openapi.yaml,
+# api/search-hmac-testvectors.json and api/CONTRACT-SOURCE.json.
+#
+# CORE points at a vizra-core checkout, which the script only ever reads
+# (remote get-url / rev-parse / for-each-ref / log / merge-base / show). It is
+# NOT run in CI: CI has no core checkout, and `contract-drift` already fails on
+# any drift from the manifest.
+#
+# vendor-contract-selftest is different: it builds throwaway repositories with
+# `git init` and needs no core checkout and no network, so it COULD be a CI
+# lane. Adding it to `ci:` is out of scope for this slice and is proposed to the
+# chair instead.
+CORE ?= ../vizra-core
+CORE_REMOTE ?= origin
+
+.PHONY: vendor-contract
+vendor-contract: ## Re-vendor the core contract + HMAC vectors and rewrite api/CONTRACT-SOURCE.json (CORE=<path>)
+	./scripts/vendor-contract.py --core '$(CORE)' --remote '$(CORE_REMOTE)'
+
+.PHONY: vendor-contract-check
+vendor-contract-check: ## Verify every vendored file still matches api/CONTRACT-SOURCE.json
+	./scripts/vendor-contract.py --check
+
+.PHONY: vendor-contract-selftest
+vendor-contract-selftest: ## Fire every refusal vendor-contract.py advertises, against throwaway repos (no network)
+	./scripts/vendor-contract-selftest.py
+
 # The development key is a published constant in this repository, so anyone on
 # the developer's network could sign a valid request against a process that
 # binds every interface. `run` therefore binds loopback explicitly rather than

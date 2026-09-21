@@ -1,0 +1,183 @@
+
+==============================================================================
+D-G  THE NEGATIVE FIXTURES CATCH THE DEFECT THEY EXIST FOR
+==============================================================================
+Mutation: revert the ref resolution in scripts/vendor-contract.py to the string-suffix
+test the verifier defeated — any ref whose last path segment is 'main' is
+accepted, and becomes the ref actually vendored from.
+
+Host: Darwin 25.5.0 arm64   python3: Python 3.9.6   date: 2026-09-21T07:47:25Z
+search HEAD: aa1c3fb73b1771b91704587bb1d2a25b7cf39396
+------------------------------------------------------------------------------
+state 0 — the guard as shipped
+  scripts/vendor-contract.py sha256=1fe2773d215989b6e8e1de30124d7d861704695b270e5c9e0309225e713ca303
+  $ ./scripts/vendor-contract-selftest.py
+    | vendor-contract-selftest: 11 fixtures, no network
+    |   tag named 'main'                   OK  (exit 1)
+    |   tag shadowing origin/main          OK  (exit 1)
+    |   branch 'fake/main'                 OK  (exit 1)
+    |   local branch refs/heads/main       OK  (exit 1)
+    |   non-ancestor --commit              OK  (exit 1)
+    |   foreign origin URL                 OK  (exit 1)
+    |   foreign origin (scp-like ssh)      OK  (exit 1)
+    |   userinfo redacted in output        OK  (exit 1)
+    |   no refs/remotes/origin/main        OK  (exit 1)
+    |   shallow clone                      OK  (exit 1)
+    |   happy path accepted                OK  (exit 0)
+    | 
+    | vendor-contract-selftest: all 11 fixtures behaved as documented
+    exit=0  expected=PASS
+    names: all 11 fixtures behaved as documented  OK
+------------------------------------------------------------------------------
+state 1 — the suffix test put back
+  scripts/vendor-contract.py sha256 before mutation: 1fe2773d215989b6e8e1de30124d7d861704695b270e5c9e0309225e713ca303
+  scripts/vendor-contract.py sha256 after  mutation: 3b067f757234f500e1d46c71df6bac9dc049d4cb12fd49dfa4198cc38371bd56
+  the patched region:
+    | 269:    resolved = matches[0]
+    | 270-    if ref.split("/")[-1] == "main":  # SUFFIX TEST — the defect, reintroduced
+    | 271-        want = resolved
+    | 272-        tip = refs[resolved][1]
+    | 273-    if resolved != want:
+  $ ./scripts/vendor-contract-selftest.py
+    | vendor-contract-selftest: FAIL: tag named 'main': expected a refusal, got exit 0
+    | vendor-contract-selftest: FAIL: tag named 'main': the refusal does not say "--ref 'main' resolves to refs/tags/main"
+    | vendor-contract-selftest: FAIL: tag named 'main': the refusal does not say 'refs/remotes/origin/main'
+    | vendor-contract-selftest: FAIL: tag named 'main': the manifest was rewritten despite the refusal
+    | vendor-contract-selftest: FAIL: tag shadowing origin/main: expected a refusal, got exit 0
+    | vendor-contract-selftest: FAIL: tag shadowing origin/main: the refusal does not say 'resolves to refs/tags/origin/main'
+    | vendor-contract-selftest: FAIL: tag shadowing origin/main: the refusal does not say 'refs/remotes/origin/main'
+    | vendor-contract-selftest: FAIL: tag shadowing origin/main: the manifest was rewritten despite the refusal
+    | vendor-contract-selftest: FAIL: branch 'fake/main': expected a refusal, got exit 0
+    | vendor-contract-selftest: FAIL: branch 'fake/main': the refusal does not say "--ref 'fake/main' resolves to refs/heads/fake/main"
+    | vendor-contract-selftest: FAIL: branch 'fake/main': the refusal does not say 'refs/remotes/origin/main'
+    | vendor-contract-selftest: FAIL: branch 'fake/main': the manifest was rewritten despite the refusal
+    | vendor-contract-selftest: FAIL: local branch refs/heads/main: expected a refusal, got exit 0
+    | vendor-contract-selftest: FAIL: local branch refs/heads/main: the refusal does not say 'resolves to refs/heads/main'
+    | vendor-contract-selftest: FAIL: local branch refs/heads/main: the refusal does not say 'refs/remotes/origin/main'
+    | vendor-contract-selftest: FAIL: local branch refs/heads/main: the manifest was rewritten despite the refusal
+    | vendor-contract-selftest: 16 failure(s)
+    | vendor-contract-selftest: 11 fixtures, no network
+    |   tag named 'main'                   *** FAILED  (exit 0)
+    |       | core checkout     : /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-g84zlia5/core-tag-main
+    |       | remote origin     : https://github.com/yegamble/vizra-core.git   [measured: git remote get-url]
+    |       |   -> repository   : yegamble/vizra-core
+    |       | resolved ref      : refs/tags/main   [--ref main]
+    |       |   -> tip          : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       | pinned commit     : b5ad9dda4e994b2491dc6bb816846666b0ade0dc   (last commit on that ref touching api/)
+    |       | subject           : api: initial
+    |       | 
+    |       | api/search-internal.openapi.yaml   sha256=d23be99a5fc513fa0e8fbd0b166ce01a4fcbfb50c54d3a3640eb19ed6aa9c5dc bytes=36     NEW
+    |       | api/search-hmac-testvectors.json   sha256=4c98533a30ab3c0da09419867b29bfeeb70aebe535f2871b117ecda3fd1c44c6 bytes=82     NEW
+    |       | 
+    |       | manifest          : api/CONTRACT-SOURCE.json
+    |       |   source_repository : yegamble/vizra-core
+    |       |   source_ref        : refs/tags/main
+    |       |   source_ref_tip    : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       |   source_commit     : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       |   vendored_at       : 2026-09-21
+    |       | 
+    |       | no vendored file changed; only the manifest's provenance was refreshed
+    |   tag shadowing origin/main          *** FAILED  (exit 0)
+    |       | core checkout     : /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-g84zlia5/core-tag-shadow
+    |       | remote origin     : https://github.com/yegamble/vizra-core.git   [measured: git remote get-url]
+    |       |   -> repository   : yegamble/vizra-core
+    |       | resolved ref      : refs/tags/origin/main   [--ref origin/main]
+    |       |   -> tip          : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       | pinned commit     : b5ad9dda4e994b2491dc6bb816846666b0ade0dc   (last commit on that ref touching api/)
+    |       | subject           : api: initial
+    |       | 
+    |       | api/search-internal.openapi.yaml   sha256=d23be99a5fc513fa0e8fbd0b166ce01a4fcbfb50c54d3a3640eb19ed6aa9c5dc bytes=36     NEW
+    |       | api/search-hmac-testvectors.json   sha256=4c98533a30ab3c0da09419867b29bfeeb70aebe535f2871b117ecda3fd1c44c6 bytes=82     NEW
+    |       | 
+    |       | manifest          : api/CONTRACT-SOURCE.json
+    |       |   source_repository : yegamble/vizra-core
+    |       |   source_ref        : refs/tags/origin/main
+    |       |   source_ref_tip    : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       |   source_commit     : b5ad9dda4e994b2491dc6bb816846666b0ade0dc
+    |       |   vendored_at       : 2026-09-21
+    |       | 
+    |       | no vendored file changed; only the manifest's provenance was refreshed
+    |   branch 'fake/main'                 *** FAILED  (exit 0)
+    |       | core checkout     : /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-g84zlia5/core-fake-main
+    |       | remote origin     : https://github.com/yegamble/vizra-core.git   [measured: git remote get-url]
+    |       |   -> repository   : yegamble/vizra-core
+    |       | resolved ref      : refs/heads/fake/main   [--ref fake/main]
+    |       |   -> tip          : 88d4bf9309c713b89ed1cc03c1dea7f82bc3495b
+    |       | pinned commit     : 88d4bf9309c713b89ed1cc03c1dea7f82bc3495b   (last commit on that ref touching api/)
+    |       | subject           : api: poisoned
+    |       | 
+    |       | api/search-internal.openapi.yaml   sha256=d23be99a5fc513fa0e8fbd0b166ce01a4fcbfb50c54d3a3640eb19ed6aa9c5dc bytes=36     NEW
+    |       | api/search-hmac-testvectors.json   sha256=ecc3983465bcf2e758a42b69d7e15665970a05928dac2cafdd037832b872afb3 bytes=88     NEW
+    |       | 
+    |       | manifest          : api/CONTRACT-SOURCE.json
+    |       |   source_repository : yegamble/vizra-core
+    |       |   source_ref        : refs/heads/fake/main
+    |       |   source_ref_tip    : 88d4bf9309c713b89ed1cc03c1dea7f82bc3495b
+    |       |   source_commit     : 88d4bf9309c713b89ed1cc03c1dea7f82bc3495b
+    |       |   vendored_at       : 2026-09-21
+    |       | 
+    |       | no vendored file changed; only the manifest's provenance was refreshed
+    |   local branch refs/heads/main       *** FAILED  (exit 0)
+    |       | core checkout     : /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-g84zlia5/core-local-main
+    |       | remote origin     : https://github.com/yegamble/vizra-core.git   [measured: git remote get-url]
+    |       |   -> repository   : yegamble/vizra-core
+    |       | resolved ref      : refs/heads/main   [--ref refs/heads/main]
+    |       |   -> tip          : 688b823a89b31f421a66c16dbdacfd95d94a38be
+    |       | pinned commit     : 688b823a89b31f421a66c16dbdacfd95d94a38be   (last commit on that ref touching api/)
+    |       | subject           : api: initial
+    |       | 
+    |       | api/search-internal.openapi.yaml   sha256=d23be99a5fc513fa0e8fbd0b166ce01a4fcbfb50c54d3a3640eb19ed6aa9c5dc bytes=36     NEW
+    |       | api/search-hmac-testvectors.json   sha256=4c98533a30ab3c0da09419867b29bfeeb70aebe535f2871b117ecda3fd1c44c6 bytes=82     NEW
+    |       | 
+    |       | manifest          : api/CONTRACT-SOURCE.json
+    |       |   source_repository : yegamble/vizra-core
+    |       |   source_ref        : refs/heads/main
+    |       |   source_ref_tip    : 688b823a89b31f421a66c16dbdacfd95d94a38be
+    |       |   source_commit     : 688b823a89b31f421a66c16dbdacfd95d94a38be
+    |       |   vendored_at       : 2026-09-21
+    |       | 
+    |       | no vendored file changed; only the manifest's provenance was refreshed
+    |   non-ancestor --commit              OK  (exit 1)
+    |   foreign origin URL                 OK  (exit 1)
+    |   foreign origin (scp-like ssh)      OK  (exit 1)
+    |   userinfo redacted in output        OK  (exit 1)
+    |   no refs/remotes/origin/main        OK  (exit 1)
+    |   shallow clone                      OK  (exit 1)
+    |   happy path accepted                OK  (exit 0)
+    exit=1  expected=FAIL
+    names: tag named 'main': expected a refusal, got exit 0  OK
+    names: branch 'fake/main': expected a refusal, got exit 0  OK
+    names: tag shadowing origin/main: expected a refusal, got exit 0  OK
+    names: local branch refs/heads/main: expected a refusal, got exit 0  OK
+------------------------------------------------------------------------------
+state 2 — restored
+  scripts/vendor-contract.py sha256 after restore:   1fe2773d215989b6e8e1de30124d7d861704695b270e5c9e0309225e713ca303
+  $ ./scripts/vendor-contract-selftest.py
+    | vendor-contract-selftest: 11 fixtures, no network
+    |   tag named 'main'                   OK  (exit 1)
+    |   tag shadowing origin/main          OK  (exit 1)
+    |   branch 'fake/main'                 OK  (exit 1)
+    |   local branch refs/heads/main       OK  (exit 1)
+    |   non-ancestor --commit              OK  (exit 1)
+    |   foreign origin URL                 OK  (exit 1)
+    |   foreign origin (scp-like ssh)      OK  (exit 1)
+    |   userinfo redacted in output        OK  (exit 1)
+    |   no refs/remotes/origin/main        OK  (exit 1)
+    |   shallow clone                      OK  (exit 1)
+    |   happy path accepted                OK  (exit 0)
+    | 
+    | vendor-contract-selftest: all 11 fixtures behaved as documented
+    exit=0  expected=PASS
+  $ ./scripts/vendor-contract.py --check
+    | manifest source_repository : yegamble/vizra-core
+    | manifest source_ref        : refs/remotes/origin/main
+    | manifest source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+    | manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+    | 
+    | api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+    | api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+    | 
+    | vendor-contract: OK — every vendored file matches the manifest.
+    exit=0  expected=PASS
+------------------------------------------------------------------------------
+D-G: every lane behaved as the demonstration claims. 0 unexpected results.

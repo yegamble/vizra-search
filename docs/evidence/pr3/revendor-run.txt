@@ -1,0 +1,115 @@
+==============================================================================
+THE RE-VENDOR — run through this repository's own command
+Host: Darwin 25.5.0 arm64   date: 2026-09-21T07:48:45Z
+search branch: chore/revendor-core-4a80a1e at aa1c3fb73b1771b91704587bb1d2a25b7cf39396
+==============================================================================
+
+REGENERATED after the PR #3 verifier's FINDING 1 and FINDING 2. The superseded
+transcript printed `source repository : yegamble/vizra-core` read out of the
+manifest the script was about to rewrite — the script never asked the checkout
+what repository it was, so that line restated its own input as a measurement.
+It now prints the URL read from `git remote get-url`, with any userinfo
+redacted, and REFUSES a checkout whose remote is not the canonical repository.
+
+No vendored file and no manifest field is typed by hand. The script resolves the
+ref, reads bytes with `git show`, writes them, reads them BACK off disk and
+digests what it read.
+
+------------------------------------------------------------------------------
+1. WHAT THE SCRIPT MEASURES ABOUT THE CHECKOUT (not what the manifest claims)
+$ git -C <core clone> remote get-url origin
+https://github.com/yegamble/vizra-core.git
+$ git -C <core clone> rev-parse --is-shallow-repository
+false
+$ git -C <core clone> for-each-ref --format='%(refname) %(objecttype) %(objectname)' refs/remotes/origin/main
+refs/remotes/origin/main commit 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+------------------------------------------------------------------------------
+2. THE RE-VENDOR
+$ ./scripts/vendor-contract.py --core <core clone> --note ... (x14)
+core checkout     : /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vzs-revendor-r2-oGJy98/core-ref
+remote origin     : https://github.com/yegamble/vizra-core.git   [measured: git remote get-url]
+  -> repository   : yegamble/vizra-core
+resolved ref      : refs/remotes/origin/main   [--ref origin/main]
+  -> tip          : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+pinned commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe   (last commit on that ref touching api/)
+subject           : chore(ci,config): hardening sweep A — make-integrity guard, direct unit lane, CI provenance, SEARCH_HMAC_KEY rename, fixture-tree strictness (#6)
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  unchanged
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  unchanged
+
+manifest          : api/CONTRACT-SOURCE.json
+  source_repository : yegamble/vizra-core
+  source_ref        : refs/remotes/origin/main
+  source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+  source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+  vendored_at       : 2026-09-21
+
+no vendored file changed; only the manifest's provenance was refreshed
+exit=0
+
+------------------------------------------------------------------------------
+3. VERIFY — self-check, and against core's own bytes
+$ ./scripts/vendor-contract.py --check
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : refs/remotes/origin/main
+manifest source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+
+vendor-contract: OK — every vendored file matches the manifest.
+exit=0
+
+$ ./scripts/vendor-contract.py --check --core <core clone>
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : refs/remotes/origin/main
+manifest source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+
+core remote origin : https://github.com/yegamble/vizra-core.git   [measured]
+resolved ref       : refs/remotes/origin/main (tip 4a80a1e3f36b8001c2954d0568bea29268e739fe)
+commit this script would pin : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+vendor-contract: OK — every vendored file matches the manifest and core's bytes.
+exit=0
+
+------------------------------------------------------------------------------
+4. DIGESTS SIDE BY SIDE — core main vs the vendored copy, measured independently
+   of the script (git blob ids and shasum, on both sides)
+
+file                               side         sha256                                                           bytes
+api/search-internal.openapi.yaml   core@4a80a1e a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+api/search-internal.openapi.yaml   vendored     a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+api/search-internal.openapi.yaml   manifest     a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 25297
+
+api/search-hmac-testvectors.json   core@4a80a1e f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+api/search-hmac-testvectors.json   vendored     f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+api/search-hmac-testvectors.json   manifest     f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 22321
+
+git agrees too — the vendored blob id equals core's blob id at 4a80a1e:
+  core     api/search-hmac-testvectors.json  1509da859954f65fd5542053332b8417fe4eb8da
+  vendored api/search-hmac-testvectors.json  1509da859954f65fd5542053332b8417fe4eb8da
+  core     api/search-internal.openapi.yaml  848503cca45dc427fede810d3ab30e73e07bd392
+  vendored api/search-internal.openapi.yaml  848503cca45dc427fede810d3ab30e73e07bd392
+
+------------------------------------------------------------------------------
+5. THE BYTES DID NOT MOVE IN THIS FIX ROUND.
+   The verifier confirmed the artifact at aa1c3fb. This round changes the TOOL,
+   not what it produced: both vendored files are byte-identical to that verified
+   head, and source_commit is unchanged. Only api/CONTRACT-SOURCE.json's
+   provenance block moved (source_ref now the full refname, plus source_ref_tip).
+$ git diff --stat aa1c3fb73b1771b91704587bb1d2a25b7cf39396 -- api/
+ api/CONTRACT-SOURCE.json | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+   api/CONTRACT-SOURCE.json is the manifest itself and is NOT listed in its own
+   `files` array, so no digest covers it and TestEveryVendoredFileMatchesItsManifest
+   does not pin it. NO PIN MOVED.
+$ python3 -c "...print the manifest's pinned paths..."
+pinned: ['api/search-internal.openapi.yaml', 'api/search-hmac-testvectors.json']
+manifest pins itself? False

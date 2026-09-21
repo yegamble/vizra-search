@@ -1,0 +1,175 @@
+==============================================================================
+LOCAL LANES — vizra-search re-vendor from core main 4a80a1e (fix round 1)
+Host: Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64
+make: GNU Make 3.81   python3: Python 3.9.6
+govulncheck: Scanner: govulncheck@v1.8.0
+date: 2026-09-21T07:52:01Z
+branch: chore/revendor-core-4a80a1e   HEAD: aa1c3fb73b1771b91704587bb1d2a25b7cf39396
+tree:
+a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448  api/search-internal.openapi.yaml
+f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862  api/search-hmac-testvectors.json
+5278b209395024138df464ae63356906dfd0a00ff12a77339a7ac140d6514bbc  api/CONTRACT-SOURCE.json
+==============================================================================
+
+NOT RUN LOCALLY, and not claimed as a pass:
+  docker-build — this host is arm64 and the image target is amd64 (ADR-009 / Q-027).
+                 It runs in CI on ubuntu-24.04, which is the acceptance platform.
+
+------------------------------------------------------------------------------
+$ make fmt-check
+fmt-check: clean
+exit=0
+
+------------------------------------------------------------------------------
+$ make vet
+go vet ./...
+exit=0
+
+------------------------------------------------------------------------------
+$ make echo-containment
+echo-containment: Echo is confined to internal/httpapi
+exit=0
+
+------------------------------------------------------------------------------
+$ make build
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=aa1c3fb-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=aa1c3fb73b1771b91704587bb1d2a25b7cf39396 -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-21T07:52:02Z' -o bin/vizra-search ./cmd/vizra-search
+exit=0
+
+------------------------------------------------------------------------------
+$ make vendor-contract-check
+./scripts/vendor-contract.py --check
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : refs/remotes/origin/main
+manifest source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+
+vendor-contract: OK — every vendored file matches the manifest.
+exit=0
+
+------------------------------------------------------------------------------
+$ make vendor-contract-selftest
+./scripts/vendor-contract-selftest.py
+vendor-contract-selftest: 11 fixtures, no network
+  tag named 'main'                   OK  (exit 1)
+  tag shadowing origin/main          OK  (exit 1)
+  branch 'fake/main'                 OK  (exit 1)
+  local branch refs/heads/main       OK  (exit 1)
+  non-ancestor --commit              OK  (exit 1)
+  foreign origin URL                 OK  (exit 1)
+  foreign origin (scp-like ssh)      OK  (exit 1)
+  userinfo redacted in output        OK  (exit 1)
+  no refs/remotes/origin/main        OK  (exit 1)
+  shallow clone                      OK  (exit 1)
+  happy path accepted                OK  (exit 0)
+
+vendor-contract-selftest: all 11 fixtures behaved as documented
+exit=0
+
+------------------------------------------------------------------------------
+$ make contract-drift
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 324 tests ran across 4 package(s), 0 failures, none deselected
+exit=0
+
+------------------------------------------------------------------------------
+$ make test
+go test -race -count=1 ./...
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	8.311s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	1.446s
+ok  	github.com/yegamble/vizra-search/internal/config	2.181s
+ok  	github.com/yegamble/vizra-search/internal/contract	2.001s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	2.319s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	7.213s
+exit=0
+
+------------------------------------------------------------------------------
+$ make test-noskip
+test-noskip: 347 pass events, 0 skips
+exit=0
+
+------------------------------------------------------------------------------
+$ make tidy-check
+tidy-check: tidy
+exit=0
+
+------------------------------------------------------------------------------
+$ ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+workflow anchor: .github/workflows/ci.yml:jobs.contract-drift runs `./scripts/contract-drift-guard.py recipe` unconditionally at step 2, before `make contract-drift` at step 3
+floor: every non-optional lane is present in the manifest
+manifest entries are bare job names
+every required check is defined by a job
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+exit=0
+
+------------------------------------------------------------------------------
+$ ./scripts/check-workflows.py
+workflows parsed: 2; no continue-on-error on any job or step
+exit=0
+
+------------------------------------------------------------------------------
+$ govulncheck ./...
+No vulnerabilities found.
+exit=0
+
+------------------------------------------------------------------------------
+$ make ci
+fmt-check: clean
+go vet ./...
+echo-containment: Echo is confined to internal/httpapi
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=aa1c3fb-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=aa1c3fb73b1771b91704587bb1d2a25b7cf39396 -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-21T07:52:29Z' -o bin/vizra-search ./cmd/vizra-search
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 324 tests ran across 4 package(s), 0 failures, none deselected
+go test -race -count=1 ./...
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	8.000s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	2.146s
+ok  	github.com/yegamble/vizra-search/internal/config	1.851s
+ok  	github.com/yegamble/vizra-search/internal/contract	1.669s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	1.455s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	6.862s
+test-noskip: 347 pass events, 0 skips
+tidy-check: tidy
+exit=0
+
+==============================================================================
+SUMMARY
+lane                     exit
+fmt-check                0
+vet                      0
+echo-containment         0
+build                    0
+vendor-contract-check    0
+vendor-contract-selftest 0
+contract-drift           0
+test                     0
+test-noskip              0
+tidy-check               0
+ci-required-guard        0
+check-workflows          0
+govulncheck              0
+ci (aggregate)           0
+docker-build             NOT RUN (arm64 host; CI runs it on ubuntu-24.04)
+
+0 lane(s) non-zero.
+==============================================================================

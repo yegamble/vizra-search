@@ -67,6 +67,64 @@ already happened here, and the vectors exist because of it.
 - If the contract is wrong, say so to the chair. The change lands in
   `vizra-core` first; this repository then re-vendors it and updates the
   manifest's `source_commit` in the same PR.
+
+**Re-vendor with the command, never by hand.**
+
+```
+make vendor-contract CORE=<path-to-a-vizra-core-checkout>   # writes both files + the manifest
+make vendor-contract-check                                  # verify; needs no core checkout
+make vendor-contract-selftest                               # fire every refusal below
+```
+
+`scripts/vendor-contract.py` is the **single writer** of the two vendored files
+and of `api/CONTRACT-SOURCE.json`. Hand-vendoring is how the manifest and the
+bytes come apart, and both ways it can happen have already happened here:
+PR #1 hand-recorded a commit on core's *feature branch*, which a squash-merge
+then deleted, so the provenance pointed at an object no reviewer could fetch;
+and a hand-typed `sha256` is a checksum of someone's attention rather than of
+the bytes. The script writes the bytes, reads them **back off disk**, and
+digests what it read.
+
+**What it refuses.** Each of these has a fixture in
+`scripts/vendor-contract-selftest.py` that shows it firing by name; a refusal
+without a fixture is a claim, not a control.
+
+| refused | how |
+|---|---|
+| a checkout whose remote is not the canonical repository | `git remote get-url` is **measured**, normalised across https / ssh / scp-like / userinfo forms, and must be `github.com/yegamble/vizra-core` |
+| a ref that is not the canonical remote-tracking branch | the ref is resolved to a **full refname** and must equal `refs/remotes/<remote>/main` exactly — a tag named `main`, a tag named `origin/main` shadowing the remote-tracking ref, `refs/heads/main`, and any branch `x/main` all resolve elsewhere and are named in the refusal |
+| a commit that is not on that ref | `merge-base --is-ancestor <commit> refs/remotes/<remote>/main`, checked against the **resolved** ref, not against anything the caller passed. Reachable via `--commit` |
+| a shallow clone | ancestry cannot be decided against a truncated history |
+| laundering the ref into the manifest | the manifest records the full refname **resolved** and the tip it pointed at. It used to write `args.ref.split("/")[-1]`, which turned `fake/main` into `main` |
+
+An earlier version of this section claimed the script "refuses a commit that is
+not an ancestor of that branch tip, and a `--ref` that is not a `main` branch".
+The first half could not fire and the second was a string-suffix test that an
+independent verifier walked past twice. Both are now true as written above, and
+tested.
+
+**What it cannot prove — do not read more into it than this.** A local clone's
+remote URL and its refs are whatever the owner of that checkout set them to;
+`git remote set-url` and `git update-ref refs/remotes/origin/main` are one
+command each, and the script never fetches. **It defends against a mistake, not
+against someone who controls the checkout it is pointed at**, and it does not
+authenticate core's bytes. The control for poisoned *normative* bytes is
+`contract-drift`, where the 5 ACCEPT and 24 REJECT vectors are actually
+consumed; a poisoned *non-normative* field would not be caught by those tests.
+The end-to-end answer is a reviewer comparing the recorded ref and commit
+against `github.com/yegamble/vizra-core` themselves — which is what recording an
+unambiguous, fetchable full refname is for.
+
+It only ever reads the core checkout (`remote get-url`, `rev-parse`,
+`for-each-ref`, `log`, `merge-base`, `show`), so it is safe to point at a
+checkout someone else is working in, and it reads committed objects rather than
+that working tree.
+
+`vendor-contract` and `vendor-contract-check` are deliberately **not** CI lanes:
+CI has no core checkout, and `contract-drift` already fails on any drift between
+the vendored bytes and the manifest. `vendor-contract-selftest` needs neither a
+core checkout nor a network and therefore could be one; that is proposed to the
+chair rather than done here.
 - `internal/httpapi.Routes()` is compared against the contract in both
   directions, and every response body is validated against the contract's
   schemas, all of which set `additionalProperties: false`. A renamed field is a

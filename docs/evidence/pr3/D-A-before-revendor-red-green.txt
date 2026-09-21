@@ -1,0 +1,50 @@
+
+==============================================================================
+D-A  BEFORE THE RE-VENDOR: core main's vectors file makes the manifest test red
+==============================================================================
+Reproduces the observation recorded by the independent verifier of vizra-core
+PR #6: search's TestEveryVendoredFileMatchesItsManifest goes red on core main's
+new bytes. That is what makes this re-vendor REQUIRED rather than cosmetic.
+
+Host: Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64   date: 2026-09-21T07:06:56Z
+search HEAD: 808a5499dae1d58971d740f34749c2f35149fa4d
+------------------------------------------------------------------------------
+state 1 — as vendored on main (the stale pin)
+  api/search-hmac-testvectors.json sha256=ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3 bytes=22327
+  manifest pins: ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+  manifest source_commit: 415a6d19cfc0acedd8ad84c1857c95db0ed63627
+  $ go test -count=1 -run ^TestEveryVendoredFileMatchesItsManifest$ -v ./internal/httpapi/
+    | === RUN   TestEveryVendoredFileMatchesItsManifest
+    | --- PASS: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    | PASS
+    | ok  	github.com/yegamble/vizra-search/internal/httpapi	0.247s
+    exit=0  expected=PASS
+------------------------------------------------------------------------------
+state 2 — core main's bytes dropped in, manifest UNCHANGED
+  api/search-hmac-testvectors.json sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321
+  $ go test -count=1 -run ^TestEveryVendoredFileMatchesItsManifest$ -v ./internal/httpapi/
+    | === RUN   TestEveryVendoredFileMatchesItsManifest
+    |     contract_drift_test.go:106: the vendored api/search-hmac-testvectors.json does not match its manifest.
+    |           manifest sha256: ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+    |           file sha256:     f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862
+    |         This repository does not own it. Re-vendor from yegamble/vizra-core@415a6d19cfc0acedd8ad84c1857c95db0ed63627 instead of editing it.
+    |     contract_drift_test.go:111: the vendored api/search-hmac-testvectors.json is 22321 bytes, the manifest says 22327
+    | --- FAIL: TestEveryVendoredFileMatchesItsManifest (0.00s)
+    | FAIL
+    | FAIL	github.com/yegamble/vizra-search/internal/httpapi	0.215s
+    | FAIL
+    exit=1  expected=FAIL
+    names: TestEveryVendoredFileMatchesItsManifest  OK
+    names: api/search-hmac-testvectors.json does not match its manifest  OK
+    names: ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3  OK
+    names: f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862  OK
+    names: Re-vendor from yegamble/vizra-core  OK
+------------------------------------------------------------------------------
+state 3 — restored
+  restore: api/search-hmac-testvectors.json
+    sha256 after restore:   ff21e6b8cdd7d3bc32caa455cf605e1069ea4534db2b9b0a9e2d90c78a3d35c3
+  $ go test -count=1 -run ^TestEveryVendoredFileMatchesItsManifest$ ./internal/httpapi/
+    | ok  	github.com/yegamble/vizra-search/internal/httpapi	0.224s
+    exit=0  expected=PASS
+------------------------------------------------------------------------------
+D-A: every lane behaved as the demonstration claims. 0 unexpected results.
