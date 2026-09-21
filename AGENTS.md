@@ -238,14 +238,15 @@ brief degraded window and should schedule it deliberately.
 
 ## Configuration
 
-Production is the **default** mode: an env file that forgets `VIZRA_SEARCH_MODE`
+Production is the **default** mode: an env file that forgets `VIZRA_MODE`
 still gets the production refusals. An unrecognised mode fails closed.
 
 | Variable | Default | Notes |
 |---|---|---|
 | `SEARCH_HMAC_KEY` | — | **Required in every mode.** Named by the contract. |
 | `MAX_INTERNAL_BODY_BYTES` | `1048576` | Named by the contract. **Production refuses any value above 8 MiB.** |
-| `VIZRA_SEARCH_MODE` | `production` | `production` or `development`. |
+| `VIZRA_MODE` | `production` | `production` or `development`. The **platform** name — `vizra-core` reads it for the same concept. |
+| `VIZRA_SEARCH_MODE` | — | **Not read here.** `vizra-core`'s search **topology**, owned by core. Refused by name **only** when it carries this service's old runtime vocabulary; every other value is ignored in silence — see below. |
 | `VIZRA_SEARCH_ADDR` | `:8081` | Never published off-host (ADR-002 / Q-017). |
 | `VIZRA_SEARCH_MAX_CLOCK_SKEW` | `300s` | The contract's window. **Production refuses any value above 300s.** |
 | `VIZRA_SEARCH_REQUEST_TIMEOUT` | `5s` | Bounds each handler. |
@@ -255,6 +256,90 @@ In production mode the boot refuses: an empty key; anything shorter than 32
 bytes; anything that looks like a placeholder (`dev-`, `test-`, `changeme`,
 `insecure`, …); a key with fewer than 8 distinct byte values; and — **by exact
 value** — every key this project publishes.
+
+### One operator-facing name per concept (2026-09-21)
+
+`VIZRA_SEARCH_MODE` means **search topology** product-wide, and it is **owned
+and read by `vizra-core`**. It says whether core talks to a search service at
+all, and to which one. Its vocabulary is core's, and this repository
+deliberately does not restate it. It is not this service's variable and was
+never a good name for this service's runtime mode.
+
+Until this date `vizra-search` read that same name as its own runtime mode with
+the vocabulary `development | production`: one operator-facing name, two
+incompatible vocabularies. A shared env file — which is the deployment shape the
+meta repository actually ships — would therefore either stop search booting or,
+worse, silently pick a mode. **The runtime mode here is now `VIZRA_MODE`**, the
+name core already uses for it, with core's vocabulary and core's meaning.
+
+Nothing is deployed, so there is **no compatibility alias**. What
+`VIZRA_SEARCH_MODE` does at boot now — one refused class, everything else
+ignored:
+
+| Value in `VIZRA_SEARCH_MODE` | Result |
+|---|---|
+| `development`, `production` (any case, surrounding whitespace ignored) | **boot refusal, by name, in every mode**, naming `VIZRA_MODE` as the replacement |
+| **anything else** — core's topology values, values this service has never heard of, whitespace-only, empty | **ignored in silence**: never read, never logged, never echoed |
+
+Both halves are deliberate and are not to be relaxed:
+
+- The refusal applies in **every mode**, not only in production. `vizra-core`
+  refuses its retired key names inside its production block, and that is right
+  for a secret; this name decides the **mode itself**, so development cannot be
+  the mode in which the check is skipped. The concrete danger is an operator
+  with `VIZRA_SEARCH_MODE=development` and no `VIZRA_MODE`: silently they get
+  production (and misread the refusal of their development key) or silently they
+  get development (believing the production refusals still apply). Neither
+  silence is acceptable; not booting is. That exact spelling is an operator
+  **asking for a mode**, which is why it alone is refused.
+- **Everything else is ignored, including values this service does not
+  recognise.** `VIZRA_SEARCH_MODE` is core's variable, and validating core's
+  vocabulary here would buy no safety while coupling two repositories: the day
+  core extended its vocabulary, every search instance reading a shared env file
+  would refuse to boot. So this repository holds no copy of core's vocabulary
+  and no test pretending to pin one.
+
+  **The accepted cost, stated plainly:** a typo such as
+  `VIZRA_SEARCH_MODE=developmnt` with no `VIZRA_MODE` boots **production** — the
+  strict mode — and the operator finds out because the development affordances
+  they wanted (the published dev key, the relaxed ceilings) are refused. That is
+  the fail-safe direction. Production is the **default**, and the only dangerous
+  outcome — running development without asking for it — requires an explicit
+  `VIZRA_MODE=development` and can never come from this variable.
+  `TestNoValueInTheOldNameCanEverProduceDevelopment` and the matrix rows
+  `old-name-typo-of-development` and `old-name-unknown-alone` hold that line.
+
+No refusal message ever echoes the value an operator supplied — only variable
+names and this service's own runtime vocabulary, which are constants in
+`internal/config/config.go`. That sentence is a **test**, not a habit, and the
+test's reach is itself a test:
+
+- `TestNoRefusalEchoesTheSuppliedValue` provokes **every `v.addf` site** in the
+  loader — 17 of them as of 2026-09-21, across 14 distinct messages, three of
+  which are emitted from more than one place — and fails if a value a probe
+  supplied comes back in the error. It also checks `Config.String()` and
+  `Config.LogValue()` for an **ignored** value. Six sites take a marker
+  assembled at run time; the rest fire
+  only for a constrained value (a parseable duration above the ceiling, a
+  placeholder-shaped key, the retired vocabulary), and each such row **says
+  which and why** next to the value it asserts absent.
+- `TestEveryRefusalSiteInTheLoaderHasANoEchoRow` parses
+  `internal/config/config.go`, counts every `v.addf` call, and fails unless the
+  table accounts for each one — so a refusal added to the loader without a row
+  is red, and "every refusal path" stays true as the loader grows. A format
+  string the guard cannot read is a failure, not a silent skip.
+- Every refusal row of the boot matrix greps the process output for the value it
+  supplied, exempting the two vocabulary words exactly as spelled.
+
+`--mutate echo-the-value` turns the first and the matrix red;
+`--mutate add-an-unrowed-refusal` turns the second red.
+
+The boot matrix behind this table runs against the **real binary**:
+`./scripts/boot-matrix.sh` (20 cases plus the focused suite), with five
+controlled mutations — `--mutate fallback-to-the-old-name`,
+`--mutate drop-the-refusal`, `--mutate default-to-development`,
+`--mutate unknown-value-as-development`, `--mutate echo-the-value` — each of
+which must turn it red. The transcripts are in `docs/evidence/pr4/`.
 
 ### Published keys are refused by exact value
 
@@ -552,8 +637,11 @@ ci`, the Dockerfile and the workflows.
 
 Deliberately **not** here, and not to be added without a dispatched slice:
 indexing, PostgreSQL, migrations, ranking, event storage, compose wiring, the
-`/admin/search` surface, and `SEARCH_MODE` selection (that is core's
-configuration, not this service's).
+`/admin/search` surface, and search **topology** selection —
+`VIZRA_SEARCH_MODE` is core's configuration, not this service's. Since
+2026-09-21 this service reads it as nothing at all and validates nothing about
+it beyond refusing its own retired runtime vocabulary (see § "One
+operator-facing name per concept").
 
 `vizra-search` never writes core tables, and core never reads schema `search`.
 When this service gains tables they live in PostgreSQL schema `search` of the

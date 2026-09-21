@@ -182,10 +182,19 @@ vendor-contract-selftest: ## Fire every refusal vendor-contract.py advertises, a
 # inheriting the container default of ":8081".
 .PHONY: run
 run: ## Run locally in development mode, on loopback only, with the documented dev key
-	VIZRA_SEARCH_MODE=development \
+	VIZRA_MODE=development \
 	VIZRA_SEARCH_ADDR=127.0.0.1:8081 \
 	SEARCH_HMAC_KEY=dev-insecure-hmac-key-do-not-use-in-production \
 	go run ./cmd/$(BINARY)
+
+# The runtime-mode boot matrix, against the REAL binary: VIZRA_MODE decides the
+# mode, VIZRA_SEARCH_MODE is core's topology and is never read as one. Not a CI
+# lane — the `test` lane already drives the same refusals through the binary
+# (cmd/vizra-search/main_test.go); this is the operator-facing demonstration and
+# the home of the three controlled mutations.
+.PHONY: boot-matrix
+boot-matrix: ## Boot the real binary across the VIZRA_MODE / VIZRA_SEARCH_MODE matrix
+	./scripts/boot-matrix.sh
 
 .PHONY: docker-build
 docker-build: ## Build the image natively (no emulation)

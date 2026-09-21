@@ -1,0 +1,452 @@
+#!/usr/bin/env bash
+# boot-matrix.sh — the runtime-mode boot matrix, run against the REAL binary.
+#
+# One operator-facing name per concept: `VIZRA_MODE` is this process's runtime
+# mode (development | production, production by default), and
+# `VIZRA_SEARCH_MODE` is vizra-core's search TOPOLOGY (off | managed |
+# external), which this service never reads as a mode.
+#
+# The matrix boots the compiled binary once per case and records what actually
+# happened — not what a unit test believes happens. Every case that must BOOT is
+# proved healthy over real TCP and then terminated; every case that must REFUSE
+# is proved to exit non-zero with the offending variable named on stderr.
+#
+#   ./scripts/boot-matrix.sh                 # the matrix, on unmodified sources
+#   ./scripts/boot-matrix.sh --mutate <name> # the matrix against one controlled
+#                                            # mutation; the run MUST go red
+#   ./scripts/boot-matrix.sh --list-mutations
+#
+# A mutation run records the sha256 of internal/config/config.go before and
+# after, REFUSES TO PROCEED if the patch did not actually change the file, and
+# restores the original on exit. A harness that would happily "demonstrate" an
+# unapplied mutation proves nothing, so this one cannot.
+#
+# Exit codes: 0 the matrix passed; 1 a case failed; 2 the harness itself could
+# not run (unapplied mutation, missing tool, build failure).
+
+set -euo pipefail
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly REPO_ROOT
+readonly TARGET="${REPO_ROOT}/internal/config/config.go"
+readonly ENV_MODE="VIZRA_MODE"
+readonly ENV_TOPOLOGY="VIZRA_SEARCH_MODE"
+# Seconds a case that must REFUSE is allowed to live before the harness calls it
+# booted. A refusal is a synchronous config check, so this is generous.
+readonly REFUSAL_GRACE=10
+
+MUTATION=""
+WORK=""
+BACKUP=""
+
+die() { echo "boot-matrix: $*" >&2; exit 2; }
+
+digest() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum   >/dev/null 2>&1; then shasum -a 256 "$1" | cut -d' ' -f1
+  else die "no sha256sum or shasum on PATH"; fi
+}
+
+cleanup() {
+  if [[ -n "${BACKUP}" && -f "${BACKUP}" ]]; then
+    cp "${BACKUP}" "${TARGET}"
+    echo "--- restored ${TARGET#"${REPO_ROOT}/"} (sha256 $(digest "${TARGET}"))"
+  fi
+  [[ -n "${WORK}" && -d "${WORK}" ]] && rm -rf "${WORK}"
+  return 0
+}
+trap cleanup EXIT
+
+# ----------------------------------------------------------------- mutations --
+#
+# Each mutation is an exact, single-occurrence replacement in config.go. Applying
+# one is checked twice: the search text must occur exactly once, and the file
+# digest must change. Both are what stops a demonstration that never happened.
+
+mutation_names() {
+  echo "fallback-to-the-old-name drop-the-refusal default-to-development unknown-value-as-development echo-the-value add-an-unrowed-refusal"
+}
+
+mutation_describes() {
+  case "$1" in
+    fallback-to-the-old-name)
+      echo "the refusal becomes a compatibility alias: the OLD name is read as the mode when ${ENV_MODE} is unset" ;;
+    drop-the-refusal)
+      echo "the old name is ignored instead of refused" ;;
+    default-to-development)
+      echo "an unset ${ENV_MODE} defaults to development instead of production" ;;
+    unknown-value-as-development)
+      echo "an UNKNOWN ${ENV_TOPOLOGY} value selects development instead of being ignored" ;;
+    echo-the-value)
+      echo "the refusal echoes the operator's ${ENV_TOPOLOGY} value back" ;;
+    add-an-unrowed-refusal)
+      echo "a NEW refusal path is added to the loader with no no-echo table row covering it" ;;
+    *) return 1 ;;
+  esac
+}
+
+# python3 does the replacement so the patterns can be multi-line and exact.
+apply_mutation() {
+  local name="$1"
+  python3 - "$TARGET" "$name" <<'PY'
+import sys
+
+path, name = sys.argv[1], sys.argv[2]
+src = open(path, encoding="utf-8").read()
+
+# (search, replace) — the search text must occur exactly once.
+PATCHES = {
+    # The refusal for the old runtime vocabulary becomes a fallback: the value
+    # is USED when the new name is absent. This is the "compatibility alias"
+    # vizra-core's RetiredKeys comment says must not exist.
+    "fallback-to-the-old-name": (
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tv.addf(",
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tif _, ok := v.raw(EnvMode); !ok {\n"
+        "\t\t\t\tv.mutationFallbackMode = Mode(value)\n"
+        "\t\t\t\treturn\n"
+        "\t\t\t}\n"
+        "\t\t\tv.addf(",
+    ),
+    # The old name is simply ignored, whatever it carries — including the old
+    # runtime vocabulary, which is the one class that must be refused.
+    "drop-the-refusal": (
+        "\traw, ok := v.raw(EnvSearchTopology)\n"
+        "\tif !ok {",
+        "\traw, ok := v.raw(EnvSearchTopology)\n"
+        "\tif true || !ok {",
+    ),
+    # An unknown value stops being ignored and selects development: the exact
+    # inversion of the fail-safe direction the policy rests on.
+    "unknown-value-as-development": (
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tv.addf(",
+        "\tif value != \"\" && value != string(ModeDevelopment) && value != string(ModeProduction) {\n"
+        "\t\tv.mutationFallbackMode = ModeDevelopment\n"
+        "\t\treturn\n"
+        "\t}\n"
+        "\tfor _, retired := range retiredModeValues {\n"
+        "\t\tif value == retired {\n"
+        "\t\t\tv.addf(",
+    ),
+    # The refusal prints the operator's value verbatim, breaking the no-echo
+    # property AGENTS.md states absolutely.
+    "echo-the-value": (
+        "\t\t\tv.addf(\"%s carries a value from this service's OLD runtime-mode vocabulary",
+        "\t\t\tv.addf(\"%s=\"+raw+\" carries a value from this service's OLD runtime-mode vocabulary",
+    ),
+    # A NEW way to refuse a boot, with nothing in the no-echo table covering it.
+    # The property it breaks is not the no-echo rule itself but the claim that
+    # the table reaches EVERY refusal — which is what round 2 exists to fix, and
+    # is exactly how a real refusal would be added without one.
+    # It fires only for a sentinel no case supplies, so NOTHING else changes:
+    # every boot case behaves exactly as it does unmutated, and the only thing
+    # that can object is the guard that counts refusal sites. That is the point
+    # — a new refusal path is invisible to behaviour and must not be invisible
+    # to the no-echo table.
+    "add-an-unrowed-refusal": (
+        "func (v *validator) addr() string {\n"
+        "\traw, ok := v.raw(EnvAddr)",
+        "func (v *validator) addr() string {\n"
+        "\tif unrowed, ok := v.raw(EnvAddr); ok && unrowed == \"zz-no-case-supplies-this\" {\n"
+        "\t\tv.addf(\"%s was supplied and this loader now objects for a brand new reason\", EnvAddr)\n"
+        "\t}\n"
+        "\traw, ok := v.raw(EnvAddr)",
+    ),
+    # Production is no longer the default.
+    "default-to-development": (
+        "\traw, ok := v.raw(EnvMode)\n"
+        "\tif !ok || strings.TrimSpace(raw) == \"\" {\n"
+        "\t\treturn ModeProduction\n"
+        "\t}",
+        "\traw, ok := v.raw(EnvMode)\n"
+        "\tif !ok || strings.TrimSpace(raw) == \"\" {\n"
+        "\t\treturn ModeDevelopment\n"
+        "\t}",
+    ),
+}
+
+if name not in PATCHES:
+    sys.exit("unknown mutation " + name)
+search, replace = PATCHES[name]
+count = src.count(search)
+if count != 1:
+    sys.exit(f"mutation {name}: anchor text occurs {count} times, want exactly 1 — the harness refuses to guess")
+src = src.replace(search, replace)
+
+if name in ("fallback-to-the-old-name", "unknown-value-as-development"):
+    # Both mutations steal the mode from the retired name, so both need
+    # somewhere to put it and a mode() that honours it — otherwise neither
+    # would be the mutation it claims to be.
+    src = src.replace(
+        "type validator struct {\n\tlookup   Lookup",
+        "type validator struct {\n\tmutationFallbackMode Mode\n\tlookup   Lookup",
+        1,
+    )
+    src = src.replace(
+        "func (v *validator) mode() Mode {\n\traw, ok := v.raw(EnvMode)",
+        "func (v *validator) mode() Mode {\n"
+        "\tif v.mutationFallbackMode != \"\" {\n\t\treturn v.mutationFallbackMode\n\t}\n"
+        "\traw, ok := v.raw(EnvMode)",
+        1,
+    )
+    # retiredModeName runs after mode() in LoadFrom, so the stolen mode has to
+    # be taken before the Config is built for the mutation to be observable.
+    src = src.replace(
+        "\tv := &validator{lookup: lookup}\n\tcfg := &Config{",
+        "\tv := &validator{lookup: lookup}\n\tv.retiredModeName()\n\tcfg := &Config{",
+        1,
+    )
+    src = src.replace("\tv.ceilings(cfg)\n\tv.retiredModeName()", "\tv.ceilings(cfg)", 1)
+
+open(path, "w", encoding="utf-8").write(src)
+PY
+}
+
+# -------------------------------------------------------------------- cases --
+#
+# name | VIZRA_MODE | VIZRA_SEARCH_MODE | expectation
+#   <unset> is written as the literal @unset, and a present-but-empty value as
+#   @empty. Refusal cases additionally assert that the supplied value is absent
+#   from the process output, unless the value IS a runtime-vocabulary word the
+#   message legitimately prints.
+readonly CASES=(
+  "unset-unset|@unset|@unset|boots:production"
+  "new-name-development|development|@unset|boots:development"
+  "new-name-production|production|@unset|boots:production"
+  # the one refused class: the old runtime vocabulary in the old name
+  "old-name-old-vocabulary-alone|@unset|development|refuses:both-names"
+  "old-name-old-vocabulary-production-alone|@unset|production|refuses:both-names"
+  "both-set-old-vocabulary|production|development|refuses:both-names"
+  "both-set-old-vocabulary-dev|development|production|refuses:both-names"
+  "old-name-old-vocabulary-odd-case|@unset|  DeVeLoPmEnT  |refuses:both-names"
+  # everything else in the old name is ignored: core's values and values this
+  # service has never heard of are the same thing to this process — nothing.
+  "old-name-core-value-plus-new-name|development|managed|boots:development"
+  "old-name-core-value-alone|@unset|off|boots:production"
+  "old-name-core-value-external|production|external|boots:production"
+  "old-name-unknown-alone|@unset|zzunknownvalue|boots:production"
+  "old-name-typo-of-development|@unset|developmnt|boots:production"
+  "old-name-unknown-plus-new-name-dev|development|zzunknownvalue|boots:development"
+  "old-name-whitespace-only|@unset|   |boots:production"
+  "old-name-empty|@unset|@empty|boots:production"
+  "old-name-empty-plus-new-name-dev|development|@empty|boots:development"
+  # the new name is this service's own, so IT is validated
+  "garbage-new-name|banana|@unset|refuses:new-name"
+  "garbage-new-name-marker|zzmarkervalue|@unset|refuses:new-name"
+  "garbage-both|banana|zzunknownvalue|refuses:new-name"
+)
+
+FAILURES=0
+PASSES=0
+
+free_port() {
+  python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+}
+
+# run_case NAME MODE TOPOLOGY EXPECT
+run_case() {
+  local name="$1" mode="$2" topology="$3" expect="$4"
+  local port; port="$(free_port)"
+  local env=(env "SEARCH_HMAC_KEY=${KEY}" "VIZRA_SEARCH_ADDR=127.0.0.1:${port}")
+  local mode_value="${mode}" topology_value="${topology}"
+  [[ "${mode_value}"     == "@empty" ]] && mode_value=""
+  [[ "${topology_value}" == "@empty" ]] && topology_value=""
+  [[ "$mode"     != "@unset" ]] && env+=("${ENV_MODE}=${mode_value}")
+  [[ "$topology" != "@unset" ]] && env+=("${ENV_TOPOLOGY}=${topology_value}")
+
+  local shown_mode="${mode/@unset/<unset>}" shown_topology="${topology/@unset/<unset>}"
+  shown_mode="${shown_mode/@empty/<empty>}"; shown_topology="${shown_topology/@empty/<empty>}"
+  echo
+  echo "=== ${name}"
+  echo "    ${ENV_MODE}=${shown_mode}  ${ENV_TOPOLOGY}=${shown_topology}  → expect ${expect}"
+
+  local log="${WORK}/${name}.log" code=0
+  local want_boot="no"
+  [[ "${expect}" == boots:* ]] && want_boot="yes"
+
+  if [[ "${want_boot}" == "yes" ]]; then
+    "${env[@]}" "${BIN}" >"${log}" 2>&1 &
+    local pid=$!
+    local healthy="no"
+    for _ in $(seq 1 50); do
+      if curl -fsS "http://127.0.0.1:${port}/healthz" >/dev/null 2>&1; then healthy="yes"; break; fi
+      if ! kill -0 "${pid}" 2>/dev/null; then break; fi
+      sleep 0.2
+    done
+    kill -TERM "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+    if [[ "${healthy}" != "yes" ]]; then
+      echo "    FAIL: it never became healthy"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+    fi
+    local want_mode="${expect#boots:}"
+    local saw_dev_warning="no"
+    grep -q "running in development mode" "${log}" && saw_dev_warning="yes"
+    if [[ "${want_mode}" == "development" && "${saw_dev_warning}" != "yes" ]]; then
+      echo "    FAIL: booted, but not in development mode (no development warning)"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+    fi
+    if [[ "${want_mode}" == "production" && "${saw_dev_warning}" == "yes" ]]; then
+      echo "    FAIL: booted in DEVELOPMENT mode; production is the default"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+    fi
+    # An IGNORED value is never read, so it must never surface in a log line.
+    # Only values long enough not to collide with ordinary log text are
+    # checked, so the assertion means what it says.
+    if [[ "${topology}" != "@unset" && "${topology}" != "@empty" && ${#topology_value} -ge 6 ]] \
+       && grep -qF -- "${topology_value}" "${log}"; then
+      echo "    FAIL: the ignored ${ENV_TOPOLOGY} value reached the log"
+      sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+    fi
+    echo "    ok: healthy on 127.0.0.1:${port}, mode ${want_mode}, then drained on SIGTERM; the ignored value never appears"
+    PASSES=$((PASSES+1))
+    return
+  fi
+
+  # A refusal case must EXIT. Under a mutation it may instead serve forever, so
+  # the wait is bounded by a watchdog: a process still alive after REFUSAL_GRACE
+  # seconds is killed and reported as having booted. Exit 137 is that kill.
+  code=0
+  (
+    "${env[@]}" "${BIN}" >"${log}" 2>&1 &
+    child=$!
+    ( sleep "${REFUSAL_GRACE}"; kill -9 "${child}" 2>/dev/null ) &
+    watchdog=$!
+    wait "${child}"; rc=$?
+    kill "${watchdog}" 2>/dev/null || true
+    exit "${rc}"
+  ) || code=$?
+  if [[ "${code}" -eq 0 ]]; then
+    echo "    FAIL: the process booted (exit 0) where a refusal was required"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+  fi
+  if [[ "${code}" -eq 137 ]]; then
+    echo "    FAIL: still running after ${REFUSAL_GRACE}s where a refusal was required — it booted"
+    sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+  fi
+  local want_names="${expect#refuses:}"
+  local missing=""
+  case "${want_names}" in
+    both-names) grep -q "${ENV_TOPOLOGY}" "${log}" || missing+=" ${ENV_TOPOLOGY}"
+                grep -q "${ENV_MODE}"     "${log}" || missing+=" ${ENV_MODE}" ;;
+    old-name)   grep -q "${ENV_TOPOLOGY}" "${log}" || missing+=" ${ENV_TOPOLOGY}" ;;
+    new-name)   grep -q "${ENV_MODE}"     "${log}" || missing+=" ${ENV_MODE}" ;;
+  esac
+  if [[ -n "${missing}" ]]; then
+    echo "    FAIL: refused (exit ${code}) but the message names neither${missing}"; sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+  fi
+  if grep -q "${KEY}" "${log}"; then
+    echo "    FAIL: the refusal echoed the shared secret"; FAILURES=$((FAILURES+1)); return
+  fi
+  # No refusal echoes the value the operator supplied. The two runtime
+  # vocabulary words are exempt EXACTLY as spelled, because the message prints
+  # them as the vocabulary — which is why a case supplies "  DeVeLoPmEnT  ":
+  # that spelling is the operator's, and the message must not reproduce it.
+  local echoed=""
+  for supplied in "${mode_value}" "${topology_value}"; do
+    [[ -z "${supplied}" ]] && continue
+    [[ "${supplied}" == "development" || "${supplied}" == "production" ]] && continue
+    grep -qF -- "${supplied}" "${log}" && echoed+=" '${supplied}'"
+  done
+  if [[ -n "${echoed}" ]]; then
+    echo "    FAIL: the refusal echoes the supplied value back:${echoed}"
+    sed 's/^/      | /' "${log}"; FAILURES=$((FAILURES+1)); return
+  fi
+  echo "    ok: refused with exit ${code}, naming${want_names:+ }${want_names//-/ }, echoing no supplied value"
+  sed 's/^/      | /' "${log}"
+  PASSES=$((PASSES+1))
+}
+
+# --------------------------------------------------------------------- main --
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mutate) MUTATION="${2:-}"; shift 2 ;;
+    --list-mutations)
+      for m in $(mutation_names); do printf '  %-26s %s\n' "$m" "$(mutation_describes "$m")"; done
+      exit 0 ;;
+    -h|--help) sed -n '2,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    *) die "unknown argument $1" ;;
+  esac
+done
+
+command -v go      >/dev/null 2>&1 || die "go is not on PATH"
+command -v curl    >/dev/null 2>&1 || die "curl is not on PATH"
+command -v python3 >/dev/null 2>&1 || die "python3 is not on PATH"
+command -v openssl >/dev/null 2>&1 || die "openssl is not on PATH"
+
+WORK="$(mktemp -d)"
+BIN="${WORK}/vizra-search"
+# Never a literal: production refuses every key this repository publishes, so
+# the matrix mints one exactly as an operator is told to.
+KEY="$(openssl rand -hex 32)"
+
+echo "boot-matrix: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "repo        $(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || echo unknown) on $(git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+echo "go          $(go version)"
+echo "host        $(uname -sm)"
+echo "source      internal/config/config.go sha256 $(digest "${TARGET}")"
+
+if [[ -n "${MUTATION}" ]]; then
+  mutation_describes "${MUTATION}" >/dev/null || die "unknown mutation ${MUTATION}; try --list-mutations"
+  BACKUP="${WORK}/config.go.orig"
+  cp "${TARGET}" "${BACKUP}"
+  before="$(digest "${TARGET}")"
+  apply_mutation "${MUTATION}" || die "mutation ${MUTATION} could not be applied"
+  after="$(digest "${TARGET}")"
+  if [[ "${before}" == "${after}" ]]; then
+    die "mutation ${MUTATION} left the file byte-identical — refusing to report a demonstration that did not happen"
+  fi
+  echo
+  echo "MUTATION    ${MUTATION}"
+  echo "            $(mutation_describes "${MUTATION}")"
+  echo "            config.go sha256 before ${before}"
+  echo "            config.go sha256 after  ${after}"
+  echo "            this run MUST go red; a green run means the control is gone"
+fi
+
+echo
+echo "--- building the binary under test"
+( cd "${REPO_ROOT}" && go build -o "${BIN}" ./cmd/vizra-search ) || die "the binary did not build"
+
+# The matrix proves behaviour; the suite names the control that broke. A
+# mutation has to turn BOTH red, so the transcript carries the failing test
+# names next to the failing boot cases.
+echo
+echo "=== go-tests (internal/config, cmd/vizra-search)"
+if ( cd "${REPO_ROOT}" && go test -count=1 ./internal/config/ ./cmd/vizra-search/ ) >"${WORK}/go-test.log" 2>&1; then
+  echo "    ok: the suite passes"
+  PASSES=$((PASSES+1))
+else
+  echo "    FAIL: the suite is red"
+  grep -E '^(--- )?(FAIL|\s+--- FAIL)|^\s+config_test|^\s+main_test' "${WORK}/go-test.log" | sed 's/^/      | /' | head -40
+  FAILURES=$((FAILURES+1))
+fi
+
+for spec in "${CASES[@]}"; do
+  IFS='|' read -r name mode topology expect <<<"${spec}"
+  run_case "${name}" "${mode}" "${topology}" "${expect}"
+done
+
+echo
+echo "--- ${PASSES} passed, ${FAILURES} failed, $(( PASSES + FAILURES )) checks (${#CASES[@]} boot cases + the focused suite)"
+if [[ -n "${MUTATION}" ]]; then
+  if [[ "${FAILURES}" -eq 0 ]]; then
+    echo "RESULT: GREEN UNDER MUTATION ${MUTATION} — the control does not hold"
+    exit 1
+  fi
+  echo "RESULT: red under mutation ${MUTATION}, as required"
+  exit 0
+fi
+if [[ "${FAILURES}" -ne 0 ]]; then
+  echo "RESULT: FAIL"
+  exit 1
+fi
+echo "RESULT: pass"

@@ -156,6 +156,81 @@ func TestBootRefusesTheDevKeyWhenTheModeIsOmitted(t *testing.T) {
 	}
 }
 
+// TestBootRefusesTheRetiredRuntimeModeName runs the real binary against the
+// danger the rename exists to close: an operator whose env file still says
+// `VIZRA_SEARCH_MODE=development` and says nothing about `VIZRA_MODE`. Neither
+// silent outcome is acceptable — not production (where their development key is
+// refused for a reason they will misread) and not development (where the
+// production refusals they believe in do not apply). The process refuses, by
+// name, and names the replacement.
+func TestBootRefusesTheRetiredRuntimeModeName(t *testing.T) {
+	_, stderr, code := runWithEnv(t, map[string]string{
+		config.EnvSearchTopology: "development",
+		config.EnvHMACKey:        strongKey,
+	})
+	if code == 0 {
+		t.Fatal("the process booted with the retired runtime-mode name set")
+	}
+	if !strings.Contains(stderr, config.EnvSearchTopology) {
+		t.Fatalf("stderr does not name the offending variable: %q", stderr)
+	}
+	if !strings.Contains(stderr, config.EnvMode) {
+		t.Fatalf("stderr does not name %s as the replacement: %q", config.EnvMode, stderr)
+	}
+}
+
+// The inverse, on the real binary: any value in that variable other than the
+// old runtime vocabulary is ignored — core's own topology value and a value
+// this service has never heard of alike — and the mode comes from the new name.
+func TestBootIgnoresEveryOtherValueOfTheRetiredName(t *testing.T) {
+	for _, value := range []string{"managed", "zz-not-a-value-this-service-knows"} {
+		t.Run(value, func(t *testing.T) {
+			addr := freeAddr(t)
+			cmd := exec.Command(binary(t))
+			cmd.Env = append(os.Environ(),
+				config.EnvMode+"=development",
+				config.EnvSearchTopology+"="+value,
+				config.EnvHMACKey+"="+config.DevHMACKey,
+				config.EnvAddr+"="+addr,
+			)
+			var out syncBuffer
+			cmd.Stdout = &out
+			cmd.Stderr = &out
+			if err := cmd.Start(); err != nil {
+				t.Fatalf("start: %v", err)
+			}
+			t.Cleanup(func() {
+				_ = cmd.Process.Kill()
+				_, _ = cmd.Process.Wait()
+			})
+			waitForHealthy(t, "http://"+addr+"/healthz", &out)
+			log := out.String()
+			if !strings.Contains(log, "running in development mode") {
+				t.Fatalf("the new name did not decide the mode:\n%s", log)
+			}
+			if strings.Contains(log, value) {
+				t.Fatalf("the ignored value reached the log:\n%s", log)
+			}
+		})
+	}
+}
+
+// The same variable with an unknown value and NO runtime mode boots production:
+// the strict default. A typo in a variable this service does not own can never
+// hand an operator development.
+func TestAnUnknownRetiredNameValueBootsProduction(t *testing.T) {
+	_, stderr, code := runWithEnv(t, map[string]string{
+		config.EnvSearchTopology: "developmnt",
+		config.EnvHMACKey:        config.DevHMACKey,
+	})
+	if code == 0 {
+		t.Fatal("the process booted with the published development key; the mode was not production")
+	}
+	if !strings.Contains(stderr, "development placeholder") {
+		t.Fatalf("stderr = %q: the refusal is not production's key refusal", stderr)
+	}
+}
+
 func TestVersionSubcommandReportsIdentity(t *testing.T) {
 	cmd := exec.Command(binary(t), "version")
 	out, err := cmd.CombinedOutput()
