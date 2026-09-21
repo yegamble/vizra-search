@@ -184,17 +184,27 @@ jobs:
       # TOPOLOGY (off|managed|external) product-wide. The image must refuse it
       # when it carries this service's OLD runtime vocabulary rather than
       # silently booting in a mode the env file never named.
+      # The key is valid, so a regressed control would make the container SERVE
+      # rather than exit — and an unbounded `docker run` would then hang this
+      # job until its timeout instead of failing. `timeout` bounds it and 124
+      # (still running) is read as "it booted", never as a refusal.
       - name: the image refuses the retired runtime-mode name
         run: |
           set -euo pipefail
-          if docker run --rm \
-              -e VIZRA_SEARCH_MODE=development \
-              -e SEARCH_HMAC_KEY="$(openssl rand -hex 32)" \
-              vizra-search:ci; then
+          code=0
+          timeout 30 docker run --rm \
+            -e VIZRA_SEARCH_MODE=development \
+            -e SEARCH_HMAC_KEY="$(openssl rand -hex 32)" \
+            vizra-search:ci || code=$?
+          if [ "$code" -eq 0 ]; then
             echo "the image booted with VIZRA_SEARCH_MODE carrying the old runtime vocabulary"
             exit 1
           fi
-          echo "the image refused the retired name, as required"
+          if [ "$code" -eq 124 ]; then
+            echo "the image was still running after 30s: it booted rather than refusing"
+            exit 1
+          fi
+          echo "the image refused the retired name (exit $code), as required"
       - name: the image serves the probes and answers not_indexed
         run: |
           set -euo pipefail
