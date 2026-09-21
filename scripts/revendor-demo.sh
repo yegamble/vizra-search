@@ -32,6 +32,9 @@
 #   scripts/revendor-demo.sh after
 #       Run on the re-vendored tree. Baseline green, then a one-byte edit of
 #       each vendored file against `make contract-drift` AND `make ci`.
+#   scripts/revendor-demo.sh guard
+#       Put the OLD string-suffix ref test back into scripts/vendor-contract.py
+#       and show the negative fixtures going red by name; restore → green.
 #
 set -uo pipefail
 
@@ -276,6 +279,101 @@ demo_after() {
 	finish "D-C"
 }
 
+# ------------------------------------------------------------------ guard ---
+
+# The independent verifier of PR #3 walked past the first version of the ref
+# guard twice, because it was `ref.split("/")[-1] != "main"` — a string-suffix
+# test. This mode puts that defect back, one patch, and shows the negative
+# fixtures catching it. A fixture set that stays green when the control is
+# removed is not a fixture set.
+GUARD_SCRIPT=scripts/vendor-contract.py
+
+GUARD_ANCHOR='    resolved = matches[0]
+    if resolved != want:'
+GUARD_DEFECT='    resolved = matches[0]
+    if ref.split("/")[-1] == "main":  # SUFFIX TEST — the defect, reintroduced
+        want = resolved
+        tip = refs[resolved][1]
+    if resolved != want:'
+
+demo_guard() {
+	banner "D-G  THE NEGATIVE FIXTURES CATCH THE DEFECT THEY EXIST FOR"
+	echo "Mutation: revert the ref resolution in $GUARD_SCRIPT to the string-suffix"
+	echo "test the verifier defeated — any ref whose last path segment is 'main' is"
+	echo "accepted, and becomes the ref actually vendored from."
+	echo
+	echo "Host: $(uname -srm)   python3: $(python3 --version 2>&1)   date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	echo "search HEAD: $(git rev-parse HEAD)"
+
+	PRISTINE="$(mktemp -d "${TMPDIR:-/tmp}/revendor-demo-pristine-XXXXXX")"
+	mkdir -p "$PRISTINE/api"
+	cp "$YAML" "$JSON" "$MANIFEST" "$PRISTINE/api/"
+	mkdir -p "$PRISTINE/scripts"
+	cp "$GUARD_SCRIPT" "$PRISTINE/scripts/"
+	trap restore_guard EXIT
+
+	local before after
+	before="$(digest "$GUARD_SCRIPT")"
+
+	rule
+	echo "state 0 — the guard as shipped"
+	echo "  $GUARD_SCRIPT sha256=$before"
+	run_lane "selftest, guard intact" PASS ./scripts/vendor-contract-selftest.py
+	assert_names "all 11 fixtures behaved as documented"
+
+	rule
+	echo "state 1 — the suffix test put back"
+	python3 - "$GUARD_SCRIPT" "$GUARD_ANCHOR" "$GUARD_DEFECT" <<-'PY'
+		import sys
+		path, anchor, defect = sys.argv[1], sys.argv[2], sys.argv[3]
+		raw = open(path, 'r', encoding='utf-8').read()
+		if raw.count(anchor) != 1:
+		    sys.exit("HARNESS BUG: anchor occurs %d times in %s, want exactly 1"
+		             % (raw.count(anchor), path))
+		open(path, 'w', encoding='utf-8').write(raw.replace(anchor, defect))
+	PY
+	if [ $? -ne 0 ]; then
+		echo "ABORT: the mutation could not be written to $GUARD_SCRIPT"
+		exit 2
+	fi
+	after="$(digest "$GUARD_SCRIPT")"
+	echo "  $GUARD_SCRIPT sha256 before mutation: $before"
+	echo "  $GUARD_SCRIPT sha256 after  mutation: $after"
+	if [ "$before" = "$after" ]; then
+		echo "ABORT: MUTATION DID NOT APPLY — $GUARD_SCRIPT has the same digest as before."
+		echo "       Refusing to score a red/green result for a mutation that never happened."
+		exit 2
+	fi
+	echo "  the patched region:"
+	grep -n -A4 'resolved = matches\[0\]' "$GUARD_SCRIPT" | sed 's/^/    | /'
+	run_lane "selftest, suffix test restored" FAIL ./scripts/vendor-contract-selftest.py
+	# Both refs the verifier used must be named as failures, by fixture name.
+	assert_names "tag named 'main': expected a refusal, got exit 0" \
+		"branch 'fake/main': expected a refusal, got exit 0" \
+		"tag shadowing origin/main: expected a refusal, got exit 0" \
+		"local branch refs/heads/main: expected a refusal, got exit 0"
+
+	rule
+	echo "state 2 — restored"
+	cp "$PRISTINE/scripts/$(basename "$GUARD_SCRIPT")" "$GUARD_SCRIPT"
+	local got; got="$(digest "$GUARD_SCRIPT")"
+	echo "  $GUARD_SCRIPT sha256 after restore:   $got"
+	if [ "$got" != "$before" ]; then
+		echo "ABORT: RESTORE DID NOT RESTORE — $GUARD_SCRIPT came back as $got, want $before."
+		exit 2
+	fi
+	run_lane "selftest, restored" PASS ./scripts/vendor-contract-selftest.py
+	run_lane "vendor-contract --check, restored" PASS ./scripts/vendor-contract.py --check
+
+	finish "D-G"
+}
+
+restore_guard() {
+	[ -n "$PRISTINE" ] || return 0
+	cp "$PRISTINE/scripts/$(basename "$GUARD_SCRIPT")" "$GUARD_SCRIPT" 2>/dev/null || true
+	restore_all
+}
+
 finish() {
 	rule
 	if [ "$FAILURES" -eq 0 ]; then
@@ -289,5 +387,6 @@ finish() {
 case "${1:-}" in
 before) shift; demo_before "${1:-}" ;;
 after)  demo_after ;;
-*) echo "usage: $0 before <core-main-vectors-file> | $0 after"; exit 2 ;;
+guard)  demo_guard ;;
+*) echo "usage: $0 before <core-main-vectors-file> | $0 after | $0 guard"; exit 2 ;;
 esac

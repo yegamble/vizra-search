@@ -153,18 +153,28 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 # api/search-hmac-testvectors.json and api/CONTRACT-SOURCE.json.
 #
 # CORE points at a vizra-core checkout, which the script only ever reads
-# (rev-parse / log / merge-base / show). It is NOT run in CI: CI has no core
-# checkout, and `contract-drift` already fails on any drift from the manifest.
+# (remote get-url / rev-parse / for-each-ref / log / merge-base / show). It is
+# NOT run in CI: CI has no core checkout, and `contract-drift` already fails on
+# any drift from the manifest.
+#
+# vendor-contract-selftest is different: it builds throwaway repositories with
+# `git init` and needs no core checkout and no network, so it COULD be a CI
+# lane. Adding it to `ci:` is out of scope for this slice and is proposed to the
+# chair instead.
 CORE ?= ../vizra-core
-CORE_REF ?= origin/main
+CORE_REMOTE ?= origin
 
 .PHONY: vendor-contract
 vendor-contract: ## Re-vendor the core contract + HMAC vectors and rewrite api/CONTRACT-SOURCE.json (CORE=<path>)
-	./scripts/vendor-contract.py --core '$(CORE)' --ref '$(CORE_REF)'
+	./scripts/vendor-contract.py --core '$(CORE)' --remote '$(CORE_REMOTE)'
 
 .PHONY: vendor-contract-check
 vendor-contract-check: ## Verify every vendored file still matches api/CONTRACT-SOURCE.json
 	./scripts/vendor-contract.py --check
+
+.PHONY: vendor-contract-selftest
+vendor-contract-selftest: ## Fire every refusal vendor-contract.py advertises, against throwaway repos (no network)
+	./scripts/vendor-contract-selftest.py
 
 # The development key is a published constant in this repository, so anyone on
 # the developer's network could sign a valid request against a process that

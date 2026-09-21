@@ -4,8 +4,8 @@ Recorded: 2026-09-21. Host: Darwin 25.5.0 arm64
 ==============================================================================
 
 The source bytes are read from a clone of the PUBLIC remote made for this slice,
-NOT from the shared /Users/yosefgamble/github/vizra/vizra-core checkout (another
-builder is working in that tree; it is read-only for this slice).
+NOT from the shared vizra-core working checkout in the war-room tree (another
+builder is working in it; it is read-only for this slice).
 
 $ git clone https://github.com/yegamble/vizra-core.git <scratch>/core-ref
 origin	https://github.com/yegamble/vizra-core.git (fetch)
@@ -32,6 +32,7 @@ exit=0
 5. which remote refs contain it
 $ git branch -r --contains 4a80a1e3f36b8001c2954d0568bea29268e739fe
   origin/HEAD -> origin/main
+  origin/feat/m0-healthcheck-runtime-image
   origin/main
 
 ------------------------------------------------------------------------------
@@ -42,6 +43,7 @@ $ git cat-file -e '2ceac77^{commit}'   # in a fresh clone of the remote
 fatal: Not a valid object name 2ceac77^{commit}
 exit=128
 $ gh api repos/yegamble/vizra-core/git/refs/heads --jq '.[].ref'
+refs/heads/feat/m0-healthcheck-runtime-image
 refs/heads/main
 
 ------------------------------------------------------------------------------

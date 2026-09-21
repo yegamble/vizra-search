@@ -6,17 +6,25 @@
     "If the contract is wrong it is changed in vizra-core and re-vendored here."
   ],
   "source_repository": "yegamble/vizra-core",
-  "source_ref": "main",
+  "source_ref": "refs/remotes/origin/main",
+  "source_ref_tip": "4a80a1e3f36b8001c2954d0568bea29268e739fe",
   "source_commit": "4a80a1e3f36b8001c2954d0568bea29268e739fe",
   "vendored_at": "2026-09-21",
   "$provenance_note": [
-    "Always pin a commit on core's DEFAULT BRANCH. The first vendoring (PR #1) recorded a",
-    "commit on core's feature branch feat/m0-foundation; core squash-merged and deleted the",
-    "branch, so the recorded commit was no longer reachable from any ref in yegamble/vizra-core",
-    "and a reviewer could not fetch it to check these digests. A source_ref a squash-merge can",
-    "delete is not provenance. scripts/vendor-contract.py enforces this: it refuses a commit",
-    "that is not an ancestor of the branch tip, and refuses a --ref that is not main.",
-    "Evidence: docs/evidence/pr2/revendor-provenance.txt and docs/evidence/pr3/provenance.txt"
+    "Provenance is recorded as the FULL refname that was resolved plus the tip it pointed",
+    "at, never a string derived from the caller's --ref argument. An earlier version wrote",
+    "args.ref.split('/')[-1], which laundered a branch named fake/main into source_ref:",
+    "'main' — the PR #1 defect (a pin on a ref that a squash-merge can delete) reintroduced",
+    "inside its own prevention. scripts/vendor-contract.py now resolves the ref to a full",
+    "refname and accepts only refs/remotes/<remote>/main, measures the checkout's remote URL",
+    "and refuses a non-canonical repository, refuses a shallow clone, and checks --commit",
+    "ancestry against the resolved ref. Each refusal has a fixture in",
+    "scripts/vendor-contract-selftest.py that shows it firing.",
+    "LIMIT: a local clone's remote URL and refs are whatever its owner set them to and the",
+    "script never fetches, so this defends against a mistake, not against someone who",
+    "controls the checkout. It does not authenticate core's bytes; the control for poisoned",
+    "normative bytes is contract-drift, where the 5 ACCEPT and 24 REJECT vectors are consumed.",
+    "Evidence: docs/evidence/pr3/provenance.txt and docs/evidence/pr3/revendor-run.txt"
   ],
   "authority": "ADR-002 (Accepted 2026-09-20) and the Q-001 ruling: the internal contract is written in core's canonical OpenAPI and drift-checked in both repos. The vectors file declares itself normative for both repositories.",
   "files": [

@@ -1,6 +1,6 @@
 ==============================================================================
 D-V  ALL 5 ACCEPT + 24 REJECT VECTORS CONSUMED FROM THE RE-VENDORED FILE
-Host: Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64   date: 2026-09-21T07:12:26Z
+Host: Darwin 25.5.0 arm64   go: go version go1.27.1 darwin/arm64   date: 2026-09-21T07:51:24Z
 branch chore/revendor-core-4a80a1e   tree digests:
 a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448  api/search-internal.openapi.yaml
 f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862  api/search-hmac-testvectors.json
@@ -88,7 +88,7 @@ $ go test -count=1 -v -run '^(TestVerifierReproducesTheSharedVectors|TestVerifie
 === RUN   TestEveryNamedRejectClassIsCovered
 --- PASS: TestEveryNamedRejectClassIsCovered (0.00s)
 PASS
-ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.277s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	0.216s
 exit=0
 
 ------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ $ go test -count=1 -v -run '^(TestTheVendoredVectorsAreUsable|TestEveryVendoredF
 === RUN   TestTheVendoredVectorsAreUsable
 --- PASS: TestTheVendoredVectorsAreUsable (0.00s)
 PASS
-ok  	github.com/yegamble/vizra-search/internal/httpapi	0.263s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	0.225s
 exit=0
 
 ------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ $ go test -count=1 -v ./internal/config/ -run '^(TestTheVectorsPublishedKeyIsSti
     publishedkeys_test.go:189: scanned 3 key literals in _test.go sources; every one is refused in production
 --- PASS: TestEveryKeyLiteralInThisRepositoryIsRefused (0.01s)
 PASS
-ok  	github.com/yegamble/vizra-search/internal/config	0.194s
+ok  	github.com/yegamble/vizra-search/internal/config	0.224s
 exit=0
 
 ------------------------------------------------------------------------------
