@@ -11,12 +11,15 @@
 # and is IMMEDIATELY preceded by `./scripts/make-integrity-guard.sh --workflow`,
 # which reads this file (and anything it includes) and the step's environment
 # from outside make, and refuses a no-op by name. The `test-noskip` lane runs the
-# suite WITHOUT make, so a failing test fails a required lane whatever this file
-# says. See AGENTS.md § "The make lanes cannot be silenced".
+# suite without a make STEP, so a failing test fails a required lane whatever
+# this file says (two tests inside that suite read this file through
+# scripts/makegate.py). See AGENTS.md § "The make lanes cannot be silenced".
 #
-# THIS FILE IS PINNED BY ITS BYTES. The anchor refuses to invoke make unless
-# this file matches its sha256 in .github/pinned-makefiles.yml, so an edit here
-# is mergeable only together with a reviewed edit to that pin:
+# THIS FILE IS PINNED BY ITS BYTES. scripts/makegate.py — the one way a script or
+# test in this repository starts make, the anchor included — refuses to start
+# make unless this file matches its sha256 in .github/pinned-makefiles.yml and
+# `make -q Makefile` says make would not remake it, so an edit here is
+# mergeable only together with a reviewed edit to that pin:
 #   shasum -a 256 Makefile
 
 SHELL := /bin/bash
@@ -113,7 +116,8 @@ build: ## Build the binary
 # no-ops every recipe here — used to be listed as what none of this stops. It is
 # now refused BY NAME before `make contract-drift` runs, by the pinned
 # make-integrity-guard anchor step in ci.yml, from outside make; and the
-# `test-noskip` lane runs every package, the drift guards included, without make.
+# `test-noskip` lane runs every package, the drift guards included, without a
+# make step.
 #
 # `|| true` on the test line is not swallowing the result: the `ran` step is the
 # authority on pass/fail, it prints the real test output, and `recipe` refuses
@@ -135,7 +139,7 @@ test: ## Full test suite with the race detector
 
 # test-noskip proves the claim "nothing skipped or fake" of Q-001. It is local
 # parity for the `test-noskip` CI lane, which runs the SAME `go test -json` and
-# the same report DIRECTLY, without make (.github/pinned-steps.yml). The report
+# the same report DIRECTLY, without a make step (.github/pinned-steps.yml). The report
 # fails on any skipped test and any package with no test files, holds EVERY
 # package to its executed-test floor in scripts/test-floors.json, refuses a
 # package that has no floor, judges `go test`'s own exit code, and prints the

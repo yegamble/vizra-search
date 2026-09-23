@@ -545,9 +545,11 @@ def check(args):
         # With the checkout in hand the recorded tip is checked against what it
         # CLAIMS to be — a commit that was the tip of this ref at vendoring
         # time: it must exist, be on the ref today (a remote-tracking main only
-        # moves forward), and contain the pinned source_commit. A tip that has
-        # merely moved on since is NOT a failure here — that is staleness, and
-        # the api/-commit comparison below is what says "re-vendor".
+        # moves forward), and contain the pinned source_commit. A recorded tip
+        # BEHIND the current one is not a failure here: any on-ref commit that
+        # contains source_commit passes, so this cannot prove the tip was the one
+        # current at vendoring time. The api/-commit comparison below is what
+        # says "re-vendor".
         if isinstance(recorded_tip, str) and re.fullmatch(r"[0-9a-f]{40}", recorded_tip):
             _, _, rc_obj = git_raw(core, "cat-file", "-e", recorded_tip + "^{commit}")
             if rc_obj != 0:
@@ -571,8 +573,9 @@ def check(args):
                         % (sc, recorded_tip)
                     )
             if recorded_tip != tip:
-                print("note: source_ref_tip %s is behind the current tip %s of %s (staleness, "
-                      "not forgery — see the api/ commit check)" % (recorded_tip[:12], tip[:12], full_ref))
+                print("note: source_ref_tip %s is behind the current tip %s of %s. Checked: it is a "
+                      "commit on that ref that contains source_commit. NOT checked, and not checkable "
+                      "from here: that it was the tip when the files were vendored." % (recorded_tip[:12], tip[:12], full_ref))
         if commit != m.get("source_commit"):
             problems.append(
                 "the manifest pins %s, but the current last api/ commit on %s is %s — re-vendor"

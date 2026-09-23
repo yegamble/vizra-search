@@ -1,6 +1,8 @@
 package httpapi_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,14 +43,22 @@ var testSelectingFlags = []string{"-run", "-skip", "-short", "-tags", "-bench", 
 // parsing the Makefile text. Asking make resolves variables, includes and
 // duplicate-target overrides in one move — each of which defeated the earlier
 // text parser.
+//
+// make is started ONLY through scripts/makegate.py, the digest-gated helper
+// every make call in this repository goes through: a `make --dry-run` is not
+// read-only (make evaluates the file and remakes an out-of-date makefile while
+// reading it), and this runs in the test-noskip lane, where no anchor step
+// precedes it (PR #5 security re-review, R-1).
 func resolvedLaneCommands(t *testing.T) []string {
 	t.Helper()
-	cmd := exec.Command("make", "--dry-run", "--no-print-directory", "contract-drift")
+	cmd := exec.Command("python3", "scripts/makegate.py", "--", "--dry-run", "--no-print-directory", "contract-drift")
 	cmd.Dir = repoRoot
 	cmd.Env = filteredEnv()
-	out, err := cmd.CombinedOutput()
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("`make --dry-run contract-drift` failed: %v\n%s", err, out)
+		t.Fatalf("`makegate.py -- --dry-run contract-drift` failed: %v\n%s%s", err, out, stderr.String())
 	}
 	var commands []string
 	var pending string
@@ -259,6 +269,13 @@ func newLaneFixture(t *testing.T) *laneFixture {
 
 	copyFile(t, filepath.Join(repoRoot, "scripts", "contract-drift-guard.py"),
 		filepath.Join(dir, "scripts", "contract-drift-guard.py"), 0o755)
+	// The guard starts make only through the digest-gated helper, and the
+	// helper runs make only on pinned bytes: every fixture Makefile is pinned
+	// below, as a reviewer would pin it, so each case tests the GUARD's own
+	// refusal rather than the gate's.
+	copyFile(t, filepath.Join(repoRoot, "scripts", "makegate.py"),
+		filepath.Join(dir, "scripts", "makegate.py"), 0o755)
+	mustMkdir(t, filepath.Join(dir, ".github"))
 	copyFile(t, filepath.Join(repoRoot, manifestPath[len("../../"):]),
 		filepath.Join(dir, "api", "CONTRACT-SOURCE.json"), 0o644)
 
@@ -271,9 +288,19 @@ func newLaneFixture(t *testing.T) *laneFixture {
 	return f
 }
 
-func (f *laneFixture) writeMakefile(body string) {
+func (f *laneFixture) writeMakefile(body string, alsoPinned ...string) {
 	f.t.Helper()
 	writeFile(f.t, filepath.Join(f.dir, "Makefile"), body, 0o644)
+	pin := "makefiles:\n"
+	for _, rel := range append([]string{"Makefile"}, alsoPinned...) {
+		raw, err := os.ReadFile(filepath.Join(f.dir, rel))
+		if err != nil {
+			f.t.Fatal(err)
+		}
+		sum := sha256.Sum256(raw)
+		pin += "  " + rel + ": " + hex.EncodeToString(sum[:]) + "\n"
+	}
+	writeFile(f.t, filepath.Join(f.dir, ".github", "pinned-makefiles.yml"), pin, 0o644)
 }
 
 // run executes the guard's `recipe` check in the fixture and returns its
@@ -505,8 +532,8 @@ func TestTheLaneGuardIsAnchoredInTheWorkflow(t *testing.T) {
 func TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile(t *testing.T) {
 	f := newLaneFixture(t)
 	writeFile(t, filepath.Join(f.dir, "drift.mk"), "TESTFLAGS := -run=TestNothingAtAll\n", 0o644)
-	f.writeMakefile("include drift.mk\n" +
-		strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json $(TESTFLAGS)", 1))
+	f.writeMakefile("include drift.mk\n"+
+		strings.Replace(cleanRecipe, "go test -count=1 -json", "go test -count=1 -json $(TESTFLAGS)", 1), "drift.mk")
 	out, code := f.run()
 	if code == 0 {
 		t.Fatalf("the guard ACCEPTED a lane whose -run came from an included makefile:\n%s", out)

@@ -11,8 +11,11 @@
 # EVERY `make` STEP below is byte-equal to an entry in .github/pinned-steps.yml,
 # carries no key but name/run/id, and is IMMEDIATELY preceded by the pinned
 # anchor `./scripts/make-integrity-guard.sh --workflow`. The anchor runs outside
-# make. It invokes make only on the reviewed bytes pinned in
-# .github/pinned-makefiles.yml (reading a Makefile executes parts of it), then
+# make. Like every script or test here that starts make, it does so only through
+# scripts/makegate.py: only on the reviewed bytes pinned in
+# .github/pinned-makefiles.yml, and only after `make -q` says make would not
+# remake them (reading a Makefile executes parts of it). The make STEPS below
+# are not started by makegate; the anchor adjacent to each is what guards them. It then
 # refuses, by name, reviewed bytes that no-op their recipes (a SHELL or
 # MAKEFLAGS override, a `-` prefix, a swallowed exit, a duplicate target) and an
 # environment that would (MAKEFLAGS and its family, MAKELEVEL and make's other
@@ -166,15 +169,16 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      # THE DIRECT LANE: the whole suite, WITHOUT make, byte-equal to
+      # THE DIRECT LANE: the whole suite, with no make STEP, byte-equal to
       # .github/pinned-steps.yml `direct_test_steps`. Whatever the Makefile
       # says, a failing test fails this required lane. `go test -json` feeds
       # scripts/go-test-report.py, which judges go test's own exit code, fails
       # on ANY skipped test (there is no allowlist) and on any package with no
       # test files, holds EVERY package to its executed-test floor in
       # scripts/test-floors.json, refuses a package with no floor, and prints
-      # the counts into this log.
-      - name: nothing is skipped and every package meets its floor (Q-001), without make
+      # the counts into this log. Two tests inside the suite read the Makefile
+      # with `make --dry-run`, only through scripts/makegate.py (digest-gated).
+      - name: nothing is skipped and every package meets its floor (Q-001), without a make step
         run: |
           set -uo pipefail
           if [ -n "${GOFLAGS+set}" ]; then

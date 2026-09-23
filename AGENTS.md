@@ -96,7 +96,7 @@ without a fixture is a claim, not a control.
 | a commit that is not on that ref | `merge-base --is-ancestor <commit> refs/remotes/<remote>/main`, checked against the **resolved** ref, not against anything the caller passed. Reachable via `--commit` |
 | a shallow clone | ancestry cannot be decided against a truncated history |
 | laundering the ref into the manifest | the manifest records the full refname **resolved** and the tip it pointed at. It used to write `args.ref.split("/")[-1]`, which turned `fake/main` into `main` |
-| a forged `source_ref_tip` | the field used to be written and never read. `--check` now requires a 40-character lowercase SHA that is not the null id; `--check --core` requires it to be a commit in core, **on** the recorded ref, and to **contain** `source_commit`. A tip that has merely fallen behind core's main is staleness, not forgery, and is reported as a note |
+| a forged `source_ref_tip` | the field used to be written and never read. `--check` now requires a 40-character lowercase SHA that is not the null id; `--check --core` requires it to be a commit in core, **on** the recorded ref, and to **contain** `source_commit`. A recorded tip behind core's current main is reported as a note, not a failure: any on-ref commit that contains `source_commit` passes, so the check cannot prove the tip was the one current at vendoring time |
 
 An earlier version of this section claimed the script "refuses a commit that is
 not an ancestor of that branch tip, and a `--ref` that is not a `main` branch".
@@ -443,7 +443,7 @@ including a check that never ran — as a failure.
 | `build` | the binary links and reports its identity |
 | `contract-drift` | the handlers, response bodies, HMAC scheme and both vendored digests match the canonical contract, and every normative vector — ACCEPT and REJECT — is consumed; the lane's own shape is checked before and after the tests run, so nothing can be deselected |
 | `test` | `go test -race -count=1 ./...` |
-| `test-noskip` | the whole suite run **without make**: **0 skipped tests**, no package without test files, **every package at or above its executed-test floor**, no package without a floor, `go test`'s own exit code judged; counts printed in the log (Q-001) |
+| `test-noskip` | the whole suite run **without a make step** (the two tests inside it that read the Makefile go through the digest-gated `scripts/makegate.py`): **0 skipped tests**, no package without test files, **every package at or above its executed-test floor**, no package without a floor, `go test`'s own exit code judged; counts printed in the log (Q-001) |
 | `tidy-check` | `go.mod`/`go.sum` are tidy |
 | `govulncheck` | no known vulnerability in the dependency graph |
 | `vendor-contract-selftest` | every refusal `scripts/vendor-contract.py` advertises fires, by name, against throwaway repositories |
@@ -514,24 +514,63 @@ surroundings**:
   and why that shape of control cannot be sound: it has to re-implement make's
   parser. **So the control moved from grammar to digest.**
   `.github/pinned-makefiles.yml` pins the sha256 of every file make may read
-  (today only `Makefile`). Before make is invoked at all, the anchor requires
-  the on-disk bytes to match the pin and refuses an unpinned `GNUmakefile` or
-  `makefile` beside it (make would read it first); after make has read the
-  file, `MAKEFILE_LIST` must be exactly the pinned set, so an unpinned
-  `include` is red. The digest gate applies with and without `--workflow`, and
-  `ci-required-guard.py` asserts the pin exists, is non-empty, covers
-  `Makefile` and matches the tree. **What it guarantees, exactly:** make runs
+  (today only `Makefile`; the `makefiles:` shape vizra-core PR #10 uses).
+  **Every place a script or test in this repository starts make goes through
+  one helper, `scripts/makegate.py`** — the anchor, the contract-drift shape
+  check (which runs *before* the anchor in its job), and the lane test inside
+  `test-noskip` — and `TestEveryPlaceThatStartsMakeIsGated` fails on any other
+  make call it can see in a `.go`, `.py` or `.sh` file. (The pinned `make`
+  workflow STEPS are the other starter; the anchor adjacent to each is their
+  guard.) The helper starts make only when all of this holds, and any failure
+  stops it BEFORE make:
+  - each pinned file is a regular, non-symlink file whose bytes match the pin;
+  - the reviewed bytes include nothing unpinned (read statically, without
+    running them), and no `GNUmakefile`/`makefile` sits beside the Makefile,
+    compared case-folded;
+  - the reviewed bytes contain none of these constructs, each refused BY NAME
+    (aligned with vizra-core PR #10 and its re-verification). They ignore a
+    gate failure without a visible `-` (`.IGNORE`, `.DEFAULT`,
+    `.EXTRA_PREREQS`), run something while make reads the file (`+` recipe
+    lines and `$(MAKE)`, both of which run even under `-n` and `-q`;
+    `$(eval …)`), or change what every later reading means (`.RECIPEPREFIX` —
+    on GNU Make 4.3 a pinned `.RECIPEPREFIX := >` hides a `-` prefix from a
+    tab-keyed check — `.SECONDEXPANSION`, `.ONESHELL`, `.POSIX`). Also refused:
+    any SHELL or .SHELLFLAGS other than the one approved line, and any
+    MAKEFLAGS, GNUMAKEFLAGS or MFLAGS, in every form (target- or
+    pattern-specific, `define`, `private`, `override`). A recipe line that
+    BEGINS with an expansion is refused too, because what it expands to — a
+    `-` prefix, say — cannot be known without running make;
+  - `MAKEFILES` is unset, and every process runs without make's flag variables,
+    `MAKEFILES`, `BASH_ENV`, `ENV` or the runner's command-file variables;
+  - `make` is a regular file in a system directory, started by that real path;
+  - **`make -q <every pinned makefile>`**, ONE invocation naming them all —
+    which runs no ordinary recipe (a `+` or `$(MAKE)` recipe line still runs under -q; one can come only from the pinned, reviewed bytes) — says make would
+    not REMAKE any of them. make remakes an out-of-date makefile even under
+    `-n`, from its own built-in rules: a newer unpinned `Makefile.sh` beside
+    the Makefile was turned into the Makefile by `% : %.sh` during the anchor's
+    own `make -pn`, after the digest had passed (PR #5 re-verification,
+    FINDING 2). The same probe covers `.c`/`.o`/`.y`/`.l` and `SCCS/s.`
+    siblings; on GNU Make 3.81 and 4.3 the RCS `,v` forms did not make make
+    remake an existing Makefile, so they are correctly green, and the bytes
+    are checked either way.
+  After every make run the pinned files are re-hashed and must be unchanged,
+  and the anchor names them as goals on every later make command and checks
+  that `MAKEFILE_LIST` is exactly the pinned set. `ci-required-guard.py` makes
+  the same byte, symlink, include and sibling checks without running make.
+  `-r`/`--no-builtin-rules` is deliberately NOT used: in the probe it would
+  hide the very built-in remake the unmodified pinned `make` step would
+  perform. **What it guarantees, exactly:** make runs
   only on reviewed bytes — and those reviewed bytes run their own reviewed
   `$(shell …)` calls while being read (today four: `go env GOROOT`,
   `git describe`, `git rev-parse HEAD`, `date`). A `Makefile` edit is
   mergeable only together with a reviewed edit to the pin
-  (`shasum -a 256 Makefile`). Then three readings of the reviewed bytes —
-  make's resolved database (`make -pn`), the text of every file make read, and
-  make's duplicate-target warnings — still refuse, by name, a `SHELL`,
-  `.SHELLFLAGS`, `MAKEFLAGS` or `GNUMAKEFLAGS` override, `.ONESHELL`,
-  `.SECONDEXPANSION`, a `.RECIPEPREFIX` assignment, a `-` prefix, a
-  `|| true`-family suffix, and a gate target defined twice or inside a
-  conditional. They run after make has read the file and are a check on what a
+  (`shasum -a 256 Makefile`). Then, after make has read the reviewed bytes:
+  make's resolved database (`make -pn`) must hold the approved SHELL and
+  .SHELLFLAGS and nothing in MAKEFLAGS; the text of every gate recipe may carry
+  no `-` prefix and no `|| true`-family suffix, and no gate target may be
+  defined twice or inside a conditional; make's own `--dry-run` must show no
+  command that EXPANDS to a swallowed exit (`cmd $(SWALLOW)`); and make's
+  warnings must show no duplicate definition. They run after make has read the file and are a check on what a
   reviewer approved, not a grammar of make. Exactly one recipe line may end
   `|| true`: contract-drift's `go test` line, keyed to that target and those
   bytes, because its next line `ran` is the lane's verdict.
@@ -541,7 +580,9 @@ surroundings**:
   job-level `if:`, a reusable-workflow job and an undigested service image are
   refused on required lanes.
 - **The direct lane.** `test-noskip` runs `go test -count=1 -json ./...`
-  without make. Its pinned body refuses a set `GOFLAGS`, records `go test`'s
+  with no make step. Inside that suite, two tests read the Makefile with
+  `make --dry-run` — only through `scripts/makegate.py`, the same gate as the
+  anchor. Its pinned body refuses a set `GOFLAGS`, records `go test`'s
   exit code, fails the step on the report's verdict (`|| exit 1`), and ends
   `exit "$rc"`, so go test's own failure fails the step even if the report line
   were removed. `scripts/go-test-report.py` fails on any skip, any package with
@@ -564,12 +605,16 @@ surroundings**:
 - **Reusable workflows and wrappers.** A `jobs.<id>.uses:` job has no steps to
   read (it is refused on a required lane, not inspected). A wrapper script or
   composite action that calls make carries no `make` token; `required_invocations`
-  bounds the damage, but a lane may run one in addition.
+  bounds the damage, but a lane may run one in addition. Likewise
+  `TestEveryPlaceThatStartsMakeIsGated` sees literal make calls in `.go`, `.py`
+  and `.sh` files; a make started through a variable or a wrapper it cannot
+  read is review-only.
 - **A reviewer approving a malicious `Makefile` together with its pin
   update.** The digest proves the bytes were reviewed, not that the review was
   right: approved bytes run, including whatever `$(shell …)` they contain, while
-  make reads them. The readings after make catch the known no-op shapes and
-  nothing else. Review is the control there, and CODEOWNERS is advisory.
+  make reads them. The named constructs above and the readings after make catch
+  the shapes they name and nothing else; a construct not on those lists, once
+  approved, runs. Review is the control there, and CODEOWNERS is advisory.
 - **Edits to the controls themselves.** `.github/pinned-steps.yml`,
   `.github/pinned-makefiles.yml`, `scripts/test-floors.json`, `FLOOR_LANES`,
   the guards and the workflows are all checked out from the pull request under
@@ -677,7 +722,7 @@ in place, and each turns a required check red:
   with no CI lane to catch it. It is now refused **by name, before
   `make contract-drift` runs**, by the pinned make-integrity anchor (see "The
   make lanes cannot be silenced" above), and `test-noskip` runs every package —
-  the drift guards included — without make.
+  the drift guards included — without a make step.
 - Editing `.github/workflows/ci.yml` as well removes reading 2. That is a second
   file and a second diff, and `ci-required` is red while the step is missing —
   but `ci-required-guard.sh` is itself checked out from the PR under test.

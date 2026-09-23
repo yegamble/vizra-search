@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -345,7 +347,7 @@ func guardEvasions() []mutation {
 		{name: "direct: go test exit swallowed", file: ciYML, old: directGoTL, new: "          go test -count=1 -json ./... > unit-events.json || true\n", want: "direct_test_steps"},
 		{name: "direct: -run added", file: ciYML, old: directGoTL, new: "          go test -count=1 -run TestX -json ./... > unit-events.json || rc=$?\n", want: "direct_test_steps"},
 		{name: "direct: GOFLAGS guard removed", file: ciYML, old: "          if [ -n \"${GOFLAGS+set}\" ]; then\n            echo \"::error::GOFLAGS is set in this step's environment; the go command reads it as extra flags. Refused, not passed.\"\n            exit 1\n          fi\n", new: "", want: "direct_test_steps"},
-		{name: "direct: step if:", file: ciYML, old: "      - name: nothing is skipped and every package meets its floor (Q-001), without make\n", new: "      - name: nothing is skipped and every package meets its floor (Q-001), without make\n        if: github.event_name == 'push'\n", want: "direct test step"},
+		{name: "direct: step if:", file: ciYML, old: "      - name: nothing is skipped and every package meets its floor (Q-001), without a make step\n", new: "      - name: nothing is skipped and every package meets its floor (Q-001), without a make step\n        if: github.event_name == 'push'\n", want: "direct test step"},
 		// --- the manifest, the floor, the pins, and their agreement (item 4) ---
 		{name: "floor lane removed from manifest", file: manifest, old: "\nvendor-contract-selftest\n", new: "\n", want: "'vendor-contract-selftest' is missing"},
 		{name: "floor lane commented out", file: manifest, old: "\ntest-noskip\n", new: "\n# test-noskip\n", want: "commented out"},
@@ -355,9 +357,9 @@ func guardEvasions() []mutation {
 		{name: "pins: unknown key", file: pinsYML, old: "", new: "\nextra_allowance: []\n", want: "unknown key"},
 		{name: "pins: a body nothing requires", file: pinsYML, old: "  - |\n    make vendor-contract-selftest\n", new: "  - |\n    make vendor-contract-selftest\n  - |\n    make ci\n", want: "that no job is required to run"},
 		{name: "Makefile edited, pin not updated", file: "Makefile", old: "SHELL := /bin/bash\n", new: "SHELL := /bin/bash \n", want: "does not match its pin"},
-		{name: "makefile pin emptied", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\n# Makefile: ", want: "pins nothing"},
-		{name: "makefile pin: Makefile not covered", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nOther: ", want: "does not pin `makefile`"},
-		{name: "makefile pin: not a sha256", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nMakefile: x", want: "not `relative/path: <64 lowercase hex>`"},
+		{name: "makefile pin emptied", file: ".github/pinned-makefiles.yml", old: "\n  Makefile: ", new: "\n#  Makefile: ", want: "must be a single `makefiles:` mapping"},
+		{name: "makefile pin: Makefile not covered", file: ".github/pinned-makefiles.yml", old: "\n  Makefile: ", new: "\n  Other: ", want: "does not pin `makefile`"},
+		{name: "makefile pin: not a sha256", file: ".github/pinned-makefiles.yml", old: "\n  Makefile: ", new: "\n  Makefile: x", want: "not a `  <path>: <64 lowercase hex sha256>` entry"},
 		{name: "pins: duplicate key", file: pinsYML, old: "", new: "\nanchor_step: |\n  ./scripts/make-integrity-guard.sh\n", want: "duplicate key 'anchor_step'"},
 	}
 }
@@ -387,7 +389,7 @@ func TestCIRequiredGuardPassesOnTheRealWorkflows(t *testing.T) {
 		"checked lane 'test': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body",
 		"checked lane 'test-noskip': 0 make step(s) and 1 direct test step(s) are byte-equal to a pinned body",
 		"checked lane 'vendor-contract-selftest' runs all 1 required invocation(s)",
-		"the suite runs directly, without make, from a pinned body in lane(s) ['test-noskip']",
+		"the suite runs directly, with no make step, from a pinned body in lane(s) ['test-noskip']",
 		"`make ci` runs exactly the required make lanes plus test-noskip",
 		"every third-party action is pinned to a commit SHA",
 	} {
@@ -481,8 +483,8 @@ func repin(t *testing.T, dir string) {
 	lines := strings.Split(string(old), "\n")
 	n := 0
 	for i, l := range lines {
-		if strings.HasPrefix(l, "Makefile: ") {
-			lines[i] = "Makefile: " + digest(b)
+		if strings.HasPrefix(l, "  Makefile: ") {
+			lines[i] = "  Makefile: " + digest(b)
 			n++
 		}
 	}
@@ -505,14 +507,14 @@ func TestTheAnchorRunsMakeOnlyOnPinnedBytes(t *testing.T) {
 	requirePython(t)
 	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
 	cases := []mutation{
-		{name: "one byte changed", file: "Makefile", old: "SHELL := /bin/bash\n", new: "SHELL := /bin/bash \n", want: "does not match its pinned digest"},
-		{name: "a comment added", file: "Makefile", old: "", new: "# harmless\n", want: "does not match its pinned digest"},
-		{name: ".SECONDEXPANSION line (desk review FINDING 1)", file: "Makefile", old: flagsPin, new: flagsPin + ".SECONDEXPANSION:\n", want: "does not match its pinned digest"},
-		{name: ".RECIPEPREFIX line (desk review FINDING 2)", file: "Makefile", old: "", new: ".RECIPEPREFIX := >\n", want: "does not match its pinned digest"},
-		{name: "an include line", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "X := 1\n"}, want: "does not match its pinned digest"},
-		{name: "the line that wrote the env file during the anchor", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "does not match its pinned digest"},
-		{name: "the pin itself edited", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nMakefile: 0", want: "is not a `path: <sha256>` pin"},
-		{name: "the pin no longer covers Makefile", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nOther: ", want: "does not pin `makefile`"},
+		{name: "one byte changed", file: "Makefile", old: "SHELL := /bin/bash\n", new: "SHELL := /bin/bash \n", want: "does not match its pin"},
+		{name: "a comment added", file: "Makefile", old: "", new: "# harmless\n", want: "does not match its pin"},
+		{name: ".SECONDEXPANSION line (desk review FINDING 1)", file: "Makefile", old: flagsPin, new: flagsPin + ".SECONDEXPANSION:\n", want: "does not match its pin"},
+		{name: ".RECIPEPREFIX line (desk review FINDING 2)", file: "Makefile", old: "", new: ".RECIPEPREFIX := >\n", want: "does not match its pin"},
+		{name: "an include line", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "X := 1\n"}, want: "does not match its pin"},
+		{name: "the line that wrote the env file during the anchor", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "does not match its pin"},
+		{name: "the pin itself edited", file: ".github/pinned-makefiles.yml", old: "\n  Makefile: ", new: "\n  Makefile: 0", want: "not a `  <path>: <64 lowercase hex sha256>` entry"},
+		{name: "the pin no longer covers Makefile", file: ".github/pinned-makefiles.yml", old: "\n  Makefile: ", new: "\n  Other: ", want: "does not pin `makefile`"},
 	}
 	for _, m := range cases {
 		m := m
@@ -570,8 +572,8 @@ func TestTheAnchorRunsMakeOnlyOnPinnedBytes(t *testing.T) {
 	})
 
 	// An included file that is NOT pinned, with the Makefile re-pinned as if the
-	// include line had been reviewed: make then reads bytes nobody reviewed, and
-	// MAKEFILE_LIST says so.
+	// include line had been reviewed: the static read set of the reviewed bytes
+	// names inc.mk, which has no pin, so make is never started.
 	t.Run("an extra included file, Makefile re-pinned", func(t *testing.T) {
 		t.Parallel()
 		m := mutation{name: "include", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "X := 1\n"}}
@@ -583,7 +585,7 @@ func TestTheAnchorRunsMakeOnlyOnPinnedBytes(t *testing.T) {
 		}
 		repin(t, dir)
 		out, code := anchor(t)(dir, cleanEnv())
-		if code == 0 || !strings.Contains(out, "make read ['Makefile', 'inc.mk']") {
+		if code == 0 || !strings.Contains(out, "make would read inc.mk, which has no entry") || !strings.Contains(out, "make was NOT invoked") {
 			t.Fatalf("exit %d:\n%s", code, out)
 		}
 		a.restore(t, m)
@@ -608,19 +610,13 @@ func reviewedBytesEvasions() []mutation {
 	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
 	const testRecipe = "\tgo test -race -count=1 $(PKG)\n"
 	return []mutation{
-		{name: "SHELL := /usr/bin/true", file: "Makefile", old: shellPin, new: "SHELL := /usr/bin/true\n", want: "shell"},
-		{name: "MAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "MAKEFLAGS += -i\n", want: "assigns makeflags"},
-		{name: "GNUMAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "GNUMAKEFLAGS += -i\n", want: "assigns gnumakeflags"},
-		{name: ".SHELLFLAGS without -e", file: "Makefile", old: flagsPin, new: ".SHELLFLAGS := -c\n", want: ".shellflags"},
-		{name: ".ONESHELL", file: "Makefile", old: flagsPin, new: flagsPin + ".ONESHELL:\n", want: "oneshell"},
-		{name: ".SECONDEXPANSION", file: "Makefile", old: flagsPin, new: flagsPin + ".SECONDEXPANSION:\n", want: "declares `.secondexpansion`"},
-		{name: ".RECIPEPREFIX", file: "Makefile", old: "", new: ".RECIPEPREFIX := >\n", want: "assigns `.recipeprefix`"},
 		{name: "- prefix on the test recipe", file: "Makefile", old: testRecipe, new: "\t-go test -race -count=1 $(PKG)\n", want: "prefixed `-`"},
 		{name: "|| true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG) || true\n", want: "ending `|| true`"},
 		{name: "; true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG); true\n", want: "ending `; true`"},
 		{name: "the exempt line in another target", file: "Makefile", old: "\tgo vet $(PKG)\n", new: "\tgo vet $(PKG)\n\tgo test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true\n", want: "ending `|| true`"},
 		{name: "duplicate test target", file: "Makefile", old: "", new: "\ntest:\n\t@true\n", want: "defined 2 times"},
 		{name: "test target inside a conditional", file: "Makefile", old: "test: ## Full test suite with the race detector\n" + testRecipe, new: "ifndef VIZRA_NEVER_SET\ntest: ## Full test suite with the race detector\n" + testRecipe + "endif\n", want: "conditional"},
+		{name: "|| true produced by an expansion", file: "Makefile", old: "test: ## Full test suite with the race detector\n" + testRecipe, new: "INERT_SWALLOW := || true\ntest: ## Full test suite with the race detector\n\tgo test -race -count=1 $(PKG) $(INERT_SWALLOW)\n", want: "expands to a command whose exit status is discarded"},
 		{name: "a NEW ?= variable, set in the environment", file: "Makefile", old: flagsPin, new: flagsPin + "GOCMD ?= go\n", env: []string{"GOCMD=true"}, want: "the environment sets gocmd='true'"},
 	}
 }
@@ -646,7 +642,7 @@ func TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes(t *testing.T) 
 			if code == 0 || !strings.Contains(strings.ToLower(out), m.want) {
 				t.Fatalf("%s: exit %d, want a refusal naming %q:\n%s", m.name, code, m.want, out)
 			}
-			if !strings.Contains(out, "make runs only on reviewed bytes") {
+			if strings.Contains(out, "does not match its pin") || strings.Contains(out, "not a `  <path>") {
 				t.Fatalf("%s: the digest gate did not pass on the re-pinned bytes, so this case tests nothing:\n%s", m.name, out)
 			}
 			a.restore(t, m)
@@ -751,7 +747,8 @@ func TestMakeIntegrityGuardPassesOnTheRealMakefile(t *testing.T) {
 	}
 	for _, want := range []string{
 		"[--workflow (strict)]",
-		"make runs only on reviewed bytes: Makefile sha256",
+		"make runs only on REVIEWED bytes: Makefile sha256",
+		"`make -q` (one invocation, every pinned file a goal) says none would be remade",
 		"MAKEFILE_LIST is exactly the pinned set: ['Makefile']",
 		"resolves SHELL to the approved /bin/bash",
 		"none of the 7 variable(s) the makefiles take from the environment is set",
@@ -1016,6 +1013,423 @@ func TestTheDirectStepCannotSwallowGoTestsExit(t *testing.T) {
 				t.Fatalf("step output does not contain %q:\n%s", tc.want, out)
 			}
 			t.Logf("step exit %d", code)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// round 2: the newer-sibling remake, the single make gate, and R-2/R-3
+// ---------------------------------------------------------------------------
+
+// plantNewerSibling writes a file make's built-in or version-control rules can
+// turn into the Makefile, with an mtime a day ahead of the Makefile's.
+func plantNewerSibling(t *testing.T, dir, rel string) {
+	t.Helper()
+	path := filepath.Join(dir, rel)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	orig, err := os.ReadFile(filepath.Join(dir, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, append(orig, []byte("# sibling bytes nobody pinned\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(filepath.Join(dir, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	future := info.ModTime().Add(24 * time.Hour)
+	if err := os.Chtimes(path, future, future); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// PR #5 re-verification FINDING 2: a newer unpinned `Makefile.sh` made the
+// anchor's own `make -pn ci` run make's built-in `% : %.sh` and REWRITE the
+// Makefile after the digest had passed. The gate now asks `make -q Makefile`
+// first — which runs no ordinary recipe — and stops if make would remake it. For every
+// sibling make's rules can turn into the Makefile, the Makefile must be
+// byte-identical afterwards; where make would remake it, the anchor is red.
+// Where make would NOT (measured on GNU Make 3.81: the RCS `,v` forms for an
+// existing, older-than-nothing Makefile), the pinned `make` step would not
+// either, so green is the correct answer — and the bytes are still checked.
+func TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake(t *testing.T) {
+	requirePython(t)
+	cases := []struct {
+		sibling string
+		mustRed bool
+	}{
+		{"Makefile.sh", true}, {"Makefile.c", true}, {"Makefile.o", true}, {"Makefile.y", true},
+		{"Makefile.l", true}, {"SCCS/s.Makefile", true}, {"s.Makefile", true},
+		{"Makefile,v", false}, {"RCS/Makefile,v", false}, {"RCS/Makefile", false},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.sibling, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			before, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
+			plantNewerSibling(t, dir, tc.sibling)
+			out, code := anchor(t)(dir, cleanEnv())
+			after, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
+			if digest(after) != digest(before) {
+				t.Fatalf("%s: the anchor let make REWRITE the Makefile (%s -> %s):\n%s",
+					tc.sibling, digest(before)[:12], digest(after)[:12], out)
+			}
+			if tc.mustRed && (code == 0 || !strings.Contains(out, "would REMAKE a pinned makefile")) {
+				t.Fatalf("%s: exit %d, want the remake refusal:\n%s", tc.sibling, code, out)
+			}
+			if code == 0 && !strings.Contains(out, "`make -q` (one invocation, every pinned file a goal) says none would be remade") {
+				t.Fatalf("%s: green without the remake probe having passed:\n%s", tc.sibling, out)
+			}
+			if err := os.RemoveAll(filepath.Join(dir, strings.Split(tc.sibling, "/")[0])); err != nil {
+				t.Fatal(err)
+			}
+			if _, code2 := anchor(t)(dir, cleanEnv()); code2 != 0 {
+				t.Fatalf("%s: still red after removing the sibling", tc.sibling)
+			}
+			t.Logf("newer %s | anchor exit %d: %s | Makefile sha256 %s before and after | removed: GREEN",
+				tc.sibling, code, firstFail(out), digest(before)[:12])
+		})
+	}
+}
+
+// R-1: the other two places that read the Makefile with make go through the
+// same gate: contract-drift-guard.py (which runs BEFORE the anchor in the
+// contract-drift job) and makegate.py's CLI (which the lane test uses in the
+// test-noskip lane, where no anchor runs).
+func TestEveryOtherMakeCallIsGated(t *testing.T) {
+	requirePython(t)
+	callers := map[string][]string{
+		"contract-drift-guard.py recipe": {"python3", "scripts/contract-drift-guard.py", "recipe"},
+		"makegate.py -- --dry-run":       {"python3", "scripts/makegate.py", "--", "--dry-run", "--no-print-directory", "contract-drift"},
+	}
+	for name, argv := range callers {
+		name, argv := name, argv
+		for _, variant := range []string{"one byte changed", "newer Makefile.sh", "unpinned GNUmakefile", "MAKEFILES set"} {
+			variant := variant
+			t.Run(name+"/"+variant, func(t *testing.T) {
+				t.Parallel()
+				dir := copyTree(t)
+				before, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
+				env := cleanEnv()
+				switch variant {
+				case "one byte changed":
+					if err := os.WriteFile(filepath.Join(dir, "Makefile"), append(append([]byte{}, before...), ' '), 0o644); err != nil {
+						t.Fatal(err)
+					}
+				case "newer Makefile.sh":
+					plantNewerSibling(t, dir, "Makefile.sh")
+				case "unpinned GNUmakefile":
+					if err := os.WriteFile(filepath.Join(dir, "GNUmakefile"), []byte("contract-drift:\n\t@true\n"), 0o644); err != nil {
+						t.Fatal(err)
+					}
+				case "MAKEFILES set":
+					env = append(env, "MAKEFILES=/dev/null")
+				}
+				out, code := run(t, dir, env, argv[0], argv[1:]...)
+				if code == 0 {
+					t.Fatalf("%s ran make on %s:\n%s", name, variant, out)
+				}
+				if !strings.Contains(out, "make was NOT invoked") && !strings.Contains(out, "only `make -q` ran") {
+					t.Fatalf("%s refused, but not by the gate before make:\n%s", name, out)
+				}
+				if variant == "newer Makefile.sh" {
+					after, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
+					if digest(after) != digest(before) {
+						t.Fatalf("%s: make rewrote the Makefile", name)
+					}
+				}
+				t.Logf("%s / %s | exit %d, make not run past the gate", name, variant, code)
+			})
+		}
+	}
+}
+
+// R-2: a failed pre-make check stops the anchor BEFORE make, in both modes.
+func TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck(t *testing.T) {
+	requirePython(t)
+	stub := t.TempDir()
+	if err := os.WriteFile(filepath.Join(stub, "make"), []byte("#!/bin/sh\nexec /usr/bin/make \"$@\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	root := repoRoot(t)
+	for _, tc := range []struct {
+		name     string
+		workflow bool
+		env      []string
+	}{
+		{"MAKEFILES, --workflow", true, []string{"MAKEFILES=/dev/null"}},
+		{"MAKEFILES, local", false, []string{"MAKEFILES=/dev/null"}},
+		{"a non-system make first on PATH, --workflow", true, []string{"PATH=" + stub + ":" + os.Getenv("PATH")}},
+		{"a non-system make first on PATH, local", false, []string{"PATH=" + stub + ":" + os.Getenv("PATH")}},
+		{"MAKEFLAGS=-i, --workflow", true, []string{"MAKEFLAGS=-i"}},
+		{"BASH_ENV=/dev/null, --workflow", true, []string{"BASH_ENV=/dev/null"}},
+		{"BASH_ENV=/dev/null, local", false, []string{"BASH_ENV=/dev/null"}},
+		{"ENV=/dev/null, --workflow", true, []string{"ENV=/dev/null"}},
+		{"GNUMAKEFLAGS=-i, --workflow", true, []string{"GNUMAKEFLAGS=-i"}},
+		{"VERSION=x (a Makefile ?= variable), --workflow", true, []string{"VERSION=x"}},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			args := []string{filepath.Join(root, "scripts", "make-integrity-guard.py")}
+			if tc.workflow {
+				args = append(args, "--workflow")
+			}
+			out, code := run(t, root, cleanEnv(tc.env...), "python3", args...)
+			if code == 0 || !strings.Contains(out, "make was NOT invoked (0 make process(es) started)") {
+				t.Fatalf("exit %d; want a refusal with no make process started:\n%s", code, out)
+			}
+			t.Logf("%s | exit %d: %s", tc.name, code, firstFail(out))
+		})
+	}
+}
+
+// R-3 and the ci-required parity: a symlinked Makefile, and case-variant
+// siblings, are refused by the anchor before make AND by ci-required-guard.
+func TestPinnedFilesMustBeRegularAndAloneInBothReaders(t *testing.T) {
+	requirePython(t)
+	for _, tc := range []struct {
+		name  string
+		setup func(t *testing.T, dir string)
+		want  string
+	}{
+		{"Makefile is a symlink to identical bytes", func(t *testing.T, dir string) {
+			mk := filepath.Join(dir, "Makefile")
+			if err := os.Rename(mk, filepath.Join(dir, "Makefile.real")); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("Makefile.real", mk); err != nil {
+				t.Fatal(err)
+			}
+		}, "is not a regular file"},
+		{"an unpinned GNUmakefile", func(t *testing.T, dir string) {
+			if err := os.WriteFile(filepath.Join(dir, "GNUmakefile"), []byte("ci:\n\t@true\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "gnumakefile exists beside the makefile"},
+		{"a pinned file that is missing", func(t *testing.T, dir string) {
+			pin := filepath.Join(dir, ".github", "pinned-makefiles.yml")
+			raw, _ := os.ReadFile(pin)
+			extra := "  gone.mk: " + strings.Repeat("0", 64) + "\n"
+			if err := os.WriteFile(pin, append(raw, []byte(extra)...), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "gone.mk is pinned in"},
+		{"a stale pin entry (a pinned file make would not read)", func(t *testing.T, dir string) {
+			if err := os.WriteFile(filepath.Join(dir, "unused.mk"), []byte("X := 1\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			pin := filepath.Join(dir, ".github", "pinned-makefiles.yml")
+			raw, _ := os.ReadFile(pin)
+			extra := "  unused.mk: " + digest([]byte("X := 1\n")) + "\n"
+			if err := os.WriteFile(pin, append(raw, []byte(extra)...), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "which make would not read"},
+		{"a case-variant GNUMakefile", func(t *testing.T, dir string) {
+			if err := os.WriteFile(filepath.Join(dir, "GNUMakefile"), []byte("ci:\n\t@true\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "gnumakefile exists beside the makefile"},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			tc.setup(t, dir)
+			out, code := anchor(t)(dir, cleanEnv())
+			if code == 0 || !strings.Contains(strings.ToLower(out), tc.want) || !strings.Contains(out, "make was NOT invoked") {
+				t.Fatalf("anchor: exit %d, want %q before make:\n%s", code, tc.want, out)
+			}
+			gout, gcode := guardPy(t)(dir, cleanEnv())
+			if gcode == 0 || !strings.Contains(strings.ToLower(gout), tc.want) {
+				t.Fatalf("ci-required-guard: exit %d, want %q:\n%s", gcode, tc.want, gout)
+			}
+			t.Logf("%s | anchor exit %d before make; ci-required-guard exit %d: %s", tc.name, code, gcode, firstFail(out))
+		})
+	}
+}
+
+// R-1's inventory: every place this repository starts make. make may be
+// started only by scripts/makegate.py (the gate) and by the pinned workflow
+// steps (each one guarded by the adjacent anchor). Anything else — a Go
+// exec.Command, a Python subprocess list, a shell line — is red here, so a
+// new, ungated make call cannot arrive unnoticed. Not read: make started
+// through an indirection (a variable holding "make", a wrapper script), which
+// is review-only, like everything else the guards cannot parse.
+func TestEveryPlaceThatStartsMakeIsGated(t *testing.T) {
+	root := repoRoot(t)
+	goExec := regexp.MustCompile(`exec\.Command(Context)?\([^,)]*?"(?:[^"]*/)?g?make"`)
+	pyList := regexp.MustCompile(`\[\s*["'](?:[^"']*/)?g?make["']\s*[,\]]|subprocess\.\w+\(\s*\[\s*make\b`)
+	shLine := regexp.MustCompile(`^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:exec\s+|command\s+)?(?:/usr/bin/)?g?make(?:\s|$)`)
+	allowed := map[string]bool{"scripts/makegate.py": true}
+	var sites []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(root, path)
+		rel = filepath.ToSlash(rel)
+		if d.IsDir() {
+			switch d.Name() {
+			case ".git", "bin", "docs", "testdata", "node_modules":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		ext := filepath.Ext(path)
+		if ext != ".go" && ext != ".py" && ext != ".sh" {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for n, line := range strings.Split(string(raw), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") {
+				continue
+			}
+			hit := false
+			switch ext {
+			case ".go":
+				hit = goExec.MatchString(line)
+			case ".py":
+				hit = pyList.MatchString(line)
+			case ".sh":
+				hit = shLine.MatchString(line)
+			}
+			if hit {
+				sites = append(sites, fmt.Sprintf("%s:%d", rel, n+1))
+				if !allowed[rel] {
+					t.Errorf("%s:%d starts make outside scripts/makegate.py: %s", rel, n+1, trimmed)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sites) == 0 {
+		t.Fatal("the inventory found no make call at all, not even makegate.py's own: the scan is not reading the tree")
+	}
+	t.Logf("every place that starts make: %v (allowed: scripts/makegate.py)", sites)
+}
+
+// The chair's correction to core #10's probe: ONE `make -q` naming EVERY pinned
+// file. -q applies in the remake phase only to makefiles named on the command
+// line, so a probe that named only `Makefile` would still let make remake a
+// pinned INCLUDE from a newer sibling and re-read it. This tree pins only the
+// Makefile today, so the case pins an include the way a reviewed edit would:
+// Makefile gains `include inc.mk`, both are pinned, and a newer `inc.mk.sh`
+// sits beside inc.mk.
+func TestTheRemakeProbeCoversEveryPinnedInclude(t *testing.T) {
+	requirePython(t)
+	dir := copyTree(t)
+	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
+	mk := filepath.Join(dir, "Makefile")
+	raw, _ := os.ReadFile(mk)
+	if strings.Count(string(raw), flagsPin) != 1 {
+		t.Fatal("the Makefile no longer has the line this case edits")
+	}
+	if err := os.WriteFile(mk, []byte(strings.Replace(string(raw), flagsPin, flagsPin+"include inc.mk\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	inc := []byte("INCLUDED_BY_REVIEW := 1\n")
+	if err := os.WriteFile(filepath.Join(dir, "inc.mk"), inc, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repin(t, dir)
+	pin := filepath.Join(dir, ".github", "pinned-makefiles.yml")
+	p, _ := os.ReadFile(pin)
+	if err := os.WriteFile(pin, append(p, []byte("  inc.mk: "+digest(inc)+"\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, code := anchor(t)(dir, cleanEnv()); code != 0 {
+		t.Fatalf("control: a reviewed Makefile with a pinned include should pass:\n%s", out)
+	}
+	plantNewerSibling(t, dir, "inc.mk.sh")
+	// plantNewerSibling dates the sibling from the Makefile; date it from inc.mk too.
+	info, _ := os.Stat(filepath.Join(dir, "inc.mk"))
+	future := info.ModTime().Add(48 * time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "inc.mk.sh"), future, future); err != nil {
+		t.Fatal(err)
+	}
+	out, code := anchor(t)(dir, cleanEnv())
+	after, _ := os.ReadFile(filepath.Join(dir, "inc.mk"))
+	if digest(after) != digest(inc) {
+		t.Fatalf("make REWROTE the pinned include inc.mk:\n%s", out)
+	}
+	if code == 0 || !strings.Contains(out, "`make -q Makefile inc.mk`") {
+		t.Fatalf("exit %d; want the one-invocation remake probe to refuse:\n%s", code, out)
+	}
+	t.Logf("pinned include + newer inc.mk.sh | anchor exit %d: %s | inc.mk sha256 %s unchanged",
+		code, firstFail(out), digest(inc)[:12])
+}
+
+// Chair note from core PR #10's re-verification: on GNU Make 4.3 a pinned
+// `.RECIPEPREFIX := >` with a recipe `> -cmd` hides the `-` prefix from every
+// tab-keyed check. So even in REVIEWED, re-pinned bytes, a `.RECIPEPREFIX`
+// assignment (any spelling) and `.SECONDEXPANSION` are refused by name from the
+// pinned read set BEFORE make, with zero make processes started. The `-cmd`
+// recipe here is a plain `-true`; nothing is built to exploit it.
+func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
+	requirePython(t)
+	for _, tc := range []struct{ name, add, want string }{
+		{".RECIPEPREFIX := > with a > -true recipe", "\n.RECIPEPREFIX := >\nextra-target:\n> -true\n", "assigns `.recipeprefix`"},
+		{"override .RECIPEPREFIX = >", "\noverride .RECIPEPREFIX = >\n", "assigns `.recipeprefix`"},
+		{"define .RECIPEPREFIX", "\ndefine .RECIPEPREFIX\n>\nendef\n", "assigns `.recipeprefix`"},
+		{".SECONDEXPANSION:", "\n.SECONDEXPANSION:\n", "declares `.secondexpansion`"},
+		// Chair note (core #10 re-verification): each of these ignores a gate failure, runs something
+		// while make reads the file, or changes what the anchor's readings mean. Inert fixtures only.
+		{".ONESHELL:", "\n.ONESHELL:\n", "declares `.oneshell`"},
+		{".IGNORE: (all targets)", "\n.IGNORE:\n", "declares `.ignore`"},
+		{".IGNORE: test", "\n.IGNORE: test\n", "declares `.ignore`"},
+		{".DEFAULT:", "\n.DEFAULT: ; @true\n", "declares `.default`"},
+		{".POSIX:", "\n.POSIX:\n", "declares `.posix`"},
+		{".EXTRA_PREREQS", "\n.EXTRA_PREREQS := nothing\n", "assigns `.extra_prereqs`"},
+		{"target-specific .EXTRA_PREREQS", "\ntest: .EXTRA_PREREQS := nothing\n", "assigns `.extra_prereqs`"},
+		{"SHELL := /usr/bin/true", "\nSHELL := /usr/bin/true\n", "assigns `shell`"},
+		{".SHELLFLAGS := -c", "\n.SHELLFLAGS := -c\n", "assigns `.shellflags`"},
+		{"MAKEFLAGS += -i", "\nMAKEFLAGS += -i\n", "assigns `makeflags`"},
+		{"GNUMAKEFLAGS += -i", "\nGNUMAKEFLAGS += -i\n", "assigns `gnumakeflags`"},
+		{"MFLAGS = -i", "\nMFLAGS = -i\n", "assigns `mflags`"},
+		{"target-specific MAKEFLAGS", "\ntest: MAKEFLAGS += -i\n", "assigns `makeflags`"},
+		{"pattern-specific SHELL", "\n%: SHELL := /usr/bin/true\n", "assigns `shell`"},
+		{"target-specific private SHELL", "\ntest: private SHELL = /bin/sh\n", "assigns `shell`"},
+		{"override .SHELLFLAGS", "\noverride .SHELLFLAGS := -c\n", "assigns `.shellflags`"},
+		{"define MAKEFLAGS", "\ndefine MAKEFLAGS\n-i\nendef\n", "assigns `makeflags`"},
+		{"$(eval …)", "\n$(eval INERT := 1)\n", "calls $(eval"},
+		{"+ recipe line", "\ninert-target:\n\t+@true\n", "prefixed `+`"},
+		{"$(MAKE) in a recipe", "\ninert-target:\n\t@echo $(MAKE) >/dev/null\n", "names $(make)"},
+		{"recipe that begins with an expansion", "\nQ := @\ninert-target:\n\t$(Q)true\n", "begins with an expansion"},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			mk := filepath.Join(dir, "Makefile")
+			raw, _ := os.ReadFile(mk)
+			if err := os.WriteFile(mk, append(raw, []byte(tc.add)...), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			repin(t, dir)
+			out, code := anchor(t)(dir, cleanEnv())
+			if code == 0 || !strings.Contains(strings.ToLower(out), tc.want) ||
+				!strings.Contains(out, "make was NOT invoked (0 make process(es) started)") {
+				t.Fatalf("exit %d; want %q refused with 0 make processes started:\n%s", code, tc.want, out)
+			}
+			gout, gcode := guardPy(t)(dir, cleanEnv())
+			if gcode == 0 || !strings.Contains(strings.ToLower(gout), tc.want) {
+				t.Fatalf("ci-required-guard: exit %d, want %q:\n%s", gcode, tc.want, gout)
+			}
+			t.Logf("%s (re-pinned) | anchor exit %d, 0 make processes: %s | ci-required-guard exit %d",
+				tc.name, code, firstFail(out), gcode)
 		})
 	}
 }

@@ -95,7 +95,7 @@ ROWS = [
     dict(id="1m2", item=1, name="Makefile: a .RECIPEPREFIX line (desk review FINDING 2)", file="Makefile",
          old="", new=".RECIPEPREFIX := >\n", cmd=ANCHOR, want="make was not invoked"),
     dict(id="1m3", item=1, name="Makefile: MAKEFLAGS += -i", file="Makefile", old=FLAGS_PIN,
-         new=FLAGS_PIN + "MAKEFLAGS += -i\n", cmd=ANCHOR, want="does not match its pinned digest"),
+         new=FLAGS_PIN + "MAKEFLAGS += -i\n", cmd=ANCHOR, want="does not match its pin"),
     dict(id="1m4", item=1, name="ci-required: Makefile edited without a pin update", file="Makefile",
          old="SHELL := /bin/bash\n", new="SHELL := /bin/bash \n", cmd=GUARD_SH, want="does not match its pin"),
     dict(id="1n", item=1, name="env: MAKELEVEL=1 MAKEFLAGS=-ki (strictness is not the environment's)",
@@ -106,12 +106,31 @@ ROWS = [
          old="            if i == 0 or trim_one_newline(step_run(steps[i - 1]) or \"\") != pins.anchor:\n",
          new="            if False:\n",
          cmd=gotest("./scripts/", "TestCIRequiredGuardRefusesEveryEvasion/anchor"), want="green (exit 0) after the mutation"),
-    dict(id="1q", item=1, name="implementation: the digest gate disabled",
-         file="scripts/make-integrity-guard.py",
-         old="    pinned = check_makefile_digests(g, root)\n    if pinned is None:\n",
-         new="    pinned = check_makefile_digests(g, root) or [\"Makefile\"]\n    if pinned is None:\n",
+    dict(id="1q", item=1, name="implementation: the digest comparison disabled in makegate",
+         file="scripts/makegate.py",
+         old="        if digests[rel] != pins[rel]:\n",
+         new="        if False:\n",
          cmd=gotest("./scripts/", "TestTheAnchorRunsMakeOnlyOnPinnedBytes"),
          want="--- fail"),
+    dict(id="1r", item=1, name="a newer unpinned Makefile.sh beside the Makefile (round-2 FINDING 2)",
+         file="Makefile.sh", old="", new="# sibling bytes nobody pinned\n", future_mtime=True,
+         assert_unchanged="Makefile", cmd=ANCHOR, want="would remake a pinned makefile"),
+    dict(id="1s", item=1, name="the same sibling, through the contract-drift shape check (runs before the anchor)",
+         file="Makefile.sh", old="", new="# sibling bytes nobody pinned\n", future_mtime=True,
+         assert_unchanged="Makefile", cmd=["python3", "scripts/contract-drift-guard.py", "recipe"],
+         want="only `make -q` ran"),
+    dict(id="1t", item=1, name="implementation: the remake probe disabled in makegate",
+         file="scripts/makegate.py",
+         old="    proc = run_make(make, root, [\"-q\", *files])\n    if proc.returncode != 0:\n",
+         new="    proc = run_make(make, root, [\"-q\", *files])\n    if False:\n",
+         cmd=gotest("./scripts/", "TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake"),
+         want="want the remake refusal"),
+    dict(id="1u", item=1, name="env: MAKEFILES set (R-2: no make process may start)", env={"MAKEFILES": "/dev/null"},
+         cmd=ANCHOR, want="make was not invoked (0 make process(es) started)"),
+    dict(id="1v", item=1, name="a new ungated make call in a script (R-1 inventory)", file="scripts/vendor-contract.py",
+         old="def main():\n", new="def _ungated():\n    subprocess.run([\"make\", \"ci\"])\n\n\ndef main():\n",
+         cmd=gotest("./scripts/", "TestEveryPlaceThatStartsMakeIsGated"),
+         want="starts make outside scripts/makegate.py"),
     # ---------------------------------------------------------------- item 2
     dict(id="2a", item=2, name="a planted t.Skip, through the pinned direct body", file="internal/buildinfo/buildinfo_test.go",
          old="", new="\nfunc TestPlantedSkip(t *testing.T) { t.Skip(\"planted\") }\n",
@@ -149,7 +168,7 @@ ROWS = [
     dict(id="4d", item=4, name="implementation: the shallow-clone refusal removed (what the lane catches)",
          file="scripts/vendor-contract.py", old="    refuse_shallow(core)\n    full_ref, tip = resolve_ref(core, args.remote, args.ref)\n    commit = choose_commit(core, full_ref, args.commit)\n\n    print(\"core checkout",
          new="    full_ref, tip = resolve_ref(core, args.remote, args.ref)\n    commit = choose_commit(core, full_ref, args.commit)\n\n    print(\"core checkout",
-         cmd=["make", "vendor-contract-selftest"], want="shallow clone"),
+         cmd=["python3", "scripts/makegate.py", "--", "vendor-contract-selftest"], want="shallow clone"),
     # ---------------------------------------------------------------- item 5
     dict(id="5a", item=5, name="implementation: parse_remote_url back to parts[-2:]", file="scripts/vendor-contract.py",
          old="    if len(parts) != 2:\n        return host or None, None\n    return host, \"/\".join(parts)\n",
@@ -239,6 +258,10 @@ def red_line(out: str) -> str:
 
 
 def apply_edit(path, old, new, remove):
+    if not os.path.exists(path) and old == "" and not remove:
+        with open(path, "wb") as fh:
+            fh.write(new.encode())
+        return None
     with open(path, "rb") as fh:
         orig = fh.read()
     if remove:
@@ -269,7 +292,9 @@ def main() -> int:
         return 0
     head = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", REPO, "status", "--porcelain"], capture_output=True, text=True).stdout.strip()
-    make_v = subprocess.run(["make", "--version"], capture_output=True, text=True).stdout.splitlines()[0]
+    make_v = subprocess.run(["python3", os.path.join(REPO, "scripts", "makegate.py"), "--", "--version"],
+                            capture_output=True, text=True).stdout.splitlines()[:1] or ["make: (gate refused)"]
+    make_v = make_v[0]
     go_v = subprocess.run(["go", "version"], capture_output=True, text=True).stdout.strip()
     print(f"ci-hardening-demo: {len(rows)} row(s); tree = HEAD {head}{' + working-tree changes' if dirty else ''}")
     print(f"  {make_v}; {go_v}; python {sys.version.split()[0]}")
@@ -288,6 +313,11 @@ def main() -> int:
                 if path:
                     before = sha(path)
                     orig = apply_edit(path, r.get("old", ""), r.get("new", ""), r.get("remove", False))
+                    if r.get("future_mtime"):
+                        ref = os.stat(os.path.join(tmp, "Makefile")).st_mtime + 86400
+                        os.utime(path, (ref, ref))
+                    watched = os.path.join(tmp, r["assert_unchanged"]) if r.get("assert_unchanged") else None
+                    watched_before = sha(watched) if watched else None
                     for cf, body in (r.get("create") or {}).items():
                         with open(os.path.join(tmp, cf), "w") as fh:
                             fh.write(body)
@@ -308,6 +338,12 @@ def main() -> int:
             rc, out = run(r["cmd"], tmp, env)
             want_ok = r["want"].lower() in out.lower()
             red_ok = rc != 0 and want_ok
+            if path and r.get("assert_unchanged"):
+                watched_after = sha(watched)
+                same = watched_after == watched_before
+                print(f"    {r['assert_unchanged']} sha256 after the command {watched_after} "
+                      f"({'byte-identical to before' if same else '*** CHANGED by the command'})")
+                red_ok = red_ok and same
             print(f"    MUTATED : exit {rc} -> {'RED as declared' if red_ok else '*** NOT RED AS DECLARED'}")
             print(f"              {red_line(out)}")
             if not want_ok:
@@ -318,8 +354,11 @@ def main() -> int:
                 for xp, xorig in reversed(extras):
                     with open(xp, "wb") as fh:
                         fh.write(xorig)
-                with open(path, "wb") as fh:
-                    fh.write(orig)
+                if orig is None:
+                    os.remove(path)
+                else:
+                    with open(path, "wb") as fh:
+                        fh.write(orig)
                 for cf in (r.get("create") or {}):
                     os.remove(os.path.join(tmp, cf))
                 restored = sha(path)

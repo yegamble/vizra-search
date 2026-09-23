@@ -75,7 +75,7 @@ What they do NOT stop, stated rather than implied:
     CI lane to catch it. It is now refused by name BEFORE `make contract-drift`
     runs, by the pinned `./scripts/make-integrity-guard.sh --workflow` anchor
     step in `.github/workflows/ci.yml`, from outside make — and the `test-noskip`
-    lane runs every package, the drift guards included, without make. See
+    lane runs every package, the drift guards included, without a make step. See
     AGENTS.md § "The make lanes cannot be silenced". Nothing in THIS program
     changed; it still cannot see such a line from inside the recipe;
   - editing `.github/workflows/ci.yml` as well removes reading 2. That is a
@@ -139,21 +139,39 @@ def fail(msg):
 # --------------------------------------------------------------- resolution --
 
 
+def _makegate():
+    """scripts/makegate.py, loaded from beside this file: the one way this repository starts make."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("makegate", os.path.join(os.path.dirname(os.path.abspath(__file__)), "makegate.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def resolved_recipe():
     """Return (commands, stderr) for what make would actually run for the lane.
 
     `make --dry-run` prints the commands after expanding variables, applying
     includes, and resolving duplicate-target overrides — i.e. what will really
     execute, not what the Makefile text looks like.
+
+    It is NOT read-only: make evaluates a makefile while reading it and remakes
+    an out-of-date one even under --dry-run. So it runs only through
+    scripts/makegate.py — pinned bytes, a clean environment, the checked `make`,
+    and a `make -q` remake probe first — and this step runs BEFORE the workflow
+    anchor in the contract-drift job, so it must not be the unguarded one
+    (PR #5 security re-review, R-1).
     """
-    env = {k: v for k, v in os.environ.items() if k not in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL")}
-    proc = subprocess.run(
-        ["make", "--dry-run", "--no-print-directory", LANE],
-        cwd=REPO_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    mg = _makegate()
+    try:
+        gate = mg.open_gate(REPO_ROOT)
+        proc = gate.run(["--dry-run", "--no-print-directory", LANE])
+    except mg.GateRefused as err:
+        fail(
+            "the Makefile gate refused to run `make --dry-run %s` (%s):\n%s"
+            % (LANE, err.invoked, indent("\n".join(err.problems)))
+        )
     if proc.returncode != 0:
         fail(
             "`make --dry-run %s` failed (exit %d), so the lane's real recipe could not be\n"

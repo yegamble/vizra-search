@@ -43,7 +43,7 @@ and this port starts from the inverted design:
                variable the Makefile takes from the environment (`?=`, or referenced and never
                assigned — computed from the Makefile by the same code the anchor uses).
   DIGEST       .github/pinned-makefiles.yml exists, pins Makefile by sha256, and the tree matches it —
-               the same gate the anchor applies before it will invoke make at all.
+               the same checks scripts/makegate.py makes before it will start make.
   STRICT YAML  A duplicate mapping key and a YAML merge key (`<<:`) are refused anywhere in a
                workflow or in the pins file, so this guard never reads a different value than a
                reviewer sees first.
@@ -104,7 +104,7 @@ except ImportError:  # pragma: no cover - the CI image always has it
 #
 #   build                     the binary links and reports its identity.
 #   test                      the suite under the race detector.
-#   test-noskip               the suite run DIRECTLY, without make, with every
+#   test-noskip               the suite run DIRECTLY, with no make step, with every
 #                             package held to an executed-test floor and no skip.
 #   contract-drift            the handlers, HMAC scheme and vendored digests
 #                             against the contract vizra-core owns.
@@ -638,13 +638,18 @@ def check_local_parity(g: Guard, makefile: Path, pins: Pins) -> None:
 
 
 def check_makefile_pins(g: Guard, path: Path, root: Path, verify_bytes: bool) -> None:
-    """DIGEST: .github/pinned-makefiles.yml exists, is non-empty, pins Makefile, and matches the tree.
+    """DIGEST: .github/pinned-makefiles.yml has the one accepted shape, pins Makefile, and matches the tree.
 
-    The anchor refuses to run make on unpinned bytes; this says the same thing in
-    `ci-required`, so a Makefile edit without its reviewed pin update is red there
-    too, by name. The format — `path: <64 lowercase hex>` — is shared with
-    vizra-core, and the anchor reads it without a YAML parser; both must agree.
+    Read by scripts/makegate.py's own parser (the one the anchor and every other make call use), so the
+    readers cannot disagree, and ALSO by the strict YAML loader, so it is valid YAML as well. With the tree:
+    each pinned file is a regular non-symlink file whose sha256 matches, the reviewed bytes include only
+    pinned files, and no unpinned GNUmakefile/makefile sits beside the Makefile (case-folded) — the same
+    refusals the anchor makes, here in `ci-required`, without running make.
     """
+    here = Path(__file__).resolve().parent / "makegate.py"
+    spec = importlib.util.spec_from_file_location("makegate", here)
+    mg = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mg)
     if not path.is_file():
         g.fail(f"{path} is missing. make is gated on pinned Makefile bytes; without the pin there is no gate.")
         return
@@ -653,28 +658,22 @@ def check_makefile_pins(g: Guard, path: Path, root: Path, verify_bytes: bool) ->
     except yaml.YAMLError as e:
         g.fail(f"{path} is refused by the strict YAML reader: {e}")
         return
-    if not isinstance(doc, dict) or not doc:
-        g.fail(f"{path} pins nothing (it must be a non-empty `path: sha256` mapping).")
+    if not isinstance(doc, dict) or set(doc) != {"makefiles"} or not isinstance(doc.get("makefiles"), dict):
+        g.fail(f"{path} must be a single `makefiles:` mapping of `path: sha256` (the shape core PR #10 uses).")
         return
-    bad = [f"{k!r}: {v!r}" for k, v in doc.items()
-           if not isinstance(k, str) or not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{64}", v)
-           or k.startswith("/") or ".." in k.split("/")]
-    if bad:
-        g.fail(f"{path} has entries that are not `relative/path: <64 lowercase hex>`:", *bad)
+    try:
+        if verify_bytes:
+            files, _, _ = mg.check_pinned_bytes(root)
+        else:
+            pins = mg.load_pin(root if (root / mg.PIN_FILE) == path else path.parent.parent)
+            files = sorted(pins)
+    except mg.GateRefused as err:
+        g.fail(f"{path.name}: the Makefile pin does not hold:", *err.problems,
+               "A Makefile edit is mergeable only together with a reviewed edit to the pin.")
         return
-    if "Makefile" not in doc:
-        g.fail(f"{path} does not pin `Makefile`.")
-        return
-    if verify_bytes:
-        import hashlib
-        for rel, want in sorted(doc.items()):
-            f = root / rel
-            got = hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else "(missing)"
-            if got != want:
-                g.fail(f"{rel} sha256 {got} does not match its pin {want} in {path.name}.",
-                       "A Makefile edit is mergeable only together with a reviewed edit to the pin.")
-                return
-    g.ok(f"{path.name} pins {sorted(doc)} by sha256" + ("; the tree matches" if verify_bytes else ""))
+    g.ok(f"{path.name} pins {files} by sha256" + ("; each is a regular file matching its pin, the reviewed "
+         "bytes include nothing unpinned, and no unpinned GNUmakefile/makefile sits beside them"
+         if verify_bytes else ""))
 
 
 def main() -> int:
@@ -777,7 +776,7 @@ def main() -> int:
         isinstance(s, dict) and trim_one_newline(s.get("run") or "") in pins.direct
         for s in (jobs[n][2].get("steps") or []))]
     if direct_lanes:
-        g.ok(f"the suite runs directly, without make, from a pinned body in lane(s) {direct_lanes}")
+        g.ok(f"the suite runs directly, with no make step, from a pinned body in lane(s) {direct_lanes}")
     else:
         g.fail("no required lane runs the suite directly from a pinned body.",
                "A Makefile turned into a no-op would then make the suite SILENT rather than red.")

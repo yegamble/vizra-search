@@ -160,7 +160,7 @@ run_lane() {
 assert_names() {
 	local n
 	for n in "$@"; do
-		if printf '%s' "$LAST_OUT" | grep -qF -- "$n"; then
+		if grep -qF -- "$n" <<< "$LAST_OUT"; then
 			echo "    names: $n  OK"
 		else
 			echo "    *** UNEXPECTED: the output does not name '$n'"; FAILURES=$((FAILURES + 1))

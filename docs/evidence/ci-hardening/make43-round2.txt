@@ -1,0 +1,78 @@
+### environment
+GNU Make 4.3
+Python 3.12.3
+go version go1.22.2 linux/arm64
+
+### control
+c0   clean tree: anchor                                           exit 0  GREEN ok        Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+c1   clean tree: contract-drift-guard recipe                      exit 0  GREEN ok        Makefile e9d7c58edc93ed4e (unchanged) | contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+c2   clean tree: makegate -- --dry-run contract-drift             exit 0  GREEN ok        Makefile e9d7c58edc93ed4e (unchanged) | 
+
+### a newer sibling make could turn into the Makefile (Makefile sha256 before: e9d7c58edc93ed4e)
+s    newer Makefile.sh: anchor                                    exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer Makefile.sh: contract-drift-guard recipe               exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer Makefile.c: anchor                                     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer Makefile.c: contract-drift-guard recipe                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer Makefile.o: anchor                                     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer Makefile.o: contract-drift-guard recipe                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer Makefile.y: anchor                                     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer Makefile.y: contract-drift-guard recipe                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer Makefile.l: anchor                                     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer Makefile.l: contract-drift-guard recipe                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer SCCS/s.Makefile: anchor                                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer SCCS/s.Makefile: contract-drift-guard recipe           exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer s.Makefile: anchor                                     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from
+s    newer s.Makefile: contract-drift-guard recipe                exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: the Makefile gate refused to run `make --dry-run contract-drift` (only `make -q` ran):
+s    newer Makefile,v: anchor                                     exit 0  GREEN measured  Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+s    newer Makefile,v: contract-drift-guard recipe                exit 1  RED   measured  Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: make emitted a warning while resolving the lane, so what it will run is not
+s    newer RCS/Makefile,v: anchor                                 exit 0  GREEN measured  Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+s    newer RCS/Makefile,v: contract-drift-guard recipe            exit 1  RED   measured  Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: make emitted a warning while resolving the lane, so what it will run is not
+s    newer RCS/Makefile: anchor                                   exit 0  GREEN measured  Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+s    newer RCS/Makefile: contract-drift-guard recipe              exit 1  RED   measured  Makefile e9d7c58edc93ed4e (unchanged) | CONTRACT-DRIFT LANE REFUSED: make emitted a warning while resolving the lane, so what it will run is not
+
+### (the round-1 hole itself is not re-run here: with the probe removed, a +1-day sibling makes make remake
+###  the Makefile, re-exec, find it still older than the sibling, and loop — measured as a hang on the first attempt)
+c3   restored                                                     exit 0  GREEN ok        Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+
+### R-2 / R-3
+r1   MAKEFILES=/dev/null: anchor                                  exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  the environment sets MAKEFILES='/dev/null'.
+r2   MAKEFILES=/dev/null: makegate                                exit 3  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) | makegate: FAIL  the environment sets MAKEFILES='/dev/null'; make would read those files before the pinned Makefile.
+r3   stub make first on PATH: anchor                              exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  `make` resolves to '/tmp/stub/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin']: a stub
+r4   Makefile is a symlink to identical bytes: anchor             exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  Makefile is not a regular file (a symlink, FIFO or device is refused): make would read whatever it points at, which is not what was digested.
+r5   Makefile is a symlink: ci-required-guard.py                  exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  pinned-makefiles.yml: the Makefile pin does not hold:
+r6   unpinned GNUmakefile: ci-required-guard.py                   exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  pinned-makefiles.yml: the Makefile pin does not hold:
+r7   unpinned lowercase makefile (Linux): anchor                  exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  makefile exists beside the Makefile. With no -f, GNU make reads GNUmakefile and makefile BEFORE Makefile, so the pinned Makefile would not be 
+r8   BASH_ENV=/dev/null: anchor (must start 0 make processes)     exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  the environment sets BASH_ENV='/dev/null'.
+     anchor line: make was NOT invoked (0 make process(es) started)
+r9   a pin entry for a missing file: ci-required-guard.py         exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  pinned-makefiles.yml: the Makefile pin does not hold:
+r10  the same: anchor                                             exit 1  RED   ok        Makefile e9d7c58edc93ed4e (unchanged) |   FAIL  stale.mk is pinned in .github/pinned-makefiles.yml but does not exist.
+
+### a pinned INCLUDE with a newer sibling (chair correction: ONE -q naming every pinned file)
+i0   Makefile + pinned include, re-pinned: anchor                 exit 0  GREEN ok        Makefile 591ae6f049b59b84 *** CHANGED | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, inc.mk, which are unchang
+i1   newer inc.mk.sh beside the pinned include: anchor            exit 1  RED   ok        Makefile 591ae6f049b59b84 *** CHANGED |   FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile inc.mk` exit 1). make remakes an out-of-date makefile even under -n �
+     inc.mk sha256 before 43f959298eb6ad88, after 43f959298eb6ad88
+     MEASURED, not the design: a per-file probe `make -q Makefile` alone:
+sha256sum: inc.mk: No such file or directory
+       exit 124 (124 = still running after 60 s, killed); inc.mk sha256 now 
+
+### reviewed (re-pinned) .RECIPEPREFIX / .SECONDEXPANSION: refused before make
+x1   .RECIPEPREFIX := > + '> -true', re-pinned: anchor            exit 1  RED   ok        Makefile f60f05a05af3ec3b *** CHANGED |   FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`.RECIPEPREFIX := >`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'S
+     anchor line: make was NOT invoked (0 make process(es) started)
+x2   .SECONDEXPANSION:, re-pinned: anchor                         exit 1  RED   ok        Makefile 0c7e341e8e9efdd1 *** CHANGED |   FAIL  Makefile:231 declares `.SECONDEXPANSION`: prerequisites would be expanded again while make considers targets, which happens under -n and -q to
+     anchor line: make was NOT invoked (0 make process(es) started)
+x3   re-pinned: .IGNORE:                                          exit 1  RED   ok        Makefile 0d4bc37ae13e60df *** CHANGED |   FAIL  Makefile:231 declares `.IGNORE`: every recipe failure of the named targets (or of ALL targets) is ignored — a `-` prefix no reading can see.
+     anchor line: make was NOT invoked (0 make process(es) started)
+x3   re-pinned: .DEFAULT: ; @true                                 exit 1  RED   ok        Makefile 1d42852928b46cef *** CHANGED |   FAIL  Makefile:231 declares `.DEFAULT`: its recipe is run for any target or prerequisite with no rule of its own.
+     anchor line: make was NOT invoked (0 make process(es) started)
+x3   re-pinned: .EXTRA_PREREQS := nothing                         exit 1  RED   ok        Makefile a355edca531030be *** CHANGED |   FAIL  Makefile:231 assigns `.EXTRA_PREREQS` (`.EXTRA_PREREQS := nothing`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail
+     anchor line: make was NOT invoked (0 make process(es) started)
+x3   re-pinned: test: MAKEFLAGS += -i                             exit 1  RED   ok        Makefile 9e8f7554bc60bed5 *** CHANGED |   FAIL  Makefile:231 assigns `MAKEFLAGS` (`test: MAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SH
+     anchor line: make was NOT invoked (0 make process(es) started)
+/run.sh: line 85: printf: `:': invalid format character
+/run.sh: line 86: printf: `:': invalid format character
+x3   re-pinned:                                                   exit 0  GREEN *** UNEXPECTED Makefile 05dbe7dec31ed89f *** CHANGED | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+     anchor line: 
+x3   re-pinned: inert-target:                                     exit 1  RED   ok        Makefile a431c03fa4c7dfd3 *** CHANGED |   FAIL  Makefile:232 is a recipe line prefixed `+`, which make runs even under -n and -q: `+@true`
+     anchor line: make was NOT invoked (0 make process(es) started)
+c4   clean tree again: anchor                                     exit 0  GREEN ok        Makefile e9d7c58edc93ed4e (unchanged) | make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+CONTAINER_DONE

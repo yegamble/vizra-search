@@ -1,5 +1,27 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Fix round 2 (on top of c3b2021): one digest-gated way to start make, and a remake probe
+
+Round 1 moved the control from grammar to digest. The re-verification then showed that a newer unpinned
+`Makefile.sh` rewrote the Makefile during the anchor's own `make -pn`, through make's built-in `% : %.sh`,
+after the digest had passed. The security re-review showed two make calls outside the gate.
+
+Round 2 adopts vizra-core PR #10's design, with the chair's correction: ONE `make -q` names every pinned
+file. All of it lives in `scripts/makegate.py`, and every script or test that starts make goes through it.
+
+| File | What it shows |
+|---|---|
+| `demo-red-green-round2.txt` | `scripts/ci-hardening-demo.py` on the final round-2 tree, 44 rows, **44/44**. The round-2 rows are: 1r (a newer `Makefile.sh`: anchor red, Makefile byte-identical); 1s (the same through `contract-drift-guard.py recipe`, which runs before the anchor); 1t (the remake probe disabled, so its test goes red); 1u (`MAKEFILES`: red, 0 make processes); 1v (a new ungated make call, so the inventory test goes red). |
+| `make43-round2.txt` / `.sh` | GNU Make 4.3 (`ubuntu:24.04`). The siblings `.sh .c .o .y .l SCCS/s. s.` are refused by the anchor AND by the contract-drift shape check, and the Makefile is unchanged in every row. RCS `,v`/`RCS/` are measured: make would not remake an existing Makefile from them, so the anchor is green with unchanged bytes. The drift check is red there only because the future-dated sibling makes make warn. R-2/R-3 rows: `MAKEFILES`, a stub make, a symlinked Makefile, `GNUmakefile`/`makefile`, and a pin for a missing file are red in both readers; `BASH_ENV` starts 0 make processes. A pinned include with a newer `inc.mk.sh` is refused by the ONE-invocation probe (`make -q Makefile inc.mk`), with inc.mk unchanged. **Measured for contrast:** a per-file `make -q Makefile` alone did NOT stay recipe-free. It was still running after 60 s (exit 124), and inc.mk was then gone (make deletes an interrupted target). That is the chair's correction, observed. Re-pinned `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.IGNORE`, `.DEFAULT`, `.EXTRA_PREREQS`, target-specific `MAKEFLAGS` and a `+` line are each refused with "0 make process(es) started". ONE row, the pattern-specific `%: SHELL := …`, was lost to a harness bug: printf read the `%` as a format, so no mutation was applied and the anchor was correctly green on the unmutated bytes. It is re-run in `make43-round2-pattern-row.txt`: red, 0 make processes. |
+| `go-meta-tests-verbose-round2.txt` | `go test -count=1 -v ./scripts/ ./internal/config/ ./internal/httpapi/`: all ok, 456 PASS, 0 FAIL. |
+| `make-ci-local-round2.txt` | `make ci` on the round-2 tree, exit 0: 613 tests, 0 skips, every package at or above its floor; vendor selftest 17/17. |
+
+A first round-2 container attempt hung for about an hour on a measured row, which ran the remake probe disabled against a +1-day sibling. The inferred cause is make remaking and re-executing in a loop; that is not verified. It was killed, and its partial output is not used.
+
+Not used: `-r`/`--no-builtin-rules`. In the probe it would hide the very built-in remake the unmodified
+pinned `make` step would perform. On the resolver it would change MAKEFLAGS and the database the checks read.
+
+
 ## Fix round 1 (on top of 4476ad5): the control moved from grammar to digest
 
 The chair's ruling on the vizra-security desk review retired the parse-time text scanner. make is now invoked
