@@ -139,14 +139,21 @@ def fail(msg):
 # --------------------------------------------------------------- resolution --
 
 
-def _makegate():
-    """scripts/makegate.py, loaded from beside this file: the one way this repository starts make."""
-    import importlib.util
+_MAKEGATE = None
 
-    spec = importlib.util.spec_from_file_location("makegate", os.path.join(os.path.dirname(os.path.abspath(__file__)), "makegate.py"))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+
+def _makegate():
+    """scripts/makegate.py, loaded ONCE from beside this file: the one way this repository starts make, and
+    the ONE makefile line reader (makefile_lines) that check_makefile_text reads the Makefile through."""
+    global _MAKEGATE
+    if _MAKEGATE is None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("makegate", os.path.join(os.path.dirname(os.path.abspath(__file__)), "makegate.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _MAKEGATE = mod
+    return _MAKEGATE
 
 
 def resolved_recipe():
@@ -208,40 +215,18 @@ def indent(text, prefix="    "):
 # the lane would still exit 0. These checks therefore read the file.
 
 
-def logical_recipe_lines(lines, start):
-    """Collect one target's recipe from Makefile text, joining continuations.
-
-    Returns a list of (first_physical_line_number, joined_text_without_tab).
-    """
-    recipe, i = [], start
-    while i < len(lines):
-        line = lines[i]
-        if line.strip() == "" or line.lstrip().startswith("#"):
-            i += 1
-            continue
-        if not line.startswith("\t"):
-            break
-        first, body = i, line[1:]
-        while body.rstrip().endswith("\\") and i + 1 < len(lines):
-            i += 1
-            body = body.rstrip()[:-1] + " " + lines[i].lstrip("\t")
-        recipe.append((first + 1, body.strip()))
-        i += 1
-    return recipe
-
-
 def check_makefile_text():
     """Refuse lane definitions whose text disarms a guard step."""
-    path = os.path.join(REPO_ROOT, MAKEFILE)
+    mg = _makegate()
     try:
-        with open(path, "r", encoding="utf-8") as handle:
-            text = handle.read()
-    except OSError as err:
+        # makegate's ONE line reader over its ONE decoding (no universal newlines), so this reading and the
+        # grammar agree on where every line starts and ends (PR #5 FINDING 14).
+        lines = mg.read_makefile_lines(os.path.join(REPO_ROOT, MAKEFILE))
+    except (OSError, UnicodeDecodeError) as err:
         fail("cannot read %s: %s" % (MAKEFILE, err))
-    lines = text.split("\n")
 
     target_re = re.compile(r"^%s\s*:" % re.escape(LANE))
-    targets = [i for i, ln in enumerate(lines) if target_re.match(ln)]
+    targets = [i for i, rec in enumerate(lines) if not rec.tab and target_re.match(rec.raw)]
     if not targets:
         fail("%s declares no `%s` target" % (MAKEFILE, LANE))
     if len(targets) > 1:
@@ -250,14 +235,14 @@ def check_makefile_text():
             "  make runs the LAST definition, which REPLACES the earlier recipe — guard steps\n"
             "  included — so a duplicate can remove this check before it ever runs. The lane\n"
             "  must have exactly one recipe."
-            % (MAKEFILE, LANE, len(targets), ", ".join(str(t + 1) for t in targets))
+            % (MAKEFILE, LANE, len(targets), ", ".join(str(lines[t].n) for t in targets))
         )
 
     # A lane defined inside a make conditional can be swapped out by setting a
     # variable, with the recipe a reader sees never executing.
     depth = 0
-    for i, ln in enumerate(lines[: targets[0]]):
-        head = ln.strip().split(" ")[0]
+    for rec in lines[: targets[0]]:
+        head = rec.raw.strip().split(" ")[0]
         if head in MAKE_CONDITIONALS:
             depth += 1
         elif head == "endif":
@@ -266,10 +251,10 @@ def check_makefile_text():
         fail(
             "the `%s` target at %s:%d is defined inside a make conditional, so which recipe\n"
             "  runs depends on a variable. The lane must be unconditional."
-            % (LANE, MAKEFILE, targets[0] + 1)
+            % (LANE, MAKEFILE, lines[targets[0]].n)
         )
 
-    recipe = logical_recipe_lines(lines, targets[0] + 1)
+    recipe = mg.recipe_lines(lines, targets[0] + 1)
     if not recipe:
         fail("the `%s` target in %s has an empty recipe" % (LANE, MAKEFILE))
 

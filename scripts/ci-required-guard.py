@@ -96,6 +96,13 @@ except ImportError:  # pragma: no cover - the CI image always has it
     print("ci-required-guard: PyYAML is required. This lane is BLOCKED, not passed.", file=sys.stderr)
     raise SystemExit(2)
 
+# scripts/makegate.py, loaded ONCE: its pin parser, its gate checks, and its ONE makefile line reader
+# (makefile_lines / read_makefile_lines), which every reading of Makefile text in this program consumes, so this
+# guard cannot split the Makefile's lines differently from the grammar or the anchor (PR #5 FINDING 14).
+_mg_spec = importlib.util.spec_from_file_location("makegate", Path(__file__).resolve().parent / "makegate.py")
+mg = importlib.util.module_from_spec(_mg_spec)
+_mg_spec.loader.exec_module(mg)
+
 # ---------------------------------------------------------------------------
 # THE FLOOR.
 #
@@ -366,30 +373,16 @@ def load_pins(path: Path) -> Pins:
 def makefile_env_names(g: Guard, makefile: Path, skip: bool) -> set[str]:
     """Names the Makefile takes from the environment — computed by the SAME code the anchor uses.
 
-    `?=` means the environment wins; a variable referenced as `$(NAME)`/`${NAME}` and
-    never assigned is taken from the environment outright (the other reference forms
-    are not read here; every gate make process drops them, see makegate.environment_words). The anchor refuses them at run time (from
-    every file make read, includes too); this refuses them as job/workflow `env:`.
+    makegate.environment_taken, over makegate's one line reader: `?=` means the environment wins; a variable
+    referenced as `$(NAME)`/`${NAME}` and never assigned is taken from the environment outright (the other
+    reference forms are refused by the grammar; every gate make process also drops every word of the pinned
+    text, see makegate.environment_words). The anchor refuses them at run time (from every file make read,
+    includes too); this refuses them as job/workflow `env:`. GOFLAGS is always included.
     """
     names = {"GOFLAGS"}
     if skip or not makefile.exists():
         return names
-    here = Path(__file__).resolve().parent / "make-integrity-guard.py"
-    spec = importlib.util.spec_from_file_location("make_integrity_guard", here)
-    if spec is None or spec.loader is None:
-        g.fail(f"cannot load {here} to compute the Makefile's environment-taken variables")
-        return names
-    mig = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mig)
-    text = makefile.read_text()
-    assigned: dict[str, str] = {}
-    for m in mig._ASSIGN_RE.finditer(text):
-        if m.group(1) not in assigned or m.group(2) == "?=":
-            assigned[m.group(1)] = m.group(2)
-    refs = set(mig._REF_RE.findall(text))
-    names |= {n for n, op in assigned.items() if op == "?="}
-    names |= {n for n in refs if n not in assigned} - mig._MAKE_BUILTIN_VARS - mig._FUNCTIONS
-    return names
+    return names | mg.environment_taken(makefile.parent, [makefile.name])
 
 
 def env_problems(scope: str, env, makefile_names: set[str]) -> list[str]:
@@ -580,15 +573,16 @@ def check_makefile_selection(g: Guard, makefile: Path) -> None:
     if not makefile.exists():
         g.fail(f"{makefile} is missing; the test selection cannot be checked")
         return
-    text = makefile.read_text()
-    pkg = re.search(r"^PKG\s*:?=\s*(.+)$", text, re.M)
+    lines = mg.read_makefile_lines(makefile)
+    pkg = next((m for rec in lines if not rec.tab for m in [re.match(r"^PKG\s*:?=\s*(.+)$", rec.raw)] if m), None)
     if not pkg or pkg.group(1).strip() != "./...":
         g.fail(f"the Makefile's PKG is {pkg.group(1).strip() if pkg else None!r}, not './...'",
                "The `test` lane would run a subset of the module while every gate stayed green.")
     else:
         g.ok("the `test` lane selects the whole module (PKG = ./...)")
-    recipe = re.search(r"^test:.*?\n((?:\t.*\n|\s*\n)+)", text, re.M)
-    if not recipe or "$(PKG)" not in recipe.group(1) or re.search(r"\s-(run|skip|short)\b", recipe.group(1)):
+    at = next((i for i, rec in enumerate(lines) if not rec.tab and re.match(r"^test:", rec.raw)), None)
+    recipe = "".join(f"\t{body}\n" for _, body in mg.recipe_lines(lines, at + 1)) if at is not None else ""
+    if not recipe or "$(PKG)" not in recipe or re.search(r"\s-(run|skip|short)\b", recipe):
         g.fail("the `test` target does not run `$(PKG)` without a test-selecting flag",
                "Its selection is not the one checked above.")
     else:
@@ -606,7 +600,8 @@ def check_local_parity(g: Guard, makefile: Path, pins: Pins) -> None:
     if not makefile.exists():
         g.fail(f"{makefile} is missing; local parity cannot be checked")
         return
-    m = re.search(r"^ci:([^#\n]*)", makefile.read_text(), re.M)
+    m = next((m for rec in mg.read_makefile_lines(makefile) if not rec.tab for m in [re.match(r"^ci:(.*)$", rec.code)]
+              if m), None)
     if not m:
         g.fail("the Makefile has no `ci:` target; there is no local complete gate to agree with CI")
         return
@@ -647,10 +642,6 @@ def check_makefile_pins(g: Guard, path: Path, root: Path, verify_bytes: bool) ->
     pinned files, and no unpinned GNUmakefile/makefile sits beside the Makefile (case-folded) — the same
     refusals the anchor makes, here in `ci-required`, without running make.
     """
-    here = Path(__file__).resolve().parent / "makegate.py"
-    spec = importlib.util.spec_from_file_location("makegate", here)
-    mg = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mg)
     if not path.is_file():
         g.fail(f"{path} is missing. make is gated on pinned Makefile bytes; without the pin there is no gate.")
         return

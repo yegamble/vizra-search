@@ -61,6 +61,9 @@ FLAGS_PIN = ".SHELLFLAGS := -eu -o pipefail -c\n"
 # Closing slice: the M-3 check as committed, and the inventory test the planted rows run.
 M3_CHECK = '            if body.startswith("$") and not body.startswith("$$"):\n'
 INVENTORY = gotest("./scripts/", "TestEveryPlaceThatStartsMakeIsGated")
+# Re-plan (one line reader): the inert-string grammar test and the reader-identity test. Neither starts make.
+GRAMMAR_STRINGS = gotest("./scripts/", "TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently")
+ONE_READER = gotest("./scripts/", "TestEveryMakefileReaderConsumesTheOneLineReader")
 
 ROWS = [
     # ---------------------------------------------------------------- item 1
@@ -281,9 +284,11 @@ ROWS = [
     dict(id="R07", item="R", name="$(call eval,...) no longer recognised as an eval",
          file="scripts/makegate.py", old=r'|\$[({]call\s+(?:eval|guile|\$)")', new='")',
          cmd=gotest("./scripts/", "TestNamedMakefileConstructsAreRefusedBeforeMake"), want="call_eval"),
-    dict(id="R09", item="R", name="FINDING 5 class: the closure reads raw lines again (a comment holding = hides a lane)",
-         file="scripts/make-integrity-guard.py", old="        for _, line in makegate._logical_lines(text):\n",
-         new='        for line in text.split("\\n"):\n',
+    # R09 re-pinned by the re-plan (one line reader): the closure now reads makegate's LogicalLine records, so the
+    # regression is reading a record's RAW text (comment included) instead of its comment-stripped code.
+    dict(id="R09", item="R", name="FINDING 5 class: the closure reads the comment again (a comment holding = hides a lane)",
+         file="scripts/make-integrity-guard.py", old="            parts = makegate._rule_parts(rec.code.rstrip())\n",
+         new="            parts = makegate._rule_parts(rec.raw.rstrip())\n",
          cmd=gotest("./scripts/", "TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes"),
          want="whose_comment_holds"),
     dict(id="R10", item="R", name="FINDING 7: run_make stops dropping every word of the pinned text",
@@ -334,6 +339,42 @@ ROWS = [
     dict(id="G6", item="G", name="control: the grammar made too strict (no `?=`), so the real Makefile no longer fits",
          file="scripts/makegate.py", old=r"(:=|\?=|=)(.*)$", new=r"(:=|=)(.*)$",
          cmd=gotest("./scripts/", "TestTheRealMakefileFitsTheGrammar"), want="does not fit the grammar"),
+    # ------------------------------ re-plan (C11-C20): ONE line reader; FINDING 14 and 15 refused by name
+    dict(id="C11", item="C", name="F14: the continued-comment refusal removed from the grammar",
+         file="scripts/makegate.py", old="        if 0 <= rec.comment_at < rec.tail:\n", new="        if False:\n",
+         cmd=GRAMMAR_STRINGS, want="f14_a_comment_continued_into_a_rule_line"),
+    dict(id="C12", item="C", name="F14: the control/invisible/non-ASCII-whitespace character refusal removed",
+         file="scripts/makegate.py", old="        if bad:\n", new="        if False:\n",
+         cmd=GRAMMAR_STRINGS, want="f14_a_lone_cr_inside_a_comment"),
+    dict(id="C13", item="C", name="F15: the directive-keyword NAME refusal removed",
+         file="scripts/makegate.py", old="        if lead and lead.group(1) in DIRECTIVE_KEYWORDS and lead.group(2):\n",
+         new="        if False:\n", cmd=GRAMMAR_STRINGS, want="f15_ifdef_as_a_variable_name"),
+    dict(id="C14", item="C", name="blank means empty: the spaces/TABs-only line refusal removed",
+         file="scripts/makegate.py", old='        if line and not line.strip(" \\t"):\n', new="        if False:\n",
+         cmd=GRAMMAR_STRINGS, want="blank_means_empty:_a_line_of_only_spaces"),
+    dict(id="C15", item="C", name="one reader: the anchor's check_text decodes the Makefile itself again (read_text)",
+         file="scripts/make-integrity-guard.py", old="            lines = makegate.read_makefile_lines(path)\n",
+         new="            lines = makegate.makefile_lines(path.read_text())\n",
+         cmd=ONE_READER, want="check_text reads makefile text itself"),
+    dict(id="C16", item="C", name="one reader: ci-required-guard's parity check reads the Makefile with its own regex again",
+         file="scripts/ci-required-guard.py",
+         old="    m = next((m for rec in mg.read_makefile_lines(makefile) if not rec.tab for m in [re.match(r\"^ci:(.*)$\", rec.code)]\n              if m), None)\n",
+         new="    m = re.search(r\"^ci:([^#\\n]*)\", makefile.read_text(), re.M)\n",
+         cmd=ONE_READER, want="poison:_ci-required-guard_check_local_parity"),
+    dict(id="C17", item="C", name="one reader: a line continues on ANY trailing backslash (the old anchor rule), not an odd run",
+         file="scripts/makegate.py", old='    return (len(physical) - len(physical.rstrip("\\\\"))) % 2 == 1\n',
+         new='    return physical.rstrip().endswith("\\\\")\n',
+         cmd=gotest("./scripts/", "TestTheAnchorReadsTheRecipeMakeReads"), want="even-backslashes"),
+    dict(id="C18", item="C", name="one reader: the reader splits with universal newlines (a lone CR becomes a line break)",
+         file="scripts/makegate.py", old='    phys = text.split("\\n")\n', new="    phys = text.splitlines() + ['']\n",
+         cmd=GRAMMAR_STRINGS, want="f14_a_lone_cr_inside_a_comment"),
+    dict(id="C19", item="C", name="one reader: the per-text cache removed, so readers of one text get different sequences",
+         file="scripts/makegate.py", old="@functools.lru_cache(maxsize=64)\n", new="",
+         cmd=ONE_READER, want="different line sequences"),
+    dict(id="C20", item="C", name="F14 re-pinned rows: the character refusal removed (a lone CR reaches make)",
+         file="scripts/makegate.py", old="        if bad:\n", new="        if False:\n",
+         cmd=gotest("./scripts/", "TestNamedMakefileConstructsAreRefusedBeforeMake/F14"),
+         want="f14_a_lone_cr_inside_a_comment"),
 ]
 
 

@@ -1,5 +1,50 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Re-plan (on top of e711d33): one line reader
+
+Input: the re-verification at e711d33, which returned FAIL with FINDING 14 REQUIRED, FINDING 15 SHOULD and an NBSP
+NIT. The defect class: two readers of the same Makefile bytes disagreed on where lines are. The grammar joined
+backslash-continued lines; the anchor's recipe reader, its definitions loop, ci-required-guard and
+contract-drift-guard split physical lines, several of them after `read_text()`/`open()`, whose universal newlines
+turn a lone CR into a line break. So a comment ending in a backslash (which make continues onto the next line)
+moved a following `\t-false` INTO the gate recipe for make and the grammar and OUT of it for the anchor.
+
+What changed:
+- **One reader.** `makegate.decode_makefile` (strict UTF-8, no newline translation) and `makegate.makefile_lines`
+  (split on LF only; an ODD run of trailing backslashes joins the next line as make joins it) are the only
+  decoding and the only splitter of makefile text. Every reader consumes their `LogicalLine` records: the grammar,
+  the by-name refusals, the static read set, the parse-time sites, `environment_taken`, `environment_words`; the
+  anchor's `prerequisite_closure`, `check_text` and `logical_recipe_lines`; ci-required-guard's
+  `makefile_env_names`, `check_makefile_selection`, `check_local_parity`; contract-drift-guard's
+  `check_makefile_text`. Which rule a TAB line belongs to is decided by one predicate (`keeps_rule_open`) for the
+  grammar and by `recipe_lines` for every reader after it. The duplicate splitters are deleted: `_logical_lines`,
+  `_grammar_lines`, both `logical_recipe_lines` bodies, and the physical-line loops. `makefile_lines` is cached per
+  text, so in one program every reader of a text receives the SAME sequence object.
+- **The grammar, tightened before make.** Refused by name: a comment (own line, or after an assignment or rule)
+  ending in an unescaped backslash; a CR anywhere (so CRLF too), a NUL, any other control character except TAB, an
+  invisible format character (e.g. U+202E), and non-ASCII whitespace (e.g. NBSP); a line of only spaces/TABs
+  ("blank" now means EMPTY); a directive keyword as an assigned NAME or as a rule target (FINDING 15). A comment
+  line is `#` in column 0.
+- **The real Makefile fits unchanged** (sha256 `e9d7c58e…`, equal to its pin): 133 blank/comment, 15 assignment,
+  17 phony, 17 rule, 24 recipe lines — the same counts as at e711d33. On the real Makefile the readers' outputs are
+  byte-identical to e711d33's: environment-taken names, environment words (559), parse-time sites (4), grammar
+  (no problem), by-name refusals (none) and the closure (10 targets).
+
+Superseded sentences: round 2's "blank, or a comment" (below) is now "empty, or a comment line (`#` in column 0)";
+round 1's "the closure reads rule lines with comments stripped" still holds, now through the one reader.
+
+Changed demo row: **R09** mutated `makegate._logical_lines`, which no longer exists. It now mutates the closure to
+read a record's RAW text (comment included) instead of its comment-stripped code; same test, same declared reason.
+
+| File | What it shows |
+|---|---|
+| `closing/replan/new-tests-at-e711d33-BEFORE.txt` | This commit's `scripts/scripts_test.go` against e711d33's UNMODIFIED gate code (a detached worktree at e711d33, only the test file replaced). exit 1. **55 subtests FAIL**: all 31 inert-string grammar cases (13 FINDING 14 / blank / character / rule-target cases and 18 directive keywords; each `grammar_problems gave []`), and all 24 new re-pinned rows. Of the 24 rows: **5 were accepted outright** (anchor exit 0, make ran): the NUL row and `unexport`, `vpath`, `undefine`, `private` as names. **6 were refused before make, but by another check**: the continued rule-line comment (as "a rule line continued with a backslash"), CRLF ("not one of the allowed shapes"), `include`/`sinclude`/`load` as names (the read set took `:=` for an unpinned include) and `-include` ("the `-include` directive"). **11 went red only after make had started**: `make -q Makefile` exited 2 on GNU Make 3.81 for `ifdef`, `ifndef`, `ifeq`, `ifneq`, `else`, `endif`, `define`, `endef`, `export`, `override` as names and for the NBSP line — so this make did NOT read those lines as the plain assignments the e711d33 grammar accepted (an observation from this run, not a measurement designed for it). **2 went red only through the later duplicate-target check** (the two rows that re-declare `test:`). `TestEveryMakefileReaderConsumesTheOneLineReader` and `TestTheAnchorReadsTheRecipeMakeReads` FAIL (no one reader exists). Starting make here was inherent to running the new rows on the old gate; every fixture is inert (no `$(shell …)`, `+` or `$(MAKE)`; only `-q`, `-pn` and `--dry-run` ran). |
+| `closing/replan/make-ci-local-replan.txt` | `make ci` exit 0: contract-drift 365 tests / 4 packages; test-noskip **801 tests / 7 packages / 0 skipped / 0 failed**, every package at or above its floor; selftest 17/17. |
+| `closing/replan/go-meta-tests-verbose-replan.txt` | `go test -count=1 -v ./scripts/ ./internal/httpapi/` exit 0: **560 PASS / 0 FAIL / 0 SKIP** (479 at e711d33; +24 re-pinned rows, +38 inert-string cases, +18 one-reader probes, +1 recipe test). |
+| `closing/replan/guards-replan.txt` | `ci-required-guard.sh` exit 0 (11 required checks); `make-integrity-guard.sh --workflow` exit 0 (make ran 21 times); `vendor-contract.py --check` exit 0. |
+| `closing/replan/demo-red-green-replan.txt` | `scripts/ci-hardening-demo.py` exit 0: **85/85 rows behaved as declared**. Every row was red for its declared reason, restored byte-identically, then green. That includes R09 (re-pinned) and C11–C20. C11–C14: the continued-comment, character, directive-keyword and spaces-only refusals each removed. C15: the anchor decodes the Makefile itself. C16: ci-required-guard's parity check uses its own regex. C17: continuation on any trailing backslash. C18: a universal-newline split. C19: the per-text cache removed. C20: the character refusal removed, through the re-pinned rows. |
+| `closing/replan/demo-red-green-replan-first-attempt.txt` | The first full run: 84/85, exit 1. **C19 was NOT RED**: the identity probe recorded `id()`s of sequences it did not keep alive, so a freed sequence's id was reused and two different sequences looked identical. The probe now keeps each sequence object. The C19 row alone was then red and green, and the full demo was re-run (the line above). Kept as a disclosed failure. |
+
 ## Closing slice, fix round 2 (on top of 888a51b): the Makefile grammar is an allowlist
 
 Input: the re-verification at 888a51b, which returned FAIL with FINDINGs 9–11 REQUIRED and 12–13 SHOULD. Every

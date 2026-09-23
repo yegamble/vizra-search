@@ -31,13 +31,20 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
      plus every literal include/load target, transitively; each must be pinned. (The grammar below
      refuses `include` and `load`, so today the read set is `Makefile` alone.) No GNUmakefile or
      makefile may sit beside it (compared case-folded, so a case-insensitive disk cannot hide one).
+     ONE LINE READER (makefile_lines, over decode_makefile: strict UTF-8, no newline translation): the
+     logical lines every check that reads makefile text consumes — the grammar and the named refusals
+     here, the anchor's, ci-required-guard's and contract-drift-guard's readings after it.
      GRAMMAR (grammar_problems, the control for what the reviewed bytes may say): an ALLOWLIST,
-     default-deny. Every logical line of every pinned makefile must be exactly one of: blank or a
-     comment; `NAME := | ?= | = value` (NAME a literal identifier, `.SHELLFLAGS` or `.DEFAULT_GOAL`)
-     whose value uses only `$$`, `$(NAME)`/`${NAME}` references and `$(shell …)`; `.PHONY: names`; a
-     rule line `name: prerequisites` with ONE literal target (not starting with `.`) and literal
-     prerequisite words; or a TAB recipe line of the rule above it, whose text uses only `$$` and
-     `$(NAME)`/`${NAME}` references, not `$(MAKE)`. ANY other line is refused with its line number.
+     default-deny. First, a line holding a CR (anywhere), a NUL or any other control character except
+     TAB, an invisible format character or non-ASCII whitespace is refused, as is a line of only
+     spaces/TABs and a comment that ends in an unescaped backslash (make continues it onto the next
+     line). Then every logical line of every pinned makefile must be exactly one of: empty or a
+     comment (`#` in column 0); `NAME := | ?= | = value` (NAME a literal identifier that is not a
+     directive keyword, `.SHELLFLAGS` or `.DEFAULT_GOAL`) whose value uses only `$$`,
+     `$(NAME)`/`${NAME}` references and `$(shell …)`; `.PHONY: names`; a rule line
+     `name: prerequisites` with ONE literal target (not starting with `.`, not a directive keyword) and
+     literal prerequisite words; or a TAB recipe line of the rule above it, whose text uses only `$$`
+     and `$(NAME)`/`${NAME}` references, not `$(MAKE)`. ANY other line is refused with its line number.
      So no conditional, include, define, export, override, private, vpath, function outside
      `$(shell …)`, computed name, inline `;` recipe, multi-target, special-target, pattern or suffix
      rule can appear. Within that grammar, also refused BY NAME (reviewed_bytes_problems, kept as a
@@ -86,13 +93,16 @@ CLI (used by the Go tests):  makegate.py [--root DIR] -- <make arguments>
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import os
 import re
 import stat
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
+from typing import NamedTuple, Optional
 
 PIN_FILE = Path(".github") / "pinned-makefiles.yml"
 PIN_HEADER_RE = re.compile(r"^makefiles:[ \t]*$")
@@ -192,27 +202,103 @@ def load_pin(root: Path) -> dict[str, str]:
     return entries
 
 
-def _logical_lines(text: str):
-    lines = text.split("\n")
+# ------------------------------------------------------------ the one line reader ---
+#
+# ONE reading of a makefile's bytes serves EVERY check that reads its text (PR #5 closing re-verification at
+# e711d33, FINDING 14). Before, the grammar joined backslash-continued lines while the anchor's recipe reader
+# split physical lines of `read_text()` (universal newlines), so a comment continued with a backslash moved
+# the next line INTO the comment for make and the grammar and OUT of it for the anchor, and a lone CR was a
+# line break to one reader and not to the others. Now every reader — grammar_problems, reviewed_bytes_problems,
+# static_read_set, the parse-time sites, environment_taken, environment_words here; prerequisite_closure,
+# check_text and logical_recipe_lines in the anchor; makefile_env_names, check_makefile_selection and
+# check_local_parity in ci-required-guard; check_makefile_text in contract-drift-guard — gets its lines from
+# makefile_lines(), over text decoded by decode_makefile(). No other function in those files splits makefile
+# text, and TestEveryMakefileReaderConsumesTheOneLineReader holds that. The grammar then refuses, before make,
+# every byte on which make's own line reading could still differ from this one (a CR, a NUL, any other control
+# or invisible character, non-ASCII whitespace, a comment continued by a backslash).
+
+
+class LogicalLine(NamedTuple):
+    """One logical line of a makefile, as makefile_lines() reads it."""
+
+    n: int                      # number of its first physical line (1-based)
+    segments: tuple             # the physical lines it was joined from, exactly as decoded
+    tab: bool                   # its first physical line starts with TAB (a recipe line while a rule is open)
+    raw: str                    # the physical lines joined as make joins them, comments included
+    code: str                   # non-TAB: raw before a make comment; TAB: raw (make hands `#` to the shell)
+    comment_at: int             # non-TAB: index in raw of the `#` that starts a make comment; else -1
+    comment_why: Optional[str]  # non-TAB: why that comment boundary is refused (a `#` inside `$(…)`), or None
+    tail: int                   # index in raw where the text of its LAST physical line starts
+
+
+def decode_makefile(data: bytes) -> str:
+    """THE decoding of makefile bytes: strict UTF-8, NO newline translation (a CR stays a CR)."""
+    return data.decode("utf-8")
+
+
+def read_makefile_text(path) -> str:
+    return decode_makefile(Path(path).read_bytes())
+
+
+def _continued(physical: str) -> bool:
+    """make continues a line that ends in an ODD number of backslashes immediately before the newline."""
+    return (len(physical) - len(physical.rstrip("\\"))) % 2 == 1
+
+
+@functools.lru_cache(maxsize=64)
+def makefile_lines(text: str) -> tuple:
+    """THE line reader: `text` split on LF only, backslash-newline joined as make joins it.
+
+    A TAB line (a recipe line) keeps its continuation lines raw, minus the one leading TAB make removes; any
+    other line joins its continuation with one space and the continuation's leading spaces/TABs removed. The
+    result is cached per text, so every reader of the same text in one program receives the SAME sequence.
+    """
+    phys = text.split("\n")
+    out = []
     i = 0
-    while i < len(lines):
-        first, line = i + 1, lines[i]
-        while line.endswith("\\") and (len(line) - len(line.rstrip("\\"))) % 2 == 1 and i + 1 < len(lines):
+    while i < len(phys):
+        first = i
+        raw = phys[i]
+        tab = raw.startswith("\t")
+        tail = 0
+        while _continued(phys[i]) and i + 1 < len(phys):
             i += 1
-            line = line[:-1] + " " + lines[i].lstrip()
-        out, j = [], 0
-        while j < len(line):
-            c = line[j]
-            if c == "\\" and j + 1 < len(line):
-                out.append(line[j:j + 2])
-                j += 2
-                continue
-            if c == "#":
-                break
-            out.append(c)
-            j += 1
-        yield first, "".join(out)
+            nxt = phys[i]
+            part = (nxt[1:] if nxt.startswith("\t") else nxt) if tab else nxt.lstrip(" \t")
+            raw = raw[:-1] + " "
+            tail = len(raw)
+            raw += part
+        if tab:
+            code, at, why = raw, -1, None
+        else:
+            code, why = _strip_comment(raw)
+            at = len(code) if len(code) < len(raw) else -1
+        out.append(LogicalLine(first + 1, tuple(phys[first:i + 1]), tab, raw, code, at, why, tail))
         i += 1
+    return tuple(out)
+
+
+def read_makefile_lines(path) -> tuple:
+    """makefile_lines() over read_makefile_text(path): what every reader that holds a PATH calls."""
+    return makefile_lines(read_makefile_text(path))
+
+
+def keeps_rule_open(rec: LogicalLine) -> bool:
+    """A blank line (an EMPTY line) or a comment line (`#` in column 0) leaves an open rule's recipe open."""
+    return not rec.tab and (rec.raw == "" or rec.raw.startswith("#"))
+
+
+def recipe_lines(lines, start: int) -> list:
+    """The recipe of the rule on lines[start - 1]: (line number, text after its TAB, stripped) for every TAB
+    line from lines[start] on. Blank and comment lines keep the recipe open; any other line closes it —
+    exactly as grammar_problems decides which rule a TAB line belongs to."""
+    recipe = []
+    for rec in lines[start:]:
+        if rec.tab:
+            recipe.append((rec.n, rec.raw[1:].strip()))
+        elif not keeps_rule_open(rec):
+            break
+    return recipe
 
 
 def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[str]]:
@@ -239,12 +325,14 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
             continue
         problems += grammar_problems(rel, text)
         problems += reviewed_bytes_problems(rel, text)
-        for n, line in enumerate(text.split("\n"), 1):
-            if _MANUFACTURES_DIRECTIVES_RE.search(line):
-                problems.append(f"{rel}:{n} calls $(eval …) or $(guile …) (directly or through $(call …)), which can manufacture an include the "
-                                f"static reading cannot see: `{line.strip()[:120]}`")
-        for n, line in _logical_lines(text):
-            m = _READ_DIRECTIVE_RE.match(line)
+        lines = makefile_lines(text)
+        for rec in lines:
+            if _MANUFACTURES_DIRECTIVES_RE.search(rec.raw):
+                problems.append(f"{rel}:{rec.n} calls $(eval …) or $(guile …) (directly or through $(call …)), which can manufacture an include the "
+                                f"static reading cannot see: `{rec.raw.strip()[:120]}`")
+        for rec in lines:
+            n = rec.n
+            m = _READ_DIRECTIVE_RE.match(rec.code)
             if not m:
                 continue
             directive, args = m.group(1), (m.group(2) or "").strip()
@@ -267,22 +355,30 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
 # THE CONTROL for what the reviewed bytes may say (chair ruling after PR #5 closing fix round 1): an
 # ALLOWLIST of line shapes, default-deny, checked before make. Every round of review found another
 # spelling a denylist missed, because make's grammar is unbounded; this repository's Makefile uses a
-# tiny part of it, so that part is all a pinned makefile may use. Every LOGICAL line (backslash-newline
-# joined) must be exactly one of:
+# tiny part of it, so that part is all a pinned makefile may use. It reads the ONE logical-line sequence
+# (makefile_lines, above) every later reader reads too. First, BY NAME, whatever the shape: a CR anywhere,
+# a NUL or any other control character except TAB, an invisible format character or non-ASCII whitespace
+# (_forbidden_char); a line of only spaces/TABs (blank means EMPTY: make reads a TAB-only line in a rule as
+# an empty recipe line); and a comment that ends in an unescaped backslash, which make continues onto the
+# next line (manual §3.1; FINDING 14). Then every logical line must be exactly one of:
 #
-#   BLANK/COMMENT  empty, or a comment (`#` outside any `$(…)`/`${…}`; text after it is ignored);
-#   ASSIGNMENT     `NAME op value`: NAME a literal `[A-Za-z_][A-Za-z0-9_]*` or one of ASSIGNABLE_SPECIALS,
+#   BLANK/COMMENT  empty, or a comment line with `#` in column 0 (keeps_rule_open), or a comment after an
+#                  assignment or rule (`#` outside any `$(…)`/`${…}`; text after it is ignored);
+#   ASSIGNMENT     `NAME op value`: NAME a literal `[A-Za-z_][A-Za-z0-9_]*` that is not one of
+#                  DIRECTIVE_KEYWORDS (FINDING 15), or one of ASSIGNABLE_SPECIALS,
 #                  op one of `:=` `?=` `=`, at the start of the line; the value may use only `$$`,
 #                  `$(NAME)`/`${NAME}` references and `$(shell …)` (whose text may use the same
 #                  references); every other `$` form — a function, a substitution reference, `$X`,
 #                  a computed name — is refused;
 #   PHONY          `.PHONY: name …` with literal names;
 #   RULE           `name: prerequisite …` at the start of the line: ONE literal target (not starting with
-#                  `.`, so no special target, suffix or pattern rule), one `:`, literal prerequisite words;
+#                  `.`, so no special target, suffix or pattern rule; not a directive keyword), one `:`,
+#                  literal prerequisite words;
 #                  no `;`, `$`, `%`, `|`, `=`, second `:`, `::` or `&:`;
 #   RECIPE         a TAB line (with its backslash-continued lines, read RAW: make hands `#` in a recipe to
-#                  the shell) while a RULE is open — blank and comment lines between recipe lines keep it
-#                  open, any other line closes it. Its text may use only `$$` and `$(NAME)`/`${NAME}`
+#                  the shell) while a RULE is open — empty and comment lines between recipe lines keep it
+#                  open, any other line closes it (keeps_rule_open; recipe_lines makes the same decision
+#                  for every reader after make). Its text may use only `$$` and `$(NAME)`/`${NAME}`
 #                  references (RECIPE_FUNCTIONS, the functions a recipe may call, is empty: this Makefile
 #                  calls none), and not `$(MAKE)`.
 #
@@ -361,33 +457,61 @@ def _strip_comment(line: str):
     return line, None
 
 
-def _grammar_lines(text: str):
-    """(first physical line number, joined logical text, is_tab) — backslash-newline joined as make does."""
-    lines = text.split("\n")
-    i = 0
-    while i < len(lines):
-        first, line = i + 1, lines[i]
-        tab = line.startswith("\t")
-        while line.endswith("\\") and (len(line) - len(line.rstrip("\\"))) % 2 == 1 and i + 1 < len(lines):
-            i += 1
-            line = line[:-1] + " " + (lines[i] if tab else lines[i].lstrip())
-        yield first, line, tab
-        i += 1
+# GNU Make's directive words (manual §3.3, §5.8, §6, §7, §4.5.2, §12.2): none may be an assigned NAME or a rule
+# target (FINDING 15), because whether make reads `ifdef := 1` as an assignment or as the directive has differed
+# between make versions, and the grammar must not see an assignment where make might see a conditional.
+DIRECTIVE_KEYWORDS = frozenset({
+    "ifdef", "ifndef", "ifeq", "ifneq", "else", "endif", "include", "-include", "sinclude", "define", "endef",
+    "export", "unexport", "override", "private", "undefine", "vpath", "load", "-load",
+})
+_G_LEAD_RE = re.compile(r"^([^\s:=?+!#]+)[ \t]*(:::=|::=|:=|\?=|\+=|!=|=|&?::?)?")
+
+
+def _forbidden_char(ch: str):
+    """Why `ch` may not appear in a pinned makefile, or None. Only TAB and LF among control characters."""
+    if ch == "\t" or " " <= ch <= "~":
+        return None
+    if ch == "\r":
+        return ("a carriage return (CR, U+000D): make drops a CR before a newline but keeps it elsewhere, and a "
+                "text reader with universal newlines breaks the line there")
+    if ch == "\0":
+        return "a NUL byte (U+0000): make does not read the rest of that line"
+    cat = unicodedata.category(ch)
+    if cat == "Cc":
+        return f"a control character (U+{ord(ch):04X})"
+    if cat == "Cf":
+        return f"an invisible format character (U+{ord(ch):04X}), which a reviewer cannot see"
+    if ch.isspace():
+        return f"a non-ASCII whitespace character (U+{ord(ch):04X}), which make does not read as whitespace"
+    return None
 
 
 def grammar_problems(rel: str, text: str) -> list[str]:
-    """Default-deny: every logical line must be one of the shapes in the block comment above."""
+    """Default-deny: every logical line (makefile_lines) must be one of the shapes in the block comment above."""
     out: list[str] = []
     in_rule = False
     shapes = {"blank/comment": 0, "assignment": 0, "phony": 0, "rule": 0, "recipe": 0}
 
     def refuse(n: int, line: str, why: str) -> None:
         out.append(f"{rel}:{n} is outside the Makefile grammar this gate allows ({why}): `{line.strip()[:100]}`. "
-                   f"Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a "
+                   f"Every line must be empty, a comment, `NAME := | ?= | = value`, `.PHONY: names`, a "
                    f"single-target rule `name: prerequisites`, or a TAB recipe line of a rule.")
 
-    for n, line, tab in _grammar_lines(text):
-        if tab:
+    for rec in makefile_lines(text):
+        n, line = rec.n, rec.raw
+        bad = [(rec.n + k, seg, why) for k, seg in enumerate(rec.segments)
+               for why in [next(filter(None, map(_forbidden_char, seg)), None)] if why]
+        if bad:
+            for k, seg, why in bad:
+                refuse(k, repr(seg)[1:-1], why)
+            in_rule = False
+            continue
+        if line and not line.strip(" \t"):
+            refuse(n, repr(line), "a line of only spaces or TABs; a blank line must be empty, because make "
+                                        "reads a TAB-only line inside a rule as an empty recipe line")
+            in_rule = False
+            continue
+        if rec.tab:
             if not in_rule:
                 refuse(n, line, "a TAB line outside a rule")
                 continue
@@ -395,15 +519,26 @@ def grammar_problems(rel: str, text: str) -> list[str]:
             for d in _dollar_problems(line, allow_shell=False):
                 refuse(n, line, f"a recipe line using {d}")
             continue
-        body, why = _strip_comment(line)
-        if why:
-            refuse(n, line, why)
+        if rec.comment_why:
+            refuse(n, line, rec.comment_why)
             in_rule = False
             continue
-        if not body.strip():
-            shapes["blank/comment"] += 1
+        if 0 <= rec.comment_at < rec.tail:
+            refuse(n, line, "a comment continued onto the next line by a trailing backslash; make reads that next "
+                            "line as part of the comment")
+            in_rule = False
             continue
+        if keeps_rule_open(rec):
+            shapes["blank/comment"] += 1  # an empty line, or a comment line (`#` in column 0)
+            continue
+        body = rec.code
         in_rule = False
+        lead = _G_LEAD_RE.match(body)
+        if lead and lead.group(1) in DIRECTIVE_KEYWORDS and lead.group(2):
+            kind = "a rule target" if lead.group(2).lstrip("&") in (":", "::") else "a variable name"
+            refuse(n, line, f"a directive keyword (`{lead.group(1)}`) as {kind}; make may read the line as that "
+                            f"directive")
+            continue
         m = _G_ASSIGN_RE.match(body)
         if m:
             shapes["assignment"] += 1
@@ -417,7 +552,8 @@ def grammar_problems(rel: str, text: str) -> list[str]:
             shapes["rule"] += 1
             in_rule = True
             continue
-        first = body.split()[0]
+        words = body.split()
+        first = words[0] if words else ""
         if first in ("ifeq", "ifneq", "ifdef", "ifndef", "else", "endif"):
             why = "a conditional directive"
         elif first in ("include", "-include", "sinclude", "load", "-load"):
@@ -609,9 +745,9 @@ def rule_line_problems(rel: str, n: int, raw: str, physical: str) -> list[str]:
 def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
     """Named constructs refused in pinned bytes before make starts. See the block comment above."""
     out: list[str] = []
-    physical_lines = text.split("\n")
-    for n, line in _logical_lines(text):
-        raw = line.rstrip()
+    for rec in makefile_lines(text):
+        n = rec.n
+        raw = rec.code.rstrip()
         if not raw.strip():
             continue
         if raw.startswith("\t"):
@@ -632,7 +768,7 @@ def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
         stripped = raw.strip()
         if stripped in APPROVED_SHELL_LINES:
             continue
-        out += rule_line_problems(rel, n, raw, physical_lines[n - 1])
+        out += rule_line_problems(rel, n, raw, rec.segments[0])
         out += computed_name_problems(rel, n, raw)
         m = _ASSIGN_CONTROLLED_RE.match(raw) or _DEFINE_CONTROLLED_RE.match(raw)
         if m:
@@ -677,7 +813,7 @@ def check_pinned_bytes(root: Path) -> tuple[list[str], dict[str, str], list[str]
                             f"(`shasum -a 256 {rel}`).")
             continue
         try:
-            texts[rel] = data.decode("utf-8")
+            texts[rel] = decode_makefile(data)
         except UnicodeDecodeError:
             problems.append(f"{rel} is not UTF-8 text.")
     order, read_problems = static_read_set(root, texts)
@@ -690,8 +826,8 @@ def check_pinned_bytes(root: Path) -> tuple[list[str], dict[str, str], list[str]
                             f"Makefile drifted.")
     if problems:
         raise GateRefused(problems)
-    sites = [f"{rel}:{n} `{line.strip()[:80]}`" for rel in order
-             for n, line in _logical_lines(texts[rel]) if _PARSE_TIME_EXEC_RE.search(line)]
+    sites = [f"{rel}:{rec.n} `{rec.code.strip()[:80]}`" for rel in order
+             for rec in makefile_lines(texts[rel]) if _PARSE_TIME_EXEC_RE.search(rec.code)]
     return order, {rel: digests[rel] for rel in order}, sites
 
 
@@ -763,13 +899,14 @@ def environment_taken(root: Path, files) -> set[str]:
     for rel in files:
         path = Path(rel) if Path(rel).is_absolute() else Path(root) / rel
         try:
-            text = path.read_text()
+            lines = read_makefile_lines(path)
         except OSError:
             continue
-        for m in _ASSIGN_RE.finditer(text):
-            if m.group(1) not in assigned or m.group(2) == "?=":
+        for rec in lines:
+            m = _ASSIGN_RE.match(rec.raw)
+            if m and (m.group(1) not in assigned or m.group(2) == "?="):
                 assigned[m.group(1)] = m.group(2)
-        refs |= set(_REF_RE.findall(text))
+            refs |= set(_REF_RE.findall(rec.raw))
     taken = {n for n, op in assigned.items() if op == "?="}
     taken |= {n for n in refs if n not in assigned} - _MAKE_BUILTIN_VARS - _FUNCTIONS
     taken.add("GOFLAGS")
@@ -795,9 +932,11 @@ def environment_words(root: Path, files) -> set[str]:
     for rel in files:
         path = Path(rel) if Path(rel).is_absolute() else Path(root) / rel
         try:
-            words |= set(_WORD_RE.findall(path.read_text()))
+            lines = read_makefile_lines(path)
         except OSError:
             continue
+        for rec in lines:
+            words |= set(_WORD_RE.findall(rec.raw))
     return words - KEEP_ENV
 
 

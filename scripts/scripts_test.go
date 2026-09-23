@@ -1718,7 +1718,7 @@ func TestTheRemakeProbeCoversEveryPinnedInclude(t *testing.T) {
 // recipe here is a plain `-true`; nothing is built to exploit it.
 func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
 	requirePython(t)
-	for _, tc := range []struct{ name, add, want string }{
+	for _, tc := range append([]struct{ name, add, want string }{
 		{".RECIPEPREFIX := > with a > -true recipe", "\n.RECIPEPREFIX := >\nextra-target:\n> -true\n", "assigns `.recipeprefix`"},
 		{"override .RECIPEPREFIX = >", "\noverride .RECIPEPREFIX = >\n", "assigns `.recipeprefix`"},
 		{"define .RECIPEPREFIX", "\ndefine .RECIPEPREFIX\n>\nendef\n", "assigns `.recipeprefix`"},
@@ -1802,7 +1802,15 @@ func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
 		{"grammar: $(origin V) in a value", "\nINERT := $(origin VZ_M4_ORIGIN)\n", "outside the makefile grammar"},
 		{"grammar: $(value V) in a value", "\nINERT := $(value VZ_M4_VALUE)\n", "outside the makefile grammar"},
 		{"grammar: ifdef V", "\nifdef VZ_M4_IFDEF\nendif\n", "outside the makefile grammar"},
-	} {
+		// FINDING 14 (re-verification at e711d33): where a line ENDS must be read the same way by every
+		// reader. Each row is refused BY NAME before make. Inert: `-false` is never run.
+		{"F14 a comment continued into a rule line", "\ntest:\n\tgo test\n# note \\\ninert:\n\t-false\n", "a comment continued onto the next line"},
+		{"F14 a rule line whose trailing comment is continued", "\ntest: # c \\\ninert:\n\t-false\n", "a comment continued onto the next line"},
+		{"F14 a lone CR inside a comment", "\ntest:\n\tgo test\n# note\rX := 1\n\t-false\n", "a carriage return"},
+		{"F14 CRLF line endings", "\ninert-target:\r\n\ttrue\r\n", "a carriage return"},
+		{"F14 a NUL inside a comment", "\n# inert\x00 comment\n", "a nul byte"},
+		{"F14 an NBSP-only line", "\n \n", "a non-ascii whitespace character (u+00a0)"},
+	}, directiveKeywordRows()...) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -1977,5 +1985,449 @@ print(json.dumps({"problems": problems, "shapes": mg.grammar_problems.last_shape
 	}
 	if !t.Failed() {
 		t.Logf("the real Makefile fits the grammar: %v; RECIPE_FUNCTIONS = %v", got.Shapes, got.RecipeFunctions)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ONE line reader (PR #5 closing re-verification at e711d33, FINDING 14 and 15)
+// ---------------------------------------------------------------------------
+
+// directiveKeywords are GNU Make's directive words. None may be an assigned
+// variable NAME (FINDING 15): on some make versions `ifdef := 1` may be read
+// as the directive, so the grammar would see an assignment where make sees a
+// conditional.
+var directiveKeywords = []string{
+	"ifdef", "ifndef", "ifeq", "ifneq", "else", "endif", "include", "-include", "sinclude",
+	"define", "endef", "export", "unexport", "override", "private", "undefine", "vpath", "load",
+}
+
+// directiveKeywordRows are TestNamedMakefileConstructsAreRefusedBeforeMake rows:
+// each directive keyword as an assigned name, re-pinned, refused by name before
+// make. Inert: an assignment of 1.
+func directiveKeywordRows() []struct{ name, add, want string } {
+	var rows []struct{ name, add, want string }
+	for _, kw := range directiveKeywords {
+		rows = append(rows, struct{ name, add, want string }{
+			"F15 " + kw + " as a variable name", "\n" + kw + " := 1\n",
+			"a directive keyword (`" + kw + "`) as a variable name",
+		})
+	}
+	return rows
+}
+
+type grammarCase struct{ name, text, want string }
+
+// misreadLineCases are inert strings the grammar must refuse BY NAME: every
+// place two readers could disagree on where a line ends (FINDING 14), and the
+// directive keywords as names (FINDING 15). Nothing here is written to a
+// Makefile or run.
+func misreadLineCases() []grammarCase {
+	cases := []grammarCase{
+		{"F14 a comment continued into a rule line", "test:\n\tgo test\n# note \\\ninert:\n\t-false\n", "a comment continued onto the next line"},
+		{"F14 a rule line whose trailing comment is continued", "test: # c \\\ninert:\n\t-false\n", "a comment continued onto the next line"},
+		{"F14 an assignment whose trailing comment is continued", "INERT := 1 # c \\\ninert:\n\t-false\n", "a comment continued onto the next line"},
+		{"F14 a lone CR inside a comment", "test:\n\tgo test\n# note\rX := 1\n\t-false\n", "a carriage return"},
+		{"F14 CRLF line endings", "test:\r\n\tgo test\r\n", "a carriage return"},
+		{"F14 CRLF after a comment's trailing backslash", "test:\n\tgo test\n# note \\\r\ninert:\n\t-false\n", "a carriage return"},
+		{"F14 a NUL inside a comment", "test:\n\tgo test\n# note\x00\ninert:\n\t-false\n", "a nul byte"},
+		{"F14 an NBSP-only line", "test:\n\tgo test\n \n\t-false\n", "a non-ascii whitespace character (u+00a0)"},
+		{"blank means empty: a line of only spaces", "test:\n\tgo test\n   \n\t-false\n", "only spaces or tabs"},
+		{"blank means empty: a TAB-only line", "test:\n\tgo test\n\t\n", "only spaces or tabs"},
+		{"a form feed", "INERT := 1\x0c\n", "a control character (u+000c)"},
+		{"a right-to-left override in a comment", "# inert ‮\n", "an invisible format character (u+202e)"},
+		{"F15 a directive keyword as a rule target", "ifdef: inert\n", "a directive keyword (`ifdef`) as a rule target"},
+	}
+	for _, kw := range directiveKeywords {
+		cases = append(cases, grammarCase{"F15 " + kw + " as a variable name", kw + " := 1\n",
+			"a directive keyword (`" + kw + "`) as a variable name"})
+	}
+	return cases
+}
+
+// acceptedLineCases are the controls: lines every reader reads the same way,
+// which the grammar must NOT refuse, so the refusals above are not a grammar
+// that refuses everything.
+var acceptedLineCases = []grammarCase{
+	{"a comment line that is not continued, between recipe lines", "test:\n\tgo test\n# note\n\t-false\n", ""},
+	{"an EVEN run of backslashes ending a comment (not a continuation)", "# note \\\\\ninert:\n", ""},
+	{"a continued assignment whose comment is on its last line", "INERT := a \\\n  b # c\n", ""},
+	{"a continued recipe line", "test:\n\tgo test \\\n\t  -v\n", ""},
+	{"a recipe line holding # and a continuation (make hands it to the shell)", "test:\n\techo a # b \\\n\techo c\n", ""},
+	{"an empty line inside a recipe", "test:\n\tgo test\n\n\tgo vet\n", ""},
+}
+
+const grammarOnStrings = `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("makegate", sys.argv[1] + "/scripts/makegate.py")
+mg = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mg)
+cases = json.load(open(sys.argv[2]))
+print(json.dumps({c[0]: mg.grammar_problems("Makefile", c[1]) for c in cases}))
+`
+
+// FINDING 14 and 15, through the committed grammar function on inert strings:
+// each is refused by name, and each control is accepted. No make process, no
+// Makefile. The same shapes, re-pinned into a copy of the real Makefile, are
+// rows of TestNamedMakefileConstructsAreRefusedBeforeMake.
+func TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently(t *testing.T) {
+	requirePython(t)
+	refused := misreadLineCases()
+	all := append(append([]grammarCase{}, refused...), acceptedLineCases...)
+	var pairs [][2]string
+	for _, c := range all {
+		pairs = append(pairs, [2]string{c.name, c.text})
+	}
+	data, err := json.Marshal(pairs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	casesFile := filepath.Join(t.TempDir(), "cases.json")
+	if err := os.WriteFile(casesFile, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := repoRoot(t)
+	out, code := run(t, root, cleanEnv(), "python3", "-c", grammarOnStrings, root, casesFile)
+	if code != 0 {
+		t.Fatalf("the grammar check did not run: exit %d\n%s", code, out)
+	}
+	var got map[string][]string
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("unreadable result: %v\n%s", err, out)
+	}
+	for _, c := range refused {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			problems, ok := got[c.name]
+			if !ok {
+				t.Fatalf("no result for %q", c.name)
+			}
+			joined := strings.ToLower(strings.Join(problems, "\n"))
+			if !strings.Contains(joined, c.want) || !strings.Contains(joined, "outside the makefile grammar") {
+				t.Fatalf("%q: grammar_problems gave %q; want a refusal naming %q", c.text, problems, c.want)
+			}
+			t.Logf("%q | refused: %s", c.text, problems[0])
+		})
+	}
+	for _, c := range acceptedLineCases {
+		c := c
+		t.Run("control: "+c.name, func(t *testing.T) {
+			if problems := got[c.name]; len(problems) != 0 {
+				t.Fatalf("%q: grammar_problems refused a line every reader reads the same way: %q", c.text, problems)
+			}
+		})
+	}
+}
+
+// oneReaderProbe loads the three programs that read pinned makefile text (the
+// anchor, ci-required-guard, contract-drift-guard) and makegate, and proves
+// every reader of makefile text gets its lines from makegate.makefile_lines:
+//
+//   - POISON: makefile_lines is wrapped to rewrite the text it is given. Each
+//     reader's verdict on an inert fixture must change exactly as the poison
+//     says. A reader with any other path to the bytes would not see it.
+//   - SOURCE: no reader function splits text, reads a file as text, decodes
+//     bytes or runs a multi-line regex itself; in makegate only makefile_lines
+//     (and load_pin, which reads the pin YAML) splits on a newline.
+//   - IDENTITY: within one program every reader of the same text receives the
+//     SAME sequence object.
+//
+// The fixture is written to a temporary directory and never run.
+const oneReaderProbe = `
+import ast, contextlib, hashlib, importlib.util, inspect, io, json, re, sys, tempfile
+from pathlib import Path
+scripts = Path(sys.argv[1]) / "scripts"
+
+def load(name, f):
+    spec = importlib.util.spec_from_file_location(name, scripts / f)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+mig = load("make_integrity_guard", "make-integrity-guard.py")
+crg = load("ci_required_guard", "ci-required-guard.py")
+cdg = load("contract_drift_guard", "contract-drift-guard.py")
+mg = mig.makegate
+
+MAKEFILE = (
+    "# inert fixture: nothing here is run\n"
+    "SHELL := /bin/bash\n"
+    ".SHELLFLAGS := -eu -o pipefail -c\n"
+    "PKG := ./...\n"
+    ".PHONY: ci test contract-drift\n"
+    "ci: test contract-drift test-noskip\n"
+    "test:\n"
+    "\tgo test $(PKG)\n"
+    "contract-drift:\n"
+    "\t./scripts/contract-drift-guard.py recipe\n"
+    "\tgo test -count=1 -json ./internal/x\n"
+)
+root = Path(tempfile.mkdtemp(prefix="one-reader-"))
+mk = root / "Makefile"
+mk.write_bytes(MAKEFILE.encode())
+(root / ".github").mkdir()
+(root / ".github" / "pinned-makefiles.yml").write_text(
+    "makefiles:\n  Makefile: " + hashlib.sha256(MAKEFILE.encode()).hexdigest() + "\n")
+cdg.REPO_ROOT = str(root)
+
+instances = {"anchor": mg, "ci-required-guard": crg.mg, "contract-drift-guard": cdg._makegate()}
+state = {"poison": None, "calls": []}
+
+def wrap(label, real):
+    def spy(text):
+        if state["poison"] is not None:
+            old, new = state["poison"]
+            if text.count(old) != 1:
+                raise AssertionError("the poison did not apply: %r" % old)
+            text = text.replace(old, new)
+        res = real(text)
+        f, stack = sys._getframe(1), []
+        while f is not None:
+            stack.append(f.f_code.co_name)
+            f = f.f_back
+        # The sequence object itself is kept, not only its id(): a freed object's id can be reused by the
+        # next allocation, which would make two different sequences look identical.
+        state["calls"].append((label, hashlib.sha256(text.encode()).hexdigest(), res, stack))
+        return res
+    return spy
+
+for label, inst in instances.items():
+    inst.makefile_lines = wrap(label, inst.makefile_lines)
+
+def guarded(module, call):
+    g = module.Guard()
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+        call(g)
+    return g.failures, buf.getvalue()
+
+def drift_text():
+    try:
+        cdg.check_makefile_text()
+        return "ok"
+    except cdg.Refused as err:
+        return str(err)
+
+PINS = crg.Pins("", ["make test", "make contract-drift"], [], {})
+ADD = "PKG := ./...\n"
+probes = [
+    ("makegate.grammar_problems", lambda: mg.grammar_problems("Makefile", MAKEFILE),
+     (ADD, ADD + "ifdef INERT\nendif\n"), lambda r: r == [], lambda r: any("conditional directive" in p for p in r)),
+    ("makegate.reviewed_bytes_problems", lambda: mg.reviewed_bytes_problems("Makefile", MAKEFILE),
+     ("\tgo test $(PKG)\n", "\t+go test $(PKG)\n"), lambda r: r == [], lambda r: any("recipe line prefixed" in p for p in r)),
+    ("makegate.static_read_set (its include reading)", lambda: mg.static_read_set(root, {"Makefile": MAKEFILE})[0],
+     (ADD, ADD + "include inert.mk\n"), lambda r: r == ["Makefile"], lambda r: "inert.mk" in r),
+    ("makegate.check_pinned_bytes (its parse-time sites)", lambda: mg.check_pinned_bytes(root)[2],
+     (ADD, ADD + "INERT := $(shell true)\n"), lambda r: r == [], lambda r: any("INERT" in s for s in r)),
+    ("makegate.environment_taken", lambda: sorted(mg.environment_taken(root, ["Makefile"])),
+     (ADD, ADD + "INERT_TAKEN ?= 1\n"), lambda r: "INERT_TAKEN" not in r, lambda r: "INERT_TAKEN" in r),
+    ("makegate.environment_words", lambda: sorted(mg.environment_words(root, ["Makefile"])),
+     (ADD, ADD + "# INERTWORD\n"), lambda r: "INERTWORD" not in r, lambda r: "INERTWORD" in r),
+    ("anchor prerequisite_closure", lambda: mig.prerequisite_closure(root, ["Makefile"], ["ci"]),
+     ("ci: test contract-drift test-noskip\n", "ci: test contract-drift test-noskip inert-lane\n"),
+     lambda r: "inert-lane" not in r, lambda r: "inert-lane" in r),
+    ("anchor check_text (recipes, through logical_recipe_lines)",
+     lambda: guarded(mig, lambda g: mig.check_text(g, root, ["Makefile"], ["ci", "test", "contract-drift"], ["ci"])),
+     ("\tgo test $(PKG)\n", "\t-go test $(PKG)\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "recipe line prefixed" in r[1]),
+    ("anchor check_text (assignments)",
+     lambda: guarded(mig, lambda g: mig.check_text(g, root, ["Makefile"], ["ci", "test", "contract-drift"], ["ci"])),
+     ("SHELL := /bin/bash\n", "SHELL := /bin/sh\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "other than the approved value" in r[1]),
+    ("anchor check_text (definitions)",
+     lambda: guarded(mig, lambda g: mig.check_text(g, root, ["Makefile"], ["ci", "test", "contract-drift"],
+                                                   ["ci", "test", "contract-drift"])),
+     ("test:\n", "inert-renamed:\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "not defined in any makefile" in r[1]),
+    ("ci-required-guard makefile_env_names", lambda: sorted(crg.makefile_env_names(crg.Guard(), mk, False)),
+     (ADD, ADD + "INERT_TAKEN ?= 1\n"), lambda r: "INERT_TAKEN" not in r, lambda r: "INERT_TAKEN" in r),
+    ("ci-required-guard check_makefile_selection", lambda: guarded(crg, lambda g: crg.check_makefile_selection(g, mk)),
+     (ADD, "PKG := ./internal/...\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "not './...'" in r[1]),
+    ("ci-required-guard check_makefile_selection (the test recipe)",
+     lambda: guarded(crg, lambda g: crg.check_makefile_selection(g, mk)),
+     ("\tgo test $(PKG)\n", "\tgo test -run X $(PKG)\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "test-selecting flag" in r[1]),
+    ("ci-required-guard check_local_parity", lambda: guarded(crg, lambda g: crg.check_local_parity(g, mk, PINS)),
+     ("ci: test contract-drift test-noskip\n", "ci: test test-noskip\n"), lambda r: r[0] == 0, lambda r: r[0] > 0 and "disagree" in r[1]),
+    ("contract-drift-guard check_makefile_text", drift_text,
+     ("\t./scripts/contract-drift-guard.py recipe\n", "\t-./scripts/contract-drift-guard.py recipe\n"),
+     lambda r: r == "ok", lambda r: "IGNORES that line" in r),
+]
+
+result = {"probes": [], "source": [], "identity": [], "readers_seen": []}
+for name, fn, poison, clean_ok, poisoned_ok in probes:
+    state["poison"] = None
+    clean = fn()
+    state["poison"] = poison
+    try:
+        poisoned = fn()
+        err = ""
+    except Exception as e:
+        poisoned, err = None, repr(e)
+    state["poison"] = None
+    result["probes"].append({"name": name, "clean_ok": bool(clean_ok(clean)),
+                             "poisoned_ok": poisoned is not None and bool(poisoned_ok(poisoned)),
+                             "detail": (repr(clean)[:300], repr(poisoned)[:300], err)})
+
+# IDENTITY: every reader in one program, clean, gets the SAME sequence object for the same text.
+state["calls"] = []
+for name, fn, poison, clean_ok, poisoned_ok in probes:
+    fn()
+by = {}
+for label, digest, seq, stack in state["calls"]:
+    by.setdefault((label, digest), set()).add(id(seq))
+    result["readers_seen"].extend(stack)
+for (label, digest), ids in sorted(by.items()):
+    result["identity"].append({"program": label, "text": digest[:12], "distinct_sequences": len(ids)})
+result["readers_seen"] = sorted(set(result["readers_seen"]))
+
+# SOURCE: no second splitter, text read, decode or multi-line regex in any reader.
+forbidden = [r'split\(\s*["\']\\n["\']\s*\)', r"\.splitlines\(", r"\.read_text\(", r"(?<![\w.])open\(", r"\.decode\(",
+             r"\bre\.M\b", r"re\.MULTILINE", r"\.readlines\("]
+readers = [(mg, n) for n in ("grammar_problems", "reviewed_bytes_problems", "static_read_set", "check_pinned_bytes",
+                             "environment_taken", "environment_words", "recipe_lines", "read_makefile_lines")]
+readers += [(mig, "prerequisite_closure"), (mig, "check_text"), (mig, "logical_recipe_lines"),
+            (crg, "makefile_env_names"), (crg, "check_makefile_selection"), (crg, "check_local_parity"),
+            (cdg, "check_makefile_text")]
+for mod, fname in readers:
+    fn = getattr(mod, fname, None)
+    if fn is None:
+        result["source"].append("%s.%s does not exist" % (mod.__name__, fname))
+        continue
+    src = inspect.getsource(fn)
+    for pat in forbidden:
+        if re.search(pat, src):
+            result["source"].append("%s.%s reads makefile text itself (%s)" % (mod.__name__, fname, pat))
+splitters = set()
+for node in ast.walk(ast.parse((scripts / "makegate.py").read_text())):
+    if isinstance(node, ast.FunctionDef) and re.search(forbidden[0], ast.get_source_segment((scripts / "makegate.py").read_text(), node) or ""):
+        splitters.add(node.name)
+if splitters != {"makefile_lines", "load_pin"}:
+    result["source"].append("makegate functions that split text on a newline: %s; want exactly makefile_lines "
+                            "(and load_pin, the pin YAML)" % sorted(splitters))
+for f in ("make-integrity-guard.py", "ci-required-guard.py", "contract-drift-guard.py"):
+    if re.search(forbidden[0], (scripts / f).read_text()):
+        result["source"].append("%s splits text on a newline itself" % f)
+print(json.dumps(result))
+`
+
+// Every reader of pinned makefile text consumes ONE logical-line sequence,
+// produced by makegate.makefile_lines over makegate.read_makefile_text's
+// decoding (FINDING 14: the grammar joined lines one way and the anchor split
+// physical lines another). See oneReaderProbe for the three properties.
+func TestEveryMakefileReaderConsumesTheOneLineReader(t *testing.T) {
+	requirePython(t)
+	root := repoRoot(t)
+	out, code := run(t, root, cleanEnv(), "python3", "-c", oneReaderProbe, root)
+	if code != 0 {
+		t.Fatalf("the reader probe did not run: exit %d\n%s", code, out)
+	}
+	var got struct {
+		Probes []struct {
+			Name       string   `json:"name"`
+			CleanOK    bool     `json:"clean_ok"`
+			PoisonedOK bool     `json:"poisoned_ok"`
+			Detail     []string `json:"detail"`
+		} `json:"probes"`
+		Source   []string `json:"source"`
+		Identity []struct {
+			Program  string `json:"program"`
+			Text     string `json:"text"`
+			Distinct int    `json:"distinct_sequences"`
+		} `json:"identity"`
+		ReadersSeen []string `json:"readers_seen"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("unreadable result: %v\n%s", err, out)
+	}
+	if len(got.Probes) < 15 {
+		t.Fatalf("%d probe(s) ran; want every reader probed", len(got.Probes))
+	}
+	for _, p := range got.Probes {
+		p := p
+		t.Run("poison: "+p.Name, func(t *testing.T) {
+			if !p.CleanOK {
+				t.Fatalf("%s: the clean fixture did not give the clean verdict: %v", p.Name, p.Detail)
+			}
+			if !p.PoisonedOK {
+				t.Fatalf("%s: rewriting the text inside makefile_lines did NOT change this reader's verdict, so it "+
+					"reads the bytes some other way: %v", p.Name, p.Detail)
+			}
+		})
+	}
+	t.Run("source", func(t *testing.T) {
+		for _, s := range got.Source {
+			t.Error(s)
+		}
+	})
+	t.Run("identity", func(t *testing.T) {
+		if len(got.Identity) == 0 {
+			t.Fatal("no call of makefile_lines was recorded")
+		}
+		programs := map[string]bool{}
+		for _, id := range got.Identity {
+			programs[id.Program] = true
+			if id.Distinct != 1 {
+				t.Errorf("%s: the readers of one text received %d different line sequences; want the same one",
+					id.Program, id.Distinct)
+			}
+		}
+		for _, p := range []string{"anchor", "ci-required-guard", "contract-drift-guard"} {
+			if !programs[p] {
+				t.Errorf("no reader in %s called makefile_lines", p)
+			}
+		}
+		seen := map[string]bool{}
+		for _, r := range got.ReadersSeen {
+			seen[r] = true
+		}
+		for _, r := range []string{"grammar_problems", "reviewed_bytes_problems", "static_read_set", "check_pinned_bytes",
+			"environment_taken", "environment_words", "prerequisite_closure", "check_text", "makefile_env_names",
+			"check_makefile_selection", "check_local_parity", "check_makefile_text"} {
+			if !seen[r] {
+				t.Errorf("%s never reached makefile_lines", r)
+			}
+		}
+	})
+	if !t.Failed() {
+		t.Logf("%d reader probes changed verdict under a poisoned makefile_lines; no second splitter; one sequence per text per program (%d)",
+			len(got.Probes), len(got.Identity))
+	}
+}
+
+// FINDING 14's first example, read by every reader of the one sequence: the
+// TAB line after a continued comment belongs to `test` for make, for the
+// grammar and for the anchor's recipe reader alike. Even with the grammar's
+// refusal removed, the anchor would read `-false` as test's recipe.
+func TestTheAnchorReadsTheRecipeMakeReads(t *testing.T) {
+	requirePython(t)
+	root := repoRoot(t)
+	prog := `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("mig", sys.argv[1] + "/scripts/make-integrity-guard.py")
+mig = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mig)
+mg = mig.makegate
+out = {}
+for name, text in (("comment", "test:\n\tgo test\n# note \\\ninert:\n\t-false\n"),
+                   ("rule-comment", "test: # c \\\ninert:\n\t-false\n"),
+                   ("even-backslashes", "test:\n\tgo test \\\\\n\t-false\n")):
+    lines = mg.makefile_lines(text)
+    out[name] = mig.logical_recipe_lines(lines, 1)
+print(json.dumps(out))
+`
+	out, code := run(t, root, cleanEnv(), "python3", "-c", prog, root)
+	if code != 0 {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+	var got map[string][][]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("unreadable: %v\n%s", err, out)
+	}
+	want := map[string]string{
+		"comment":          `[[2,"go test"],[5,"-false"]]`,
+		"rule-comment":     `[[3,"-false"]]`,
+		"even-backslashes": `[[2,"go test \\\\"],[3,"-false"]]`,
+	}
+	for name, w := range want {
+		b, _ := json.Marshal(got[name])
+		if string(b) != w {
+			t.Errorf("%s: the anchor's recipe for test is %s; want %s (make's reading)", name, b, w)
+		}
 	}
 }

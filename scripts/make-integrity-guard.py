@@ -41,11 +41,16 @@ Then three readings of those reviewed bytes, because a reviewer can approve a mi
   TEXT      those same files, read: a `-`/`+` prefix, a `|| true`-family suffix, any SHELL/.SHELLFLAGS/
             MAKEFLAGS/GNUMAKEFLAGS/MFLAGS assignment, `.ONESHELL`, a gate target defined twice or inside a
             make conditional. The recipe prefix/suffix scan covers the EXPLICIT rules of the named
-            closure (prerequisite_closure): every TAB recipe line of each one. makegate's grammar has
-            already refused, before make, every line that is not blank, a comment, an assignment, a
-            `.PHONY:` line, a single-target rule line or a TAB recipe line of a rule, so a rule's recipe
-            is exactly the TAB lines after it, and no pattern, suffix or `.DEFAULT` rule and no
-            `$`-named prerequisite can be written. NOT scanned: a recipe make supplies from its BUILT-IN
+            closure (prerequisite_closure): every TAB recipe line of each one. Every one of these readings
+            consumes makegate's ONE logical-line sequence (makegate.read_makefile_lines), the same one
+            makegate's grammar judged before make, and decides which rule a TAB line belongs to with the
+            grammar's own rule (makegate.recipe_lines: empty and comment lines keep a recipe open, any
+            other line closes it). The grammar has already refused every line that is not empty, a
+            comment, an assignment, a `.PHONY:` line, a single-target rule line or a TAB recipe line of a
+            rule, every comment continued by a backslash, and every CR, NUL, other control, invisible or
+            non-ASCII whitespace character. So a rule's recipe is exactly the TAB lines after it, up to
+            the next line that is neither empty nor a comment, for the grammar and for this reading
+            alike, and no pattern, suffix or `.DEFAULT` rule and no `$`-named prerequisite can be written. NOT scanned: a recipe make supplies from its BUILT-IN
             implicit rules, for a closure target with no explicit rule (printed as a note) or with an
             explicit rule that has no recipe and is not `.PHONY`.
   WARNINGS  `make --dry-run` stderr: a duplicate target ("overriding commands" on GNU Make 3.81,
@@ -87,10 +92,12 @@ WHAT IT DOES NOT DO — stated, not implied. This list is not called complete.
     reviewed bytes — and the reviewed bytes run their own `$(shell …)` calls while being read (today
     four: `go env GOROOT`, `git describe`, `git rev-parse HEAD`, `date`). A malicious Makefile approved
     TOGETHER with its pin update runs. BEFORE make, every line of the reviewed bytes must fit
-    makegate's grammar (makegate.grammar_problems — an allowlist, default-deny): blank or a comment,
-    `NAME := | ?= | = value` whose value uses only `$$`, `$(NAME)`/`${NAME}` and `$(shell …)`,
-    `.PHONY: names`, a single-target rule line with literal prerequisites, or a TAB recipe line of a
-    rule using only `$$` and `$(NAME)`/`${NAME}`; anything else is refused by line number. Within it,
+    makegate's grammar (makegate.grammar_problems — an allowlist, default-deny, over makegate's one
+    line reader): empty or a comment, `NAME := | ?= | = value` (NAME not a directive keyword) whose
+    value uses only `$$`, `$(NAME)`/`${NAME}` and `$(shell …)`, `.PHONY: names`, a single-target rule
+    line with literal prerequisites, or a TAB recipe line of a rule using only `$$` and
+    `$(NAME)`/`${NAME}`; anything else, and any CR, NUL, other control, invisible or non-ASCII whitespace
+    character and any backslash-continued comment, is refused by line number. Within it,
     SHELL/.SHELLFLAGS other than the approved lines, MAKEFLAGS-family assignments, `+` and `$(MAKE)`
     recipe lines and a recipe body beginning with `$` are also refused by name. What the grammar lets a
     reviewer write — the commands a recipe runs, what a `$(shell …)` in a value runs while make reads
@@ -406,9 +413,11 @@ def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list
     So the closure is COMPUTED from the explicit rules rather than listed, and a
     lane added to `ci` as an explicit rule is covered without editing this file.
 
-    It reads rule lines through makegate's logical lines (comments stripped,
-    continuations joined) and its rule/assignment split. makegate's grammar has
-    already refused every rule line that is not `name: literal prerequisites`,
+    It reads rule lines through makegate's ONE logical-line sequence
+    (makegate.read_makefile_lines: continuations joined, each line's comment
+    stripped exactly as the grammar stripped it) and its rule/assignment split.
+    makegate's grammar has already refused every rule line that is not
+    `name: literal prerequisites`,
     so there is no pattern, suffix or `.DEFAULT` rule and no `$`-named
     prerequisite to follow.
 
@@ -422,16 +431,16 @@ def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list
     prereqs: dict[str, list[str]] = {}
     for rel in files:
         try:
-            text = (root / rel).read_text()
+            lines = makegate.read_makefile_lines(root / rel)
         except OSError:
             continue
-        # makegate's reading: comments stripped and continuations joined FIRST (a rule line whose
-        # trailing comment held `=` used to fall out of the old RULE_RE, and its prerequisites with it), then
-        # the same rule/assignment split makegate refuses non-simple rule lines with.
-        for _, line in makegate._logical_lines(text):
-            if line.startswith("\t") or not line.strip():
+        # makegate's ONE reading: continuations joined and comments stripped exactly as the grammar read them
+        # (a rule line whose trailing comment held `=` used to fall out of the old RULE_RE, and its
+        # prerequisites with it), then the same rule/assignment split makegate refuses non-simple rule lines with.
+        for rec in lines:
+            if rec.tab or not rec.code.strip():
                 continue
-            parts = makegate._rule_parts(line.rstrip())
+            parts = makegate._rule_parts(rec.code.rstrip())
             if parts is None:
                 continue
             names = parts[0].split()
@@ -458,38 +467,21 @@ def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list
     return out
 
 
-def logical_recipe_lines(lines: list[str], start: int):
-    """Collect one target's recipe from Makefile text, joining continuations.
+def logical_recipe_lines(lines, start: int):
+    """One target's recipe: makegate.recipe_lines over makegate's ONE logical-line sequence.
 
-    makegate's grammar (makegate.grammar_problems) has already refused, before make, every line that
-    is not blank, a comment, an assignment, a `.PHONY:` line, a single-target rule line or a TAB recipe
-    line of a rule — no conditional, no inline `;` recipe — so a rule's recipe is exactly the TAB lines
-    after it, up to the next line of another shape.
+    `lines` is makegate.read_makefile_lines(<file>) and `start` the index of the line after the rule line.
+    Every TAB line from there on is the rule's, blank and comment lines keep it open, and any other line
+    closes it — the same sequence, and the same decision, as makegate.grammar_problems, which has already
+    refused before make every line that is not empty, a comment, an assignment, a `.PHONY:` line, a
+    single-target rule line or a TAB recipe line of a rule, and every comment continued by a backslash. So a
+    rule's recipe is exactly the TAB lines after it, for make, for the grammar and for this reading.
     """
-    recipe = []
-    i = start
-    while i < len(lines):
-        line = lines[i]
-        if line.strip() == "" or line.lstrip().startswith("#"):
-            i += 1
-            continue
-        if not line.startswith("\t"):
-            break
-        first, body = i, line[1:]
-        while body.rstrip().endswith("\\") and i + 1 < len(lines):
-            i += 1
-            body = body.rstrip()[:-1] + " " + lines[i].lstrip("\t")
-        recipe.append((first + 1, body.strip()))
-        i += 1
-    return recipe
+    return makegate.recipe_lines(lines, start)
 
 
 # The environment-taken reading lives in makegate (environment_taken), because EVERY make process drops
-# those names, not only the anchor's (M-4). Re-exported for ci-required-guard.py, which reads them here.
-_MAKE_BUILTIN_VARS = makegate._MAKE_BUILTIN_VARS
-_FUNCTIONS = makegate._FUNCTIONS
-_ASSIGN_RE = makegate._ASSIGN_RE
-_REF_RE = makegate._REF_RE
+# those names, not only the anchor's (M-4); ci-required-guard.py calls it there too.
 
 
 def check_environment_overrides(g: Guard, root: Path, files: list[str], workflow: bool) -> None:
@@ -555,16 +547,16 @@ def check_text(g: Guard, root: Path, files: list[str], targets: list[str], seeds
     for rel in files:
         path = root / rel
         try:
-            text = path.read_text()
-        except OSError as err:
+            lines = makegate.read_makefile_lines(path)
+        except (OSError, UnicodeDecodeError) as err:
             g.fail(f"cannot read {rel}, which make says it read: {err}")
             continue
-        lines = text.split("\n")
         is_root = Path(rel).name == "Makefile" and Path(rel).parent in (Path("."), Path(""))
 
-        for n, line in enumerate(lines, 1):
-            if line.startswith("\t"):
+        for idx, rec in enumerate(lines):
+            if rec.tab:
                 continue  # a recipe line, handled below
+            n, line = rec.n, rec.raw
             m = assignment_re.match(line)
             if m:
                 name, op, value = m.group(1), m.group(2), m.group(3)
@@ -612,8 +604,8 @@ def check_text(g: Guard, root: Path, files: list[str], targets: list[str], seeds
                     # Guard against a gate target hidden inside a conditional:
                     # which recipe runs would then depend on a variable.
                     depth = 0
-                    for prev in lines[: n - 1]:
-                        head = prev.strip().split(" ")[0]
+                    for prev in lines[:idx]:
+                        head = prev.raw.strip().split(" ")[0]
                         if head in MAKE_CONDITIONALS:
                             depth += 1
                         elif head == "endif":
@@ -624,7 +616,7 @@ def check_text(g: Guard, root: Path, files: list[str], targets: list[str], seeds
                             "Which recipe runs would depend on a variable, so the recipe a reader sees is",
                             "not necessarily the one that executes. Gate targets must be unconditional.",
                         )
-                    check_recipe(g, rel, t, logical_recipe_lines(lines, n))
+                    check_recipe(g, rel, t, logical_recipe_lines(lines, idx + 1))
 
     if not seen_shell or not seen_shellflags:
         g.fail(

@@ -563,19 +563,39 @@ surroundings**:
   - **every line of the reviewed bytes fits the Makefile grammar** — an
     ALLOWLIST, default-deny, like the pinned workflow steps (chair ruling
     after the PR #5 closing re-verification: every denylist round found
-    another spelling). Each logical line (backslash-newline joined) must be
-    exactly one of:
-    - blank, or a comment (a `#` inside `$(…)` is refused, so where a
-      comment starts never depends on how a make version reads it);
+    another spelling). The bytes are decoded ONCE (strict UTF-8, no
+    newline translation) and split into lines ONCE, by
+    `makegate.makefile_lines`: on LF only, a line ending in an ODD run of
+    backslashes joined to the next as make joins it. **That one sequence of
+    logical lines serves every check that reads Makefile text** — this
+    grammar, the by-name refusals, the static read set, the environment
+    readings, the anchor's closure, definition and recipe readings,
+    `ci-required-guard`'s selection and parity readings and
+    `contract-drift-guard`'s lane reading; none of them splits the text
+    itself (`TestEveryMakefileReaderConsumesTheOneLineReader`). Before any
+    shape is judged, a line is refused if it holds a byte on which make's
+    own line reading could still differ from that one: a carriage return
+    (anywhere, so CRLF too), a NUL or any other control character except
+    TAB, an invisible format character, or non-ASCII whitespace such as
+    NBSP. Each logical line must then be exactly one of:
+    - empty (a line of only spaces or TABs is refused), or a comment line
+      with `#` in column 0. A comment — on its own line or after an
+      assignment or rule — may not end in an unescaped backslash, because
+      make continues a comment onto the next line (manual §3.1). A `#`
+      inside `$(…)` is refused, so where a comment starts never depends on
+      how a make version reads it;
     - an assignment `NAME op value` at the start of the line, where NAME is a
-      literal identifier, `.SHELLFLAGS` or `.DEFAULT_GOAL`, op is `:=`, `?=`
+      literal identifier other than a directive keyword (`ifdef`, `ifndef`,
+      `ifeq`, `ifneq`, `else`, `endif`, `include`, `-include`, `sinclude`,
+      `define`, `endef`, `export`, `unexport`, `override`, `private`,
+      `undefine`, `vpath`, `load`), `.SHELLFLAGS` or `.DEFAULT_GOAL`, op is `:=`, `?=`
       or `=`, and the value uses only `$$`, `$(NAME)`/`${NAME}` references and
       `$(shell …)` whose own text uses only those references;
     - `.PHONY: names`, with literal names;
     - a rule line `name: prerequisites`: ONE literal target, not starting
-      with `.`, then literal prerequisite words, with no `;`, `$`, `%`, `|`,
+      with `.` and not a directive keyword, then literal prerequisite words, with no `;`, `$`, `%`, `|`,
       `=`, second `:`, `::` or `&:`;
-    - a TAB recipe line of the rule above it (blank and comment lines between
+    - a TAB recipe line of the rule above it (empty and comment lines between
       recipe lines keep the rule open, any other line closes it), read raw,
       whose text uses only `$$` and `$(NAME)`/`${NAME}` references, and not
       `$(MAKE)`. No function may be called in a recipe: this `Makefile` calls
@@ -586,7 +606,12 @@ surroundings**:
     other than `$(shell …)` in a value, a computed name, an inline `;`
     recipe, several targets, a special target other than `.PHONY`, or a
     pattern or suffix rule cannot appear, in any spelling. Today's `Makefile`
-    passes unchanged (`TestTheRealMakefileFitsTheGrammar`). Within the
+    passes unchanged (`TestTheRealMakefileFitsTheGrammar`). Which bytes make
+    itself reads differently from `makefile_lines` (a continued comment, a
+    CR, a NUL, a directive keyword as a name) is taken from the GNU Make
+    manual and a reading of make's source, NOT measured here: this
+    repository runs make on no such bytes, because each is refused before
+    make. Within the
     grammar, these are also refused BY NAME, as a second and more specific
     diagnosis:
     - any SHELL or .SHELLFLAGS assignment other than the one approved line;
@@ -645,9 +670,15 @@ surroundings**:
   EXPLICIT rules of the named gate targets and of their prerequisite closure
   (followed through the literal prerequisites of explicit rules, read with
   comments stripped) may carry no `-` prefix and no `|| true`-family suffix,
-  and no gate target may be defined twice or inside a conditional. Because of
-  the grammar, a rule's recipe is exactly the TAB lines after it, and no
-  pattern, suffix or `.DEFAULT` rule or `$`-named prerequisite can be
+  and no gate target may be defined twice or inside a conditional. These
+  readings consume the SAME logical lines the grammar judged
+  (`makegate.makefile_lines`), and decide which rule a TAB line belongs to
+  exactly as the grammar does (`makegate.recipe_lines`: empty and comment
+  lines keep a recipe open, any other line closes it, as GNU Make's manual
+  §5.1 says make ignores blank and comment lines among recipe lines). So, for
+  the grammar and for these readings alike, a rule's recipe is exactly the TAB
+  lines after it, up to the next line that is neither empty nor a comment;
+  and no pattern, suffix or `.DEFAULT` rule or `$`-named prerequisite can be
   written. A recipe make supplies from its BUILT-IN implicit rules is NOT
   scanned (see the residuals); make's own `--dry-run` must show no
   command that EXPANDS to a swallowed exit (`cmd $(SWALLOW)`); and make's
