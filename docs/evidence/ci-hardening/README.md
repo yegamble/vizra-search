@@ -1,5 +1,50 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Closing slice, fix round 1 (on top of 617c6d9): refuse the spellings the readers miss
+
+Input: the closing re-verification at 617c6d9 (FINDING 5 to 8 and 3 NITs), and the chair's ruling: where a
+construct is cheap to refuse, refuse it; narrow a sentence only where refusing is not practical.
+
+**Refused before make, with 0 make processes (makegate):**
+- a rule with an inline `;` recipe (FINDING 5);
+- several targets on one rule line, including a special target that is not first, and grouped `&:` (FINDING 5);
+- a rule target that is an expansion (`$(I)ORE:`);
+- a rule line that starts with whitespace, or is continued with a backslash;
+- a variable name that is an expansion, in any assignment or `define` (M-2, refused rather than narrowed);
+- `$(call eval,…)`, `$(call guile,…)` and `$(call $(F),…)`, because `call` runs the built-in of that name.
+
+Of these, FINDING 5 named the first two. I found the others while fixing it. Each is a way to write a rule, or to
+name something computed, that the anchor's `<target>:` reading or the literal-name list would miss. Today's Makefile
+uses none of them, and its pin is unchanged.
+
+**The anchor's readings:**
+- the recipe reader steps over conditional directives, as make does;
+- the closure reads rule lines with comments stripped. A rule line whose comment held `=` used to drop its
+  prerequisites from the closure.
+
+**FINDING 7:** every gate make process now also runs without any environment variable whose name appears as a word
+in the pinned text, minus a keep-list.
+
+**The inventory:**
+- `env`/`nohup`/`sudo` flags may take one argument (FINDING 6);
+- a Go dot-import of `os/exec` is matched (FINDING 6);
+- Python `from subprocess|os import *` is matched;
+- a Python argv list or tuple literal anywhere is matched, which restores the form e068e07 matched (FINDING 8).
+
+All files are in `closing/round1/` except the demo, which now has 70 rows.
+
+| File | What it shows |
+|---|---|
+| `closing/round1/new-tests-at-617c6d9-BEFORE.txt` | This round's committed tests against 617c6d9's UNMODIFIED `makegate.py` and `make-integrity-guard.py`. The 13 new pre-make rows FAIL and both new reading rows FAIL. Both M-4 callers FAIL: their make processes received `VZ_M4_SUBST,Q,VZ_M4_ORIGIN,VZ_M4_VALUE,VZ_M4_EARLY,VZ_M4_IFDEF`, the six forms other than `$(V)`/`${V}`. |
+| `closing/round1/inventory-planted-forms-at-617c6d9-BEFORE.txt` | Demo rows R11–R16 (shell `env -u X make`, `sudo -u bob make`; a Go dot-import; Python star-imports of subprocess and os; a Python argv list in a variable) against 617c6d9's inventory. Every one exits 0 and is NOT red. |
+| `closing/round1/demo-red-green-round1.txt` | `scripts/ci-hardening-demo.py`, every row: exit 0, **70/70** rows as declared. The first full run (`demo-red-green-round1-first-attempt.txt`, 69/70) had row C3 red for the right reason (planted names reached make) but with a declared text this round had made stale; only that text was changed before the second run. R01–R10 remove one new check each: the inline `;`, multi-target, computed-target, indented and continued rule-line refusals, the computed-variable-name refusal, `$(call eval,…)`, the recipe reader's conditional step, the closure's comment stripping, and the word-level environment drop. Each makes its test red, and each is green again after a byte-identical restore. R11–R16 plant the forms above, and the inventory goes red naming the planted file. |
+| `closing/round1/go-meta-tests-verbose-round1.txt` | `go test -count=1 -v ./scripts/ ./internal/httpapi/`: exit 0, 448 `--- PASS`, 0 FAIL, 0 SKIP. |
+| `closing/round1/make-ci-local-round1.txt` | `make ci`: exit 0, 689 tests across 7 packages, 0 skips, every package at or above its floor; contract-drift 365; vendor selftest 17/17. |
+| `closing/round1/guards-round1.txt` | `ci-required-guard.sh`, `make-integrity-guard.sh --workflow` and `vendor-contract.py --check`: all exit 0 (make ran 21 times in the anchor). |
+
+Host: darwin/arm64, go1.27.1 (printed from inside each worktree), GNU Make 3.81, Python 3.9.6. Nothing ran on GNU
+Make 4.3.
+
 ## Closing slice (on top of e068e07): every sentence claims no more than its control
 
 Inputs: the vizra-security desk review at e068e07 (M-1…M-5, N-1…N-3) and the re-verification's FINDING 4. The
@@ -20,9 +65,19 @@ are in `closing/`.
 | `closing/make-ci-local-closing.txt` | `make ci`: exit 0, 664 tests across 7 packages, 0 skips, every package at or above its floor; contract-drift 365; vendor selftest 17/17. |
 | `closing/guards-closing.txt` | `ci-required-guard.sh` exit 0; `make-integrity-guard.sh --workflow` exit 0 (make ran 21 times, the last one the closing `make -q`). |
 
-Host for all of these: darwin/arm64, go1.27.1, GNU Make 3.81, Python 3.9.6. **Nothing in the closing slice was run on
-GNU Make 4.3**; its changes are to Python and Go readers and to the environment make receives, not to how make
-treats the Makefile.
+Host for all of these: darwin/arm64, go1.27.1, GNU Make 3.81, Python 3.9.6. The header line of each of the two
+e068e07 BEFORE transcripts prints `go1.26.2`. That header ran `go version` in the meta-repository directory, which
+selects go1.26.2, not in the worktree where the tests ran. That worktree has the same `go.mod` as this tree, where
+`go version` reports go1.27.1. The fix-round-1 BEFORE transcripts print it from inside the worktree. **Nothing in
+the closing slice was run on GNU Make 4.3**; its changes are to Python and Go readers and to the environment make
+receives, not to how make treats the Makefile.
+
+**Superseded by fix round 1 (above):**
+- "M-2: named constructs are refused in their LITERAL spelling only": the computed spellings are now refused
+  outright.
+- At 617c6d9 the inventory was narrower than e068e07's in one form (FINDING 8): an argv list held in a variable,
+  `ARGV = ["make", "ci"]` then `subprocess.run(ARGV)`. e068e07's regex matched it; 617c6d9's Python `ast` half did
+  not. Fix round 1 restores it.
 
 ## Fix round 2 (on top of c3b2021): one digest-gated way to start make, and a remake probe
 
@@ -33,7 +88,7 @@ after the digest had passed. The security re-review showed two make calls outsid
 Round 2 adopts vizra-core PR #10's design, with the chair's correction: ONE `make -q` names every pinned
 file. All of it lives in `scripts/makegate.py`, and every script or test that starts make goes through it — as far as
 `TestEveryPlaceThatStartsMakeIsGated` can tell: it matches only the literal forms AGENTS.md lists (see the closing slice
-below for what those are now), and make started through a variable, a wrapper or a form it does not match is review-only.
+above for what those are now), and make started through a variable, a wrapper or a form it does not match is review-only.
 
 | File | What it shows |
 |---|---|

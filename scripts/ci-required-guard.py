@@ -40,8 +40,8 @@ and this port starts from the inverted design:
                no undigested service image, and no job- or workflow-level `env:` naming a variable
                that reaches make or the shell (MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, MAKEFILES, MAKELEVEL,
                MAKE_RESTARTS, MAKEOVERRIDES, MAKECMDGOALS, SHELL, PATH, BASH_ENV, ENV, GOFLAGS) or a
-               variable the Makefile takes from the environment (`?=`, or referenced and never
-               assigned — computed from the Makefile by the same code the anchor uses).
+               variable the Makefile takes from the environment (`?=`, or referenced as `$(NAME)`/
+               `${NAME}` and never assigned — computed from the Makefile by the same code the anchor uses).
   DIGEST       .github/pinned-makefiles.yml exists, pins Makefile by sha256, and the tree matches it —
                the same checks scripts/makegate.py makes before it will start make.
   STRICT YAML  A duplicate mapping key and a YAML merge key (`<<:`) are refused anywhere in a
@@ -366,8 +366,9 @@ def load_pins(path: Path) -> Pins:
 def makefile_env_names(g: Guard, makefile: Path, skip: bool) -> set[str]:
     """Names the Makefile takes from the environment — computed by the SAME code the anchor uses.
 
-    `?=` means the environment wins; a variable referenced and never assigned is
-    taken from the environment outright. The anchor refuses them at run time (from
+    `?=` means the environment wins; a variable referenced as `$(NAME)`/`${NAME}` and
+    never assigned is taken from the environment outright (the other reference forms
+    are not read here; every gate make process drops them, see makegate.environment_words). The anchor refuses them at run time (from
     every file make read, includes too); this refuses them as job/workflow `env:`.
     """
     names = {"GOFLAGS"}

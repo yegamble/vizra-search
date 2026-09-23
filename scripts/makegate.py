@@ -4,14 +4,16 @@
 Derived from vizra-core PR #10 (branch chore/m0-anchor-makefile-digest, head 62d16aa), whose
 scripts/make-integrity-guard.py carries the same pin shape, static read set, `make -q` remake probe and
 re-hash. vizra-core has since gone further (B5b, vizra-core #11: computed-name refusals, a closure of
-explicit .PHONY rules); this module does NOT carry that, and says so under WHAT IT DOES NOT DO. Search
+explicit .PHONY rules); this module refuses its own set of computed and non-simple spellings (step 2)
+and does NOT carry core's closure rule. Search
 puts the pieces it has in this module so that the known make invocations — the workflow anchor
 (make-integrity-guard.py), the contract-drift lane's shape check (contract-drift-guard.py), and the
 Go test that reads the lane (internal/httpapi/lane_selection_test.go) — go through the same gate.
 TestEveryPlaceThatStartsMakeIsGated (scripts/scripts_test.go) fails on any make call it matches outside
 this file; it matches only the literal forms AGENTS.md lists (os/exec Command/CommandContext, strings
-passed to subprocess/os calls, make in command position on a .sh line), not make reached through a
-variable, a wrapper, another exec API or a file type it does not read.
+passed to subprocess/os calls, a Python argv list or tuple literal starting with make, make in command
+position on a .sh line), not make reached through any other variable, a wrapper, another exec API or a
+file type it does not read.
 
 WHY. GNU Make EVALUATES a makefile while it reads it — `$(shell …)`, `$(file …)`, `!=`, `+` and
 `$(MAKE)` recipe lines, `.SECONDEXPANSION` prerequisites — and it REMAKES an out-of-date makefile
@@ -28,23 +30,33 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
   2. READ SET. From the pinned bytes, without running them: the files make will read are `Makefile`
      plus every literal include/load target, transitively; each must be pinned. No GNUmakefile or
      makefile may sit beside it (compared case-folded, so a case-insensitive disk cannot hide one).
-     `$(eval …)`/`$(guile …)` and computed include names are refused: the reading cannot see them.
-     Refused BY NAME in the reviewed bytes (reviewed_bytes_problems), each only in its LITERAL
+     `$(eval …)`/`$(guile …)` — also through `$(call eval,…)`, `$(call guile,…)` or `$(call $(F),…)` —
+     and computed include names are refused: the reading cannot see what they produce.
+     Refused BY NAME in the reviewed bytes (reviewed_bytes_problems), each matched in its LITERAL
      spelling at the start of a line: `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`,
      `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`; any SHELL / .SHELLFLAGS other than the approved line, and
      any MAKEFLAGS / GNUMAKEFLAGS / MFLAGS, in the literal forms `NAME =`, `target: NAME =`,
-     `%: NAME =`, `define NAME`, with `private`/`override`/`export` modifiers. A name make COMPUTES
-     (`$(X)ORE:`, a special target that is not the first word of its rule line, a target-specific
-     assignment whose variable name is an expansion) is NOT refused. Also `$(eval …)`; `+` recipe
-     lines and `$(MAKE)`, which run even under -n and -q; and a recipe line whose body (after any
-     `@`/`-`/`+` prefix) begins with `$` other than `$$` — `$(…)`, `${…}`, `$@`, `$<`, `$X` — whose
-     prefix cannot be determined without running make.
+     `%: NAME =`, `define NAME`, with `private`/`override`/`export` modifiers. The places a name could
+     be COMPUTED instead are refused outright, whatever the name: a rule target that is an expansion
+     (`$(I)ORE:`), a variable name that is an expansion in any assignment or `define`
+     (`$(M)AKEFLAGS += -i`, `test: $(S)HELL = …`), and — so that a special target is always the one
+     literal target of its rule line — every rule line with more than one target. The RULE LINES
+     themselves must be simple, so every recipe line is a TAB line the checks below and the anchor
+     read: a rule with an inline `;` recipe, a rule line that starts with whitespace, and a rule line
+     continued with a backslash are refused. Also `+` recipe lines and `$(MAKE)`, which run even
+     under -n and -q; and a recipe line whose body (after any `@`/`-`/`+` prefix) begins with `$`
+     other than `$$` — `$(…)`, `${…}`, `$@`, `$<`, `$X` — whose prefix cannot be determined without
+     running make. Today's Makefile uses none of the refused rule or name shapes.
   3. ENVIRONMENT. MAKEFILES must be unset (it adds makefiles nobody pinned). Every process this module
      starts runs with clean_env(): make's flag variables, MAKEFILES, BASH_ENV, ENV and the runner's
      command-file variables (and anything pointing into the runner's command-file directory) removed.
-     Every MAKE process additionally runs without the variables the pinned makefiles take from the
-     environment (environment_taken: `?=` names and names referenced but never assigned, plus
-     GOFLAGS — the list the anchor refuses in --workflow mode), whoever opened the gate.
+     Every MAKE process additionally runs, whoever opened the gate, without: every environment
+     variable whose name appears as a word ANYWHERE in the pinned makefiles' text (environment_words;
+     over-matching on purpose, so `$V`, `$(V:a=b)`, `ifdef V`, `$(origin V)`, `$(value V)` and a read
+     before a later `:=` are all covered), except a short keep-list (KEEP_ENV: PATH, HOME, …); and
+     environment_taken (`?=` names, names referenced as `$(NAME)`/`${NAME}` and never assigned, and
+     GOFLAGS — the narrower list the anchor REFUSES in --workflow mode). A variable name make
+     assembles from parts, appearing as no single word, is not dropped.
   4. MAKE. `make` must resolve to a regular file named make/gmake in a system directory, and it is
      started by THAT real path, not looked up again.
   5. REMAKE PROBE. `make -q <every pinned makefile>` — each named as a GOAL, so -q applies to it and
@@ -58,9 +70,10 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
 WHAT IT DOES NOT DO. It does not judge the reviewed bytes: they run their own reviewed `$(shell …)`
 calls while being read (today four), and a malicious Makefile approved together with its pin update
 runs. Review is the control there, and CODEOWNERS is advisory. The named-construct list is matched on
-literal spellings only (step 2): a computed name for any of them, once approved, is not refused here.
-vizra-core #11 (open, B5b) refuses computed names, per the vizra-security desk review of this PR;
-search adopts core's anchor in a follow-up. It sees only what it reads: a step
+literal spellings (step 2); the computed spellings it names — an expansion as a rule target or as an
+assigned or defined variable name, a special target that is not the only target of its line — are
+refused outright, and a spelling not listed there is not. Search adopts core's anchor (vizra-core #11)
+in a follow-up. It sees only what it reads: a step
 that changed the machine before it ran (a forwarding make stub, a replaced toolchain) is outside it.
 It does not use `-r`/`--no-builtin-rules`: disabling the built-in rules in the probe would HIDE the
 very remake the unmodified pinned `make` step would perform, and on the resolver it would change
@@ -90,7 +103,9 @@ PIN_ENTRY_RE = re.compile(r"^  ([A-Za-z0-9_][A-Za-z0-9._/-]*): ([0-9a-f]{64})[ \
 DEFAULT_MAKEFILE_NAMES = ("GNUmakefile", "makefile", "Makefile")
 
 _READ_DIRECTIVE_RE = re.compile(r"^[ \t]*(-include|sinclude|include|-load|load)(?:[ \t]+(.*))?$")
-_MANUFACTURES_DIRECTIVES_RE = re.compile(r"\$[({](eval|guile)[\s)}]")
+# `$(eval …)`, `$(guile …)`, and `$(call eval,…)` / `$(call guile,…)` / `$(call $(F),…)`: make's `call`
+# always invokes a built-in function of that name, so `call eval` IS an eval.
+_MANUFACTURES_DIRECTIVES_RE = re.compile(r"\$[({](?:eval|guile)[\s)}]|\$[({]call\s+(?:eval|guile|\$)")
 _COMPUTED_NAME_CHARS = set("$*?[%~`\\")
 _PARSE_TIME_EXEC_RE = re.compile(r"\$[({]shell[\s)}]|!=")
 
@@ -224,7 +239,7 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
         problems += reviewed_bytes_problems(rel, text)
         for n, line in enumerate(text.split("\n"), 1):
             if _MANUFACTURES_DIRECTIVES_RE.search(line):
-                problems.append(f"{rel}:{n} calls $(eval …) or $(guile …), which can manufacture an include the "
+                problems.append(f"{rel}:{n} calls $(eval …) or $(guile …) (directly or through $(call …)), which can manufacture an include the "
                                 f"static reading cannot see: `{line.strip()[:120]}`")
         for n, line in _logical_lines(text):
             m = _READ_DIRECTIVE_RE.match(line)
@@ -248,11 +263,11 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
 # ------------------------------------------------ constructs refused by name ---
 #
 # Refused in REVIEWED bytes, by name, BEFORE make is started — derived from vizra-core PR #10 and its
-# re-verification (core has since added computed-name refusals in B5b, vizra-core #11; this list does
-# not). Each one either runs something while make reads the file (so the `make -q` probe would not be
+# re-verification (core has since added its own computed-name refusals in B5b, vizra-core #11). Each one either runs something while make reads the file (so the `make -q` probe would not be
 # recipe-free), or changes what the anchor's later readings mean, or ignores a gate failure without a
 # `-` prefix any reading could see. The regexes below match the LITERAL name at the start of a line
-# (after an optional `target:` for assignments); a name make computes by expansion is not matched. This
+# (after an optional `target:` for assignments); the positions where make could compute a name instead
+# are refused outright by rule_line_problems and computed_name_problems. This
 # is a list of named constructs over reviewed text, not a grammar of make; the control for what a
 # reviewer approves is still review.
 APPROVED_SHELL_LINES = {"SHELL := /bin/bash", ".SHELLFLAGS := -eu -o pipefail -c"}
@@ -274,9 +289,152 @@ _SPECIAL_WHY = {
 }
 
 
+# Directives whose lines are not rule lines even when they contain a `:`.
+_DIRECTIVES = {"ifeq", "ifneq", "ifdef", "ifndef", "else", "endif", "include", "-include", "sinclude", "load",
+               "-load", "define", "endef", "undefine", "vpath", "export", "unexport", "override", "private"}
+
+
+def _rule_parts(line: str):
+    """(targets, rest) when this non-recipe logical line is a RULE line, else None.
+
+    Scans outside `$(…)`/`${…}`: an assignment operator (`=`, `:=`, `::=`, `:::=`, `?=`, `+=`, `!=`)
+    before the first bare `:` makes it an assignment; otherwise the first `:` (or `::`) splits the
+    targets from the rest (prerequisites, an inline `;` recipe, or a target-specific assignment).
+    """
+    depth, i = 0, 0
+    while i < len(line):
+        c = line[i]
+        if c == "$" and i + 1 < len(line):
+            if line[i + 1] in "({":
+                depth += 1
+            i += 2
+            continue
+        if depth:
+            if c in ")}":
+                depth -= 1
+            i += 1
+            continue
+        if c == "=":
+            return None
+        if c == ":":
+            j = i
+            while j < len(line) and line[j] == ":":
+                j += 1
+            if j < len(line) and line[j] == "=":
+                return None
+            return line[:i], line[j:]
+        i += 1
+    return None
+
+
+def _outside_expansions(text: str) -> str:
+    """`text` with every `$(…)`/`${…}` and `$X` removed, for finding a bare `;` or `=`."""
+    out, depth, i = [], 0, 0
+    while i < len(text):
+        c = text[i]
+        if c == "$" and i + 1 < len(text):
+            if text[i + 1] in "({":
+                depth += 1
+            i += 2
+            continue
+        if depth:
+            if c in ")}":
+                depth -= 1
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
+_NON_ASSIGNING_DIRECTIVES = {"ifeq", "ifneq", "ifdef", "ifndef", "else", "endif", "include", "-include", "sinclude",
+                             "load", "-load", "endef", "vpath"}
+_ASSIGN_MODIFIERS = {"export", "override", "private", "unexport"}
+
+
+def _assigned_name(text: str):
+    """The variable name of an assignment `NAME op value` (modifiers dropped), or None if `text` has no
+    bare `=` outside expansions."""
+    depth, i = 0, 0
+    while i < len(text):
+        c = text[i]
+        if c == "$" and i + 1 < len(text):
+            if text[i + 1] in "({":
+                depth += 1
+            i += 2
+            continue
+        if depth:
+            if c in ")}":
+                depth -= 1
+        elif c == "=":
+            words = [w for w in text[:i].rstrip(":+?! \t").split() if w not in _ASSIGN_MODIFIERS]
+            return " ".join(words)
+        i += 1
+    return None
+
+
+def computed_name_problems(rel: str, n: int, raw: str) -> list[str]:
+    """A variable name that is an expansion — in an assignment (global, target- or pattern-specific) or a
+    `define` — is refused before make: the named-construct list above matches literal names, and a
+    computed one (`$(M)AKEFLAGS += -i`) would pass it (PR #5 security desk review, M-2). Rule TARGETS
+    that are expansions are refused by rule_line_problems."""
+    words = raw.split()
+    if not words or words[0] in _NON_ASSIGNING_DIRECTIVES:
+        return []
+    mods = [w for w in words if w not in _ASSIGN_MODIFIERS]
+    if mods and mods[0] == "define":
+        name = mods[1] if len(mods) > 1 else ""
+        return ([f"{rel}:{n} defines a variable whose name is an expansion (`{raw.strip()[:100]}`); the "
+                 f"named-construct list reads literal names only."] if "$" in name else [])
+    parts = _rule_parts(raw)
+    text = parts[1] if parts is not None else raw
+    name = _assigned_name(text)
+    if name is not None and "$" in name:
+        return [f"{rel}:{n} assigns a variable whose name is an expansion (`{raw.strip()[:100]}`); the "
+                f"named-construct list reads literal names only, so a computed one is refused outright."]
+    return []
+
+
+def rule_line_problems(rel: str, n: int, raw: str, physical: str) -> list[str]:
+    """Rule-line spellings refused before make, so every rule the text readings see is a SIMPLE rule line.
+
+    The anchor finds a target's definition as `^<target>\\s*:` and reads the TAB lines after it. A rule
+    written any other way would hide its recipe from that reading (PR #5 closing VERIFY, FINDING 5), so
+    each of these is refused: an inline `;` recipe on the rule line; more than one target on a rule line
+    (grouped `&:` included); a target name that is an expansion; a rule line that starts with whitespace;
+    a rule line continued with a backslash. Today's Makefile uses none of them.
+    """
+    first = raw.split(None, 1)[0] if raw.split() else ""
+    if first in _DIRECTIVES:
+        return []
+    parts = _rule_parts(raw)
+    if parts is None:
+        return []
+    targets_text, rest = parts
+    targets = targets_text.split()
+    out: list[str] = []
+    what = f"`{raw.strip()[:100]}`"
+    bare_rest = _outside_expansions(rest)
+    if "=" not in bare_rest and ";" in bare_rest:
+        out.append(f"{rel}:{n} is a rule with an inline `;` recipe ({what}). That recipe is not a TAB line, so "
+                   f"no reading here sees its prefix; write it on its own TAB line.")
+    if len(targets) > 1:
+        out.append(f"{rel}:{n} names more than one target on one rule line ({what}). The anchor reads a "
+                   f"target's rule as `<target>:` at the start of a line; give each target its own rule.")
+    if any("$" in t for t in targets):
+        out.append(f"{rel}:{n} is a rule whose target name is an expansion ({what}); which target it defines "
+                   f"cannot be read without running make.")
+    if raw[:1] in (" ", "\t"):
+        out.append(f"{rel}:{n} is a rule line that starts with whitespace ({what}); the anchor reads rules at "
+                   f"the start of a line.")
+    if physical.rstrip().endswith("\\") and (len(physical.rstrip()) - len(physical.rstrip().rstrip("\\"))) % 2 == 1:
+        out.append(f"{rel}:{n} is a rule line continued with a backslash ({what}); write the rule on one line.")
+    return out
+
+
 def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
     """Named constructs refused in pinned bytes before make starts. See the block comment above."""
     out: list[str] = []
+    physical_lines = text.split("\n")
     for n, line in _logical_lines(text):
         raw = line.rstrip()
         if not raw.strip():
@@ -299,6 +457,8 @@ def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
         stripped = raw.strip()
         if stripped in APPROVED_SHELL_LINES:
             continue
+        out += rule_line_problems(rel, n, raw, physical_lines[n - 1])
+        out += computed_name_problems(rel, n, raw)
         m = _ASSIGN_CONTROLLED_RE.match(raw) or _DEFINE_CONTROLLED_RE.match(raw)
         if m:
             out.append(f"{rel}:{n} assigns `{m.group(1)}` (`{stripped[:100]}`). SHELL and .SHELLFLAGS may appear "
@@ -412,14 +572,16 @@ _REF_RE = re.compile(r"(?<!\$)\$[({]([A-Za-z_][A-Za-z0-9_]*)[)}]")
 
 
 def environment_taken(root: Path, files) -> set[str]:
-    """The variables the given makefiles take FROM the environment, plus GOFLAGS.
+    """The variables the given makefiles take FROM the environment, as this reading sees them, plus GOFLAGS.
 
-    A name assigned with `?=`, or referenced as `$(NAME)` and never assigned, is one the environment
+    A name assigned with `?=`, or referenced as `$(NAME)`/`${NAME}` and never assigned, is one the environment
     sets — and make imports an environment variable as a RECURSIVELY expanded variable, so its value is
     evaluated as make text while the Makefile is read (manual §6.10). The anchor refuses these in
     --workflow mode (check_environment_overrides); run_make drops them from EVERY make process this
     module starts, so a caller that opens the gate without the anchor (contract-drift-guard.py, the lane
-    test) does not hand them to make either (PR #5 security desk review, M-4).
+    test) does not hand them to make either (PR #5 security desk review, M-4). It does NOT see `$V`,
+    `$(V:a=b)`, `ifdef V`, `$(origin V)`, `$(value V)` or a read before a later `:=`; run_make therefore
+    also drops environment_words(), which does.
     """
     assigned: dict[str, str] = {}
     refs: set[str] = set()
@@ -439,11 +601,37 @@ def environment_taken(root: Path, files) -> set[str]:
     return taken
 
 
+# Environment variables every make process keeps even when the makefiles name them.
+KEEP_ENV = frozenset({"PATH", "HOME", "TMPDIR", "USER", "LOGNAME", "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE",
+                      "TERM", "SHELL", "PWD", "TZ"})
+_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def environment_words(root: Path, files) -> set[str]:
+    """EVERY identifier-shaped word in the given makefiles' text, minus KEEP_ENV.
+
+    Deliberately over-matching (PR #5 closing VERIFY, FINDING 7): make can read an environment variable
+    as `$(V)`, `${V}`, `$(V:a=b)`, `$V`, `ifdef V`, `$(origin V)`, `$(value V)`, or before a later `:=`,
+    and environment_taken's `$(NAME)`/`${NAME}` reading sees only the first two. A word that appears
+    anywhere in the text — comments included — is dropped from make's environment instead. Not covered:
+    a name make assembles from parts (`$(A)$(B)`), which appears as no single word.
+    """
+    words: set[str] = set()
+    for rel in files:
+        path = Path(rel) if Path(rel).is_absolute() else Path(root) / rel
+        try:
+            words |= set(_WORD_RE.findall(path.read_text()))
+        except OSError:
+            continue
+    return words - KEEP_ENV
+
+
 def run_make(make: str, root: Path, args: list[str]) -> subprocess.CompletedProcess:
     global MAKE_INVOCATIONS
     # Computed from the PINNED files on every call (a stale or missing pin raises GateRefused here,
     # before make starts), so no caller can forget to pass it.
-    taken = environment_taken(root, sorted(load_pin(Path(root))))
+    pinned = sorted(load_pin(Path(root)))
+    taken = environment_taken(root, pinned) | environment_words(root, pinned)
     MAKE_INVOCATIONS += 1
     return subprocess.run([make, *args], cwd=str(root), env=clean_env(drop=taken), capture_output=True,
                           text=True)
