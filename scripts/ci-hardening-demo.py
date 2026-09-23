@@ -58,6 +58,9 @@ MAKE_TEST = "        run: make test\n"
 ANCHOR_BEFORE_TEST = ("      - name: refuse a neutered Makefile or make environment (anchor)\n"
                       "        run: ./scripts/make-integrity-guard.sh --workflow\n      - name: make test\n")
 FLAGS_PIN = ".SHELLFLAGS := -eu -o pipefail -c\n"
+# Closing slice: the M-3 check as committed, and the inventory test the planted rows run.
+M3_CHECK = '            if body.startswith("$") and not body.startswith("$$"):\n'
+INVENTORY = gotest("./scripts/", "TestEveryPlaceThatStartsMakeIsGated")
 
 ROWS = [
     # ---------------------------------------------------------------- item 1
@@ -214,6 +217,43 @@ ROWS = [
          new="type badValue struct{ raw string }\n\nfunc (b badValue) Error() string { return b.raw }\n\nfunc osLookupEnv(",
          cmd=gotest("./internal/config/", "TestNoRefusalBypassesTheNoEchoTable"),
          want="declares an error() method"),
+    # ------------------------------------------------ closing slice (C): M-3, M-4, FINDING 4
+    dict(id="C1", item="C", name="M-3: makegate back to refusing only a leading $( / ${ (the $@ row must go red)",
+         file="scripts/makegate.py", old=M3_CHECK, new='            if body.startswith(("$(", "${")):\n',
+         cmd=gotest("./scripts/", "TestNamedMakefileConstructsAreRefusedBeforeMake"), want="begins_with_$@"),
+    dict(id="C2", item="C", name="M-3 control: refusing EVERY leading $ (so $$ too) must go red",
+         file="scripts/makegate.py", old=M3_CHECK, new='            if body.startswith("$"):\n',
+         cmd=gotest("./scripts/", "TestARecipeBeginningWithAnEscapedDollarIsNotRefused"), want="want green"),
+    dict(id="C3", item="C", name="M-4: run_make no longer drops the environment-taken variables",
+         file="scripts/makegate.py", old="env=clean_env(drop=taken)", new="env=clean_env()",
+         cmd=gotest("./scripts/", "TestEnvironmentTakenVariablesNeverReachMake"),
+         want="received a variable the makefile takes from the environment"),
+    dict(id="C4", item="C", name="FINDING 4: a planted Go exec.CommandContext(ctx, \"make\", ...) (never run)",
+         file="internal/buildinfo/planted_make_call.go", old="",
+         new="package buildinfo\n\nimport (\n\t\"context\"\n\t\"os/exec\"\n)\n\n"
+             "func plantedMakeCall(ctx context.Context) { _ = exec.CommandContext(ctx, \"make\", \"ci\") }\n",
+         cmd=INVENTORY, want="internal/buildinfo/planted_make_call.go:8 starts make outside"),
+    dict(id="C5", item="C", name="FINDING 4: a planted Python subprocess.run(\"make ci\", shell=True) (never run)",
+         file="scripts/vendor-contract.py", old="def main():\n",
+         new="def _planted():\n    subprocess.run(\"make ci\", shell=True)\n\n\ndef main():\n",
+         cmd=INVENTORY, want="starts make outside scripts/makegate.py"),
+    dict(id="C6", item="C", name="FINDING 4: a planted Python os.system(\"make ci\") (never run)",
+         file="scripts/vendor-contract.py", old="def main():\n",
+         new="def _planted():\n    os.system(\"make ci\")\n\n\ndef main():\n",
+         cmd=INVENTORY, want="starts make outside scripts/makegate.py"),
+    dict(id="C7", item="C", name="FINDING 4: a planted Python subprocess.run([\"env\", \"make\", \"ci\"]) (never run)",
+         file="scripts/vendor-contract.py", old="def main():\n",
+         new="def _planted():\n    subprocess.run([\"env\", \"make\", \"ci\"])\n\n\ndef main():\n",
+         cmd=INVENTORY, want="starts make outside scripts/makegate.py"),
+    dict(id="C8", item="C", name="FINDING 4: a planted shell line `cd x && make ci` (never run)",
+         file="scripts/planted-make-call.sh", old="", new="#!/bin/sh\ncd x && make ci\n",
+         cmd=INVENTORY, want="scripts/planted-make-call.sh:2 starts make outside"),
+    dict(id="C9", item="C", name="FINDING 4: a planted shell line `if make -q ci; then :; fi` (never run)",
+         file="scripts/planted-make-call.sh", old="", new="#!/bin/sh\nif make -q ci; then :; fi\n",
+         cmd=INVENTORY, want="scripts/planted-make-call.sh:2 starts make outside"),
+    dict(id="C10", item="C", name="FINDING 4: a planted shell line `/usr/local/bin/make ci` (never run)",
+         file="scripts/planted-make-call.sh", old="", new="#!/bin/sh\n/usr/local/bin/make ci\n",
+         cmd=INVENTORY, want="scripts/planted-make-call.sh:2 starts make outside"),
 ]
 
 

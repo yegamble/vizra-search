@@ -1,5 +1,29 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Closing slice (on top of e068e07): every sentence claims no more than its control
+
+Inputs: the vizra-security desk review at e068e07 (M-1…M-5, N-1…N-3) and the re-verification's FINDING 4. The
+sentences that overclaimed are narrowed to the code (M-1: the recipe scan reads the EXPLICIT rules of the named
+closure only; M-2: named constructs are refused in their LITERAL spelling only), and three controls are widened:
+M-3 (a recipe body starting with any `$` but `$$` is refused), M-4 (every make process the gate starts, for every
+caller, runs without the variables the Makefile takes from the environment) and FINDING 4 (the make-launch
+inventory reads Go with `go/ast`, Python with `ast`, and shell command positions). N-3: the anchor ends with the
+`make -q` probe again. Nothing under `api/` and nothing in the Makefile changed (its pin is unchanged). All files
+are in `closing/`.
+
+| File | What it shows |
+|---|---|
+| `closing/m3-m4-new-tests-at-e068e07-BEFORE.txt` | The closing slice's committed tests run against e068e07's UNMODIFIED gate: the `$@`, `$<` and `$X` rows FAIL (the anchor passed them), and both M-4 callers FAIL — the make processes of `contract-drift-guard.py recipe` and of `makegate.py -- --dry-run` received `VERSION,COMMIT,CORE,GOFLAGS`. |
+| `closing/finding4-planted-forms-at-e068e07-BEFORE.txt` | Demo rows C4–C10 (a planted Go `exec.CommandContext(ctx, "make", …)`, Python `shell=True`, `os.system`, `["env", "make", …]`, shell `&& make`, `if make`, `/usr/local/bin/make`) against e068e07's inventory: every one exit 0, NOT red — FINDING 4 reproduced. |
+| `closing/demo-red-green-closing.txt` | `scripts/ci-hardening-demo.py`, every row, on the closing tree: exit 0, **54/54** rows as declared. Closing rows: C1 (makegate back to `$(`/`${` only: the `$@` row goes red); C2 (refusing every leading `$`, `$$` included: the `$$` control goes red); C3 (run_make no longer drops the environment-taken variables: the M-4 test goes red); C4–C10 (the planted forms above: the inventory goes red, naming the planted file). Each is green after a byte-identical restore. |
+| `closing/go-meta-tests-verbose-closing.txt` | `go test -count=1 -v ./scripts/ ./internal/httpapi/`: exit 0, 423 `--- PASS`, 0 FAIL, 0 SKIP. |
+| `closing/make-ci-local-closing.txt` | `make ci`: exit 0, 664 tests across 7 packages, 0 skips, every package at or above its floor; contract-drift 365; vendor selftest 17/17. |
+| `closing/guards-closing.txt` | `ci-required-guard.sh` exit 0; `make-integrity-guard.sh --workflow` exit 0 (make ran 21 times, the last one the closing `make -q`). |
+
+Host for all of these: darwin/arm64, go1.27.1, GNU Make 3.81, Python 3.9.6. **Nothing in the closing slice was run on
+GNU Make 4.3**; its changes are to Python and Go readers and to the environment make receives, not to how make
+treats the Makefile.
+
 ## Fix round 2 (on top of c3b2021): one digest-gated way to start make, and a remake probe
 
 Round 1 moved the control from grammar to digest. The re-verification then showed that a newer unpinned
@@ -7,7 +31,9 @@ Round 1 moved the control from grammar to digest. The re-verification then showe
 after the digest had passed. The security re-review showed two make calls outside the gate.
 
 Round 2 adopts vizra-core PR #10's design, with the chair's correction: ONE `make -q` names every pinned
-file. All of it lives in `scripts/makegate.py`, and every script or test that starts make goes through it.
+file. All of it lives in `scripts/makegate.py`, and every script or test that starts make goes through it — as far as
+`TestEveryPlaceThatStartsMakeIsGated` can tell: it matches only the literal forms AGENTS.md lists (see the closing slice
+below for what those are now), and make started through a variable, a wrapper or a form it does not match is review-only.
 
 | File | What it shows |
 |---|---|

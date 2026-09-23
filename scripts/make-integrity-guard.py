@@ -31,15 +31,19 @@ below; and ONE `make -q <every pinned makefile>` — no ordinary recipe runs und
 `$(MAKE)` line would, and can only come from the reviewed bytes — must say none would be REMADE (a newer
 unpinned `Makefile.sh` would be, by make's built-in `% : %.sh`). ANY failure stops the anchor before
 make runs. Every later make names the pinned makefiles as goals, is started by the checked real path,
-re-hashes them afterwards, and MAKEFILE_LIST must be exactly the pinned set. Then three readings of
-those reviewed bytes, because a reviewer can approve a mistake:
+runs without the variables the makefiles take from the environment, re-hashes them afterwards, and
+MAKEFILE_LIST must be exactly the pinned set; the anchor ends with the same `make -q` probe again.
+Then three readings of those reviewed bytes, because a reviewer can approve a mistake:
 
   RESOLVER  `make -pn TARGET`: SHELL, .SHELLFLAGS and MAKEFLAGS as make itself resolved them — through
             variables, includes and duplicate definitions — and MAKEFILE_LIST, every file make read.
             Blind to a `-` recipe prefix: the dry-run prints the command without it.
   TEXT      those same files, read: a `-`/`+` prefix, a `|| true`-family suffix, any SHELL/.SHELLFLAGS/
             MAKEFLAGS/GNUMAKEFLAGS/MFLAGS assignment, `.ONESHELL`, a gate target defined twice or inside a
-            make conditional. Blind to a value computed at run time (`$(eval …)`).
+            make conditional. The recipe prefix/suffix scan covers the EXPLICIT rules of the named
+            closure (prerequisite_closure): a recipe make reaches through a pattern, suffix or built-in
+            implicit rule, `.DEFAULT`, or a `$`-named prerequisite is NOT scanned. Blind to a value
+            computed at run time (`$(eval …)`).
   WARNINGS  `make --dry-run` stderr: a duplicate target ("overriding commands" on GNU Make 3.81,
             "overriding recipe" on 4.x — both matched).
 
@@ -78,14 +82,21 @@ WHAT IT DOES NOT DO — stated, not implied. This list is not called complete.
     reviewed bytes — and the reviewed bytes run their own `$(shell …)` calls while being read (today
     four: `go env GOROOT`, `git describe`, `git rev-parse HEAD`, `date`). A malicious Makefile approved
     TOGETHER with its pin update runs. A named list of constructs in reviewed bytes is refused BEFORE
-    make (makegate.reviewed_bytes_problems: `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`,
-    `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`, SHELL/.SHELLFLAGS/MAKEFLAGS-family assignments in any form,
-    `$(eval)`, `+` and `$(MAKE)` lines, recipe lines that begin with an expansion); a construct not on
-    it, once approved, runs. The
-    resolver and text readings then refuse the known no-op shapes in reviewed bytes (a SHELL/MAKEFLAGS
-    override, a `-` prefix, a swallowed exit, `.ONESHELL`, a duplicate or conditional gate target), but
-    they run AFTER make has read the file and are not a grammar of make. Review is the control there, and CODEOWNERS is
-    advisory until the owner's ruleset exists.
+    make, each in its LITERAL spelling at the start of a line (makegate.reviewed_bytes_problems:
+    `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`, `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`,
+    literal SHELL/.SHELLFLAGS/MAKEFLAGS-family assignments — global, target- or pattern-specific,
+    `define`, `private`, `override` — `$(eval)`, `+` and `$(MAKE)` lines, recipe lines whose body begins
+    with `$` other than `$$`); a construct not on it, or one of them under a name make COMPUTES, once
+    approved, runs. The resolver and text readings then refuse the known no-op shapes in reviewed bytes
+    (a SHELL/MAKEFLAGS override, a `-` prefix, a swallowed exit, `.ONESHELL`, a duplicate or
+    conditional gate target), but they run AFTER make has read the file and are not a grammar of make;
+    the `-` prefix and suffix scan reads only the EXPLICIT rules of the named closure, not a recipe
+    reached through a pattern, suffix or implicit rule, `.DEFAULT`, or a `$`-named prerequisite.
+    vizra-core #11 (open, B5b) refuses the computed names and the non-explicit closure recipes, per the
+    vizra-security desk review of this PR; a `$`-named prerequisite is dropped from core's closure too
+    (read at 29387da, its make-integrity-guard.py:812), so that one is refused in neither repo yet.
+    Search adopts core's anchor in a follow-up. Review is the control there, and CODEOWNERS is advisory
+    until the owner's ruleset exists.
   * Without `--workflow` the ENVIRONMENT check is not a control. That is the local-parity mode the Go
     meta-tests use: make exports MAKEFLAGS to a recipe, so the words are checked against an ALLOWLIST of
     what GNU Make 3.81 and 4.3 export, and variables the makefiles take from the environment are
@@ -112,8 +123,9 @@ from pathlib import Path
 #
 # Every make target a CI lane invokes (.github/pinned-steps.yml `make_steps`),
 # plus `ci`, the local complete gate, so its prerequisite closure is scanned too.
-# The closure is COMPUTED from the rules, so a lane added to `ci` is covered
-# without editing this list.
+# The closure is COMPUTED from the literal prerequisites of explicit rules (see
+# prerequisite_closure for what it does not follow), so a lane added to `ci` as
+# an explicit rule is covered without editing this list.
 # ---------------------------------------------------------------------------
 GATE_TARGETS = [
     "ci",  # local parity: every lane, in order
@@ -384,13 +396,23 @@ RULE_RE = re.compile(r"^([^\t#=:][^#=:]*):(?!=)([^=]*)$")
 
 
 def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list[str]:
-    """Expand the named gate targets to everything they depend on.
+    """Expand the named gate targets through the literal prerequisites of EXPLICIT rules.
 
     `ci` is one word in a workflow and ten lanes in the Makefile. Checking only
     the word would leave `test`'s recipe — the actual test run — outside
     every recipe check here, which is precisely the gap a `-` prefix would use.
-    So the closure is COMPUTED from the rules rather than listed, and a lane
-    added to `ci` is covered without editing this file.
+    So the closure is COMPUTED from the explicit rules rather than listed, and a
+    lane added to `ci` as an explicit rule is covered without editing this file.
+
+    What it does NOT follow, so what check_recipe never scans: pattern rules
+    (`%` targets are skipped), old-style suffix rules and make's built-in
+    implicit rules, `.DEFAULT`, and any prerequisite written as an expansion
+    (`$`-named, dropped here). A closure prerequisite with no explicit rule is
+    only printed as a note; the recipe make would use for it is not read.
+    vizra-core #11 (open, B5b) refuses non-explicit and non-.PHONY closure
+    targets, per the vizra-security desk review of this PR; its closure drops a
+    `$`-named prerequisite as this one does (read at 29387da). Search adopts
+    core's anchor in a follow-up.
     """
     prereqs: dict[str, list[str]] = {}
     for rel in files:
@@ -445,21 +467,12 @@ def logical_recipe_lines(lines: list[str], start: int):
     return recipe
 
 
-# Make's own variables, which a makefile may reference without assigning.
-_MAKE_BUILTIN_VARS = {
-    "MAKE", "MAKEFILE_LIST", "CURDIR", "MAKEFLAGS", "MAKECMDGOALS", "SHELL", "MAKELEVEL",
-    ".SHELLFLAGS", "MAKE_VERSION", "MAKE_HOST", ".DEFAULT_GOAL", "MFLAGS", "MAKEFILES",
-    "VPATH", ".RECIPEPREFIX", ".VARIABLES", ".FEATURES", ".INCLUDE_DIRS", "SUFFIXES",
-}
-_FUNCTIONS = {
-    "shell", "wildcard", "eval", "info", "error", "warning", "foreach", "call", "patsubst",
-    "subst", "filter", "filter-out", "sort", "dir", "notdir", "strip", "word", "words",
-    "firstword", "lastword", "abspath", "realpath", "if", "or", "and", "origin", "value",
-    "addprefix", "addsuffix", "basename", "suffix", "join", "findstring", "flavor", "file",
-}
-_ASSIGN_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_][A-Za-z0-9_.]*)\s*(\?=|:{1,3}=|\+=|!=|=)", re.M)
-# `$(NAME)` / `${NAME}` — but not the shell's `$${NAME}` inside a recipe.
-_REF_RE = re.compile(r"(?<!\$)\$[({]([A-Za-z_][A-Za-z0-9_]*)[)}]")
+# The environment-taken reading lives in makegate (environment_taken), because EVERY make process drops
+# those names, not only the anchor's (M-4). Re-exported for ci-required-guard.py, which reads them here.
+_MAKE_BUILTIN_VARS = makegate._MAKE_BUILTIN_VARS
+_FUNCTIONS = makegate._FUNCTIONS
+_ASSIGN_RE = makegate._ASSIGN_RE
+_REF_RE = makegate._REF_RE
 
 
 def check_environment_overrides(g: Guard, root: Path, files: list[str], workflow: bool) -> None:
@@ -477,27 +490,15 @@ def check_environment_overrides(g: Guard, root: Path, files: list[str], workflow
     is one the environment can set — and in `--workflow` mode it must be ABSENT.
     `GOFLAGS` is refused as well whether or not a makefile names it, because
     the go command reads it directly. Local mode only reports them: a developer
-    may legitimately run `VERSION=v0.0.1 make build`.
+    may legitimately run `VERSION=v0.0.1 make build`. In BOTH modes, and for
+    every other caller of the gate, makegate.run_make starts make without them.
     """
-    assigned: dict[str, str] = {}
-    refs: set[str] = set()
-    for rel in files:
-        path = root / rel if not Path(rel).is_absolute() else Path(rel)
-        try:
-            text = path.read_text()
-        except OSError:
-            continue
-        for m in _ASSIGN_RE.finditer(text):
-            if m.group(1) not in assigned or m.group(2) == "?=":
-                assigned[m.group(1)] = m.group(2)
-        refs |= set(_REF_RE.findall(text))
-    from_env = {n for n, op in assigned.items() if op == "?="}
-    from_env |= {n for n in refs if n not in assigned} - _MAKE_BUILTIN_VARS - _FUNCTIONS
-    from_env.add("GOFLAGS")
+    from_env = makegate.environment_taken(root, files)
     present = sorted(n for n in from_env if n in os.environ)
     if not workflow:
-        g.ok(f"[local parity] the environment may set these makefile variables: {sorted(from_env)}"
-             + (f"; set now: {present}" if present else ""))
+        g.ok(f"[local parity] the makefiles take these from the environment: {sorted(from_env)}"
+             + (f"; set now: {present}" if present else "")
+             + " — every make the gate starts runs WITHOUT them")
         return
     if present:
         g.fail(
@@ -933,6 +934,17 @@ def main() -> int:
                 continue
             check_resolved(g, t, v)
             check_warnings(g, root, t)
+    except makegate.GateRefused as err:
+        for p in err.problems:
+            g.fail(p)
+    for p in makegate.recheck(root, GATE.digests):
+        g.fail(p)
+
+    # N-3: the same one-invocation probe again, last, so the pinned `make` step that follows does not
+    # depend on nothing having touched a modification time since the first probe.
+    try:
+        makegate.remake_probe(GATE.make, root, GATE.files)
+        g.ok(f"`make -q {' '.join(GATE.files)}` again at the end: still nothing would be remade")
     except makegate.GateRefused as err:
         for p in err.problems:
             g.fail(p)

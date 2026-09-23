@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """makegate — the ONE way this repository starts `make` from a script or a test.
 
-Aligned with vizra-core PR #10 (branch chore/m0-anchor-makefile-digest, head 62d16aa), whose
+Derived from vizra-core PR #10 (branch chore/m0-anchor-makefile-digest, head 62d16aa), whose
 scripts/make-integrity-guard.py carries the same pin shape, static read set, `make -q` remake probe and
-re-hash. Search puts those pieces in this module so that EVERY make invocation — the workflow anchor
+re-hash. vizra-core has since gone further (B5b, vizra-core #11: computed-name refusals, a closure of
+explicit .PHONY rules); this module does NOT carry that, and says so under WHAT IT DOES NOT DO. Search
+puts the pieces it has in this module so that the known make invocations — the workflow anchor
 (make-integrity-guard.py), the contract-drift lane's shape check (contract-drift-guard.py), and the
-Go test that reads the lane (internal/httpapi/lane_selection_test.go) — goes through the same gate.
-scripts/scripts_test.go inventories every place the repository starts make and fails on any other.
+Go test that reads the lane (internal/httpapi/lane_selection_test.go) — go through the same gate.
+TestEveryPlaceThatStartsMakeIsGated (scripts/scripts_test.go) fails on any make call it matches outside
+this file; it matches only the literal forms AGENTS.md lists (os/exec Command/CommandContext, strings
+passed to subprocess/os calls, make in command position on a .sh line), not make reached through a
+variable, a wrapper, another exec API or a file type it does not read.
 
 WHY. GNU Make EVALUATES a makefile while it reads it — `$(shell …)`, `$(file …)`, `!=`, `+` and
 `$(MAKE)` recipe lines, `.SECONDEXPANSION` prerequisites — and it REMAKES an out-of-date makefile
@@ -24,15 +29,22 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
      plus every literal include/load target, transitively; each must be pinned. No GNUmakefile or
      makefile may sit beside it (compared case-folded, so a case-insensitive disk cannot hide one).
      `$(eval …)`/`$(guile …)` and computed include names are refused: the reading cannot see them.
-     Refused BY NAME in the reviewed bytes (reviewed_bytes_problems): `.RECIPEPREFIX`,
-     `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`, `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`; any SHELL /
-     .SHELLFLAGS other than the approved line, and any MAKEFLAGS / GNUMAKEFLAGS / MFLAGS, in every
-     form (target- or pattern-specific, define, private, override); `$(eval …)`; `+` recipe lines and
-     `$(MAKE)`, which run even under -n and -q; and a recipe line that BEGINS with an expansion,
-     whose prefix cannot be determined without running make.
+     Refused BY NAME in the reviewed bytes (reviewed_bytes_problems), each only in its LITERAL
+     spelling at the start of a line: `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`,
+     `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`; any SHELL / .SHELLFLAGS other than the approved line, and
+     any MAKEFLAGS / GNUMAKEFLAGS / MFLAGS, in the literal forms `NAME =`, `target: NAME =`,
+     `%: NAME =`, `define NAME`, with `private`/`override`/`export` modifiers. A name make COMPUTES
+     (`$(X)ORE:`, a special target that is not the first word of its rule line, a target-specific
+     assignment whose variable name is an expansion) is NOT refused. Also `$(eval …)`; `+` recipe
+     lines and `$(MAKE)`, which run even under -n and -q; and a recipe line whose body (after any
+     `@`/`-`/`+` prefix) begins with `$` other than `$$` — `$(…)`, `${…}`, `$@`, `$<`, `$X` — whose
+     prefix cannot be determined without running make.
   3. ENVIRONMENT. MAKEFILES must be unset (it adds makefiles nobody pinned). Every process this module
      starts runs with clean_env(): make's flag variables, MAKEFILES, BASH_ENV, ENV and the runner's
      command-file variables (and anything pointing into the runner's command-file directory) removed.
+     Every MAKE process additionally runs without the variables the pinned makefiles take from the
+     environment (environment_taken: `?=` names and names referenced but never assigned, plus
+     GOFLAGS — the list the anchor refuses in --workflow mode), whoever opened the gate.
   4. MAKE. `make` must resolve to a regular file named make/gmake in a system directory, and it is
      started by THAT real path, not looked up again.
   5. REMAKE PROBE. `make -q <every pinned makefile>` — each named as a GOAL, so -q applies to it and
@@ -45,7 +57,10 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
 
 WHAT IT DOES NOT DO. It does not judge the reviewed bytes: they run their own reviewed `$(shell …)`
 calls while being read (today four), and a malicious Makefile approved together with its pin update
-runs. Review is the control there, and CODEOWNERS is advisory. It sees only what it reads: a step
+runs. Review is the control there, and CODEOWNERS is advisory. The named-construct list is matched on
+literal spellings only (step 2): a computed name for any of them, once approved, is not refused here.
+vizra-core #11 (open, B5b) refuses computed names, per the vizra-security desk review of this PR;
+search adopts core's anchor in a follow-up. It sees only what it reads: a step
 that changed the machine before it ran (a forwarding make stub, a replaced toolchain) is outside it.
 It does not use `-r`/`--no-builtin-rules`: disabling the built-in rules in the probe would HIDE the
 very remake the unmodified pinned `make` step would perform, and on the resolver it would change
@@ -108,11 +123,14 @@ def _is_runner_command_file(value: str, command_dirs: set[str]) -> bool:
     return bool(parent) and (os.path.basename(parent) == RUNNER_FILE_COMMANDS_DIR or parent in command_dirs)
 
 
-def clean_env(environ=None) -> dict:
-    """The environment for EVERY process started here. Defence in depth, not the control."""
+def clean_env(environ=None, drop=()) -> dict:
+    """The environment for EVERY process started here. Defence in depth, not the control.
+
+    `drop`: further names to remove — run_make passes environment_taken() for every make process.
+    """
     env = dict(os.environ if environ is None else environ)
     command_dirs = {os.path.dirname(os.path.normpath(env[n])) for n in RUNNER_COMMAND_FILES if env.get(n)} - {""}
-    drop = set(_ALWAYS_DROPPED) | set(RUNNER_COMMAND_FILES)
+    drop = set(drop) | set(_ALWAYS_DROPPED) | set(RUNNER_COMMAND_FILES)
     drop |= {k for k, v in env.items() if _is_runner_command_file(v, command_dirs)}
     # A name a shell cannot even spell (`.RECIPEPREFIX`, `.SHELLFLAGS`) is one only make would read.
     drop |= {k for k in env if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", k)}
@@ -229,11 +247,14 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
 
 # ------------------------------------------------ constructs refused by name ---
 #
-# Refused in REVIEWED bytes, by name, BEFORE make is started — aligned with vizra-core PR #10 and its
-# re-verification. Each one either runs something while make reads the file (so the `make -q` probe
-# would not be recipe-free), or changes what the anchor's later readings mean, or ignores a gate
-# failure without a `-` prefix any reading could see. This is a list of named constructs over reviewed
-# text, not a grammar of make; the control for what a reviewer approves is still review.
+# Refused in REVIEWED bytes, by name, BEFORE make is started — derived from vizra-core PR #10 and its
+# re-verification (core has since added computed-name refusals in B5b, vizra-core #11; this list does
+# not). Each one either runs something while make reads the file (so the `make -q` probe would not be
+# recipe-free), or changes what the anchor's later readings mean, or ignores a gate failure without a
+# `-` prefix any reading could see. The regexes below match the LITERAL name at the start of a line
+# (after an optional `target:` for assignments); a name make computes by expansion is not matched. This
+# is a list of named constructs over reviewed text, not a grammar of make; the control for what a
+# reviewer approves is still review.
 APPROVED_SHELL_LINES = {"SHELL := /bin/bash", ".SHELLFLAGS := -eu -o pipefail -c"}
 _CONTROLLED_VARS = r"(SHELL|\.SHELLFLAGS|MAKEFLAGS|GNUMAKEFLAGS|MFLAGS|\.RECIPEPREFIX|\.EXTRA_PREREQS)"
 _MODIFIERS = r"(?:(?:export|override|private|unexport)\s+)*"
@@ -269,7 +290,7 @@ def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
             if "+" in prefix:
                 out.append(f"{rel}:{n} is a recipe line prefixed `+`, which make runs even under -n and -q: "
                            f"`{raw.strip()[:100]}`")
-            if body.startswith(("$(", "${")):
+            if body.startswith("$") and not body.startswith("$$"):
                 out.append(f"{rel}:{n} is a recipe line that BEGINS with an expansion (`{body[:40]}`). What it "
                            f"expands to — possibly a `-` or `+` prefix — cannot be determined without running make.")
             if _MAKE_VAR_RE.search(raw):
@@ -282,8 +303,8 @@ def reviewed_bytes_problems(rel: str, text: str) -> list[str]:
         if m:
             out.append(f"{rel}:{n} assigns `{m.group(1)}` (`{stripped[:100]}`). SHELL and .SHELLFLAGS may appear "
                        f"only as {sorted(APPROVED_SHELL_LINES)}; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX "
-                       f"and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, "
-                       f"pattern-specific, define, private, override).")
+                       f"and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, "
+                       f"target- or pattern-specific, define, private, override).")
         t = _SPECIAL_TARGET_RE.match(raw)
         if t:
             out.append(f"{rel}:{n} declares `{t.group(1)}`: {_SPECIAL_WHY[t.group(1)]}.")
@@ -373,10 +394,59 @@ def check_environment() -> None:
                            f"files before the pinned Makefile."])
 
 
+# Make's own variables, which a makefile may reference without assigning.
+_MAKE_BUILTIN_VARS = {
+    "MAKE", "MAKEFILE_LIST", "CURDIR", "MAKEFLAGS", "MAKECMDGOALS", "SHELL", "MAKELEVEL",
+    ".SHELLFLAGS", "MAKE_VERSION", "MAKE_HOST", ".DEFAULT_GOAL", "MFLAGS", "MAKEFILES",
+    "VPATH", ".RECIPEPREFIX", ".VARIABLES", ".FEATURES", ".INCLUDE_DIRS", "SUFFIXES",
+}
+_FUNCTIONS = {
+    "shell", "wildcard", "eval", "info", "error", "warning", "foreach", "call", "patsubst",
+    "subst", "filter", "filter-out", "sort", "dir", "notdir", "strip", "word", "words",
+    "firstword", "lastword", "abspath", "realpath", "if", "or", "and", "origin", "value",
+    "addprefix", "addsuffix", "basename", "suffix", "join", "findstring", "flavor", "file",
+}
+_ASSIGN_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_][A-Za-z0-9_.]*)\s*(\?=|:{1,3}=|\+=|!=|=)", re.M)
+# `$(NAME)` / `${NAME}` — but not the shell's `$${NAME}` inside a recipe.
+_REF_RE = re.compile(r"(?<!\$)\$[({]([A-Za-z_][A-Za-z0-9_]*)[)}]")
+
+
+def environment_taken(root: Path, files) -> set[str]:
+    """The variables the given makefiles take FROM the environment, plus GOFLAGS.
+
+    A name assigned with `?=`, or referenced as `$(NAME)` and never assigned, is one the environment
+    sets — and make imports an environment variable as a RECURSIVELY expanded variable, so its value is
+    evaluated as make text while the Makefile is read (manual §6.10). The anchor refuses these in
+    --workflow mode (check_environment_overrides); run_make drops them from EVERY make process this
+    module starts, so a caller that opens the gate without the anchor (contract-drift-guard.py, the lane
+    test) does not hand them to make either (PR #5 security desk review, M-4).
+    """
+    assigned: dict[str, str] = {}
+    refs: set[str] = set()
+    for rel in files:
+        path = Path(rel) if Path(rel).is_absolute() else Path(root) / rel
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        for m in _ASSIGN_RE.finditer(text):
+            if m.group(1) not in assigned or m.group(2) == "?=":
+                assigned[m.group(1)] = m.group(2)
+        refs |= set(_REF_RE.findall(text))
+    taken = {n for n, op in assigned.items() if op == "?="}
+    taken |= {n for n in refs if n not in assigned} - _MAKE_BUILTIN_VARS - _FUNCTIONS
+    taken.add("GOFLAGS")
+    return taken
+
+
 def run_make(make: str, root: Path, args: list[str]) -> subprocess.CompletedProcess:
     global MAKE_INVOCATIONS
+    # Computed from the PINNED files on every call (a stale or missing pin raises GateRefused here,
+    # before make starts), so no caller can forget to pass it.
+    taken = environment_taken(root, sorted(load_pin(Path(root))))
     MAKE_INVOCATIONS += 1
-    return subprocess.run([make, *args], cwd=str(root), env=clean_env(), capture_output=True, text=True)
+    return subprocess.run([make, *args], cwd=str(root), env=clean_env(drop=taken), capture_output=True,
+                          text=True)
 
 
 def remake_probe(make: str, root: Path, files: list[str]) -> None:

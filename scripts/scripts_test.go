@@ -6,12 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1254,20 +1258,140 @@ func TestPinnedFilesMustBeRegularAndAloneInBothReaders(t *testing.T) {
 	}
 }
 
-// R-1's inventory: every place this repository starts make. make may be
-// started only by scripts/makegate.py (the gate) and by the pinned workflow
-// steps (each one guarded by the adjacent anchor). Anything else — a Go
-// exec.Command, a Python subprocess list, a shell line — is red here, so a
-// new, ungated make call cannot arrive unnoticed. Not read: make started
-// through an indirection (a variable holding "make", a wrapper script), which
-// is review-only, like everything else the guards cannot parse.
-func TestEveryPlaceThatStartsMakeIsGated(t *testing.T) {
-	root := repoRoot(t)
-	goExec := regexp.MustCompile(`exec\.Command(Context)?\([^,)]*?"(?:[^"]*/)?g?make"`)
-	pyList := regexp.MustCompile(`\[\s*["'](?:[^"']*/)?g?make["']\s*[,\]]|subprocess\.\w+\(\s*\[\s*make\b`)
-	shLine := regexp.MustCompile(`^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:exec\s+|command\s+)?(?:/usr/bin/)?g?make(?:\s|$)`)
-	allowed := map[string]bool{"scripts/makegate.py": true}
-	var sites []string
+// R-1's inventory. make may be started only by scripts/makegate.py (the gate)
+// and by the pinned workflow steps (each one guarded by the adjacent anchor).
+// This test fails on any make call it MATCHES outside makegate.py, and it
+// matches exactly these forms (AGENTS.md lists the same, and what it does not
+// match):
+//
+//   - .go, parsed with go/ast: an os/exec Command/CommandContext call (under
+//     any import name) with a string literal in ANY argument that is make or
+//     gmake (any path), or a shell line with make in command position;
+//   - .py, parsed with Python's ast: a string, or a name make/gmake, anywhere
+//     in the arguments of a subprocess.* call or an os.system / os.popen /
+//     os.exec* / os.spawn* / os.posix_spawn* call, under any import name —
+//     a list element (["env", "make", …] included) or a shell string
+//     (shell=True, os.system) with make in command position;
+//   - .sh, per line: make in command position (makeShellPattern).
+//
+// Not matched, so review-only: make named through a variable or constant, a
+// wrapper script, other exec APIs, the line positions makeShellPattern does
+// not list, and files without those extensions or under docs/, testdata/,
+// bin/. A .go or .py file that does not parse is a failure, not a pass.
+//
+// makeShellPattern is make in shell command position: at the start, or after
+// ; & && | || ( ` { ! or then/do/if/elif/else/while/until/time, optionally
+// behind VAR=value words and exec/command (no flags) or env/nohup/sudo (with
+// flags and VAR=value words), with any path. RE2 and Python's re agree on it;
+// the Python scan receives it as an argument, so there is one definition.
+const makeShellPattern = "(?:^|[;&|(`{!]|\\b(?:then|do|if|elif|else|while|until|time)\\s)\\s*" +
+	"(?:[A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*" +
+	"(?:(?:exec|command)\\s+|(?:env|nohup|sudo)\\s+(?:-\\S+\\s+)*(?:[A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*)*" +
+	"(?:\\S*/)?g?make(?:\\s|$|[;&|)`}])"
+
+var (
+	makeShell   = regexp.MustCompile(makeShellPattern)
+	makeProgram = regexp.MustCompile(`^(?:.*/)?g?make$`)
+)
+
+// pyMakeCalls is the Python half of the inventory: argv[1] is makeShellPattern,
+// the rest are .py files. It prints JSON: [{"path", "line"}] per matched call,
+// and {"path", "error"} for a file it cannot parse.
+const pyMakeCalls = `
+import ast, json, re, sys
+SH = re.compile(sys.argv[1])
+PROG = re.compile(r"^(?:.*/)?g?make$")
+OS_FUNCS = ("system", "popen", "exec", "spawn", "posix_spawn")
+out = []
+for path in sys.argv[2:]:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read(), path)
+    except (SyntaxError, UnicodeDecodeError, ValueError) as err:
+        out.append({"path": path, "line": 0, "error": str(err)})
+        continue
+    mods, funcs = {}, {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                if a.name in ("subprocess", "os"):
+                    mods[a.asname or a.name] = a.name
+        elif isinstance(node, ast.ImportFrom) and node.module in ("subprocess", "os"):
+            for a in node.names:
+                funcs[a.asname or a.name] = (node.module, a.name)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        f, target = node.func, None
+        if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) and f.value.id in mods:
+            target = (mods[f.value.id], f.attr)
+        elif isinstance(f, ast.Name) and f.id in funcs:
+            target = funcs[f.id]
+        if target is None or (target[0] == "os" and not target[1].startswith(OS_FUNCS)):
+            continue
+        hit = False
+        for arg in list(node.args) + [k.value for k in node.keywords]:
+            for sub in ast.walk(arg):
+                if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                    hit = hit or bool(PROG.match(sub.value) or SH.search(sub.value))
+                elif isinstance(sub, ast.Name):
+                    hit = hit or sub.id in ("make", "gmake")
+        if hit:
+            out.append({"path": path, "line": node.lineno, "error": ""})
+json.dump(out, sys.stdout)
+`
+
+// goMakeCalls returns the line of every os/exec Command/CommandContext call in
+// src that names make (see makeShellPattern for the shell form).
+func goMakeCalls(path string, src []byte) ([]int, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, src, parser.SkipObjectResolution)
+	if err != nil {
+		return nil, err
+	}
+	execNames := map[string]bool{"exec": true}
+	for _, imp := range f.Imports {
+		if p, _ := strconv.Unquote(imp.Path.Value); p == "os/exec" && imp.Name != nil {
+			execNames[imp.Name.Name] = true
+		}
+	}
+	var lines []int
+	ast.Inspect(f, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || (sel.Sel.Name != "Command" && sel.Sel.Name != "CommandContext") {
+			return true
+		}
+		if x, ok := sel.X.(*ast.Ident); !ok || !execNames[x.Name] {
+			return true
+		}
+		hit := false
+		for _, a := range call.Args {
+			ast.Inspect(a, func(m ast.Node) bool {
+				if lit, ok := m.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					if v, err := strconv.Unquote(lit.Value); err == nil && (makeProgram.MatchString(v) || makeShell.MatchString(v)) {
+						hit = true
+					}
+				}
+				return true
+			})
+		}
+		if hit {
+			lines = append(lines, fset.Position(call.Pos()).Line)
+		}
+		return true
+	})
+	return lines, nil
+}
+
+// makeLaunchSites walks root as the inventory does and returns every matched
+// site as "rel:line", plus the files it could not read (a failure, never a pass).
+func makeLaunchSites(t *testing.T, root string) (sites, problems []string) {
+	t.Helper()
+	var pyFiles []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -1281,32 +1405,32 @@ func TestEveryPlaceThatStartsMakeIsGated(t *testing.T) {
 			}
 			return nil
 		}
-		ext := filepath.Ext(path)
-		if ext != ".go" && ext != ".py" && ext != ".sh" {
-			return nil
-		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		for n, line := range strings.Split(string(raw), "\n") {
-			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") {
-				continue
+		switch filepath.Ext(path) {
+		case ".go":
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				return err
 			}
-			hit := false
-			switch ext {
-			case ".go":
-				hit = goExec.MatchString(line)
-			case ".py":
-				hit = pyList.MatchString(line)
-			case ".sh":
-				hit = shLine.MatchString(line)
+			lines, err := goMakeCalls(path, raw)
+			if err != nil {
+				problems = append(problems, fmt.Sprintf("%s does not parse, so it is not cleared: %v", rel, err))
 			}
-			if hit {
-				sites = append(sites, fmt.Sprintf("%s:%d", rel, n+1))
-				if !allowed[rel] {
-					t.Errorf("%s:%d starts make outside scripts/makegate.py: %s", rel, n+1, trimmed)
+			for _, n := range lines {
+				sites = append(sites, fmt.Sprintf("%s:%d", rel, n))
+			}
+		case ".py":
+			pyFiles = append(pyFiles, path)
+		case ".sh":
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for n, line := range strings.Split(string(raw), "\n") {
+				if strings.HasPrefix(strings.TrimSpace(line), "#") {
+					continue
+				}
+				if makeShell.MatchString(line) {
+					sites = append(sites, fmt.Sprintf("%s:%d", rel, n+1))
 				}
 			}
 		}
@@ -1315,10 +1439,150 @@ func TestEveryPlaceThatStartsMakeIsGated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(pyFiles) > 0 {
+		cmd := exec.Command("python3", append([]string{"-c", pyMakeCalls, makeShellPattern}, pyFiles...)...)
+		cmd.Env = cleanEnv()
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("BLOCKED: the Python half of the inventory did not run: %v\n%s", err, out)
+		}
+		var found []struct {
+			Path  string `json:"path"`
+			Line  int    `json:"line"`
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(out, &found); err != nil {
+			t.Fatalf("the Python half of the inventory printed something that is not its JSON: %v\n%s", err, out)
+		}
+		for _, h := range found {
+			rel, _ := filepath.Rel(root, h.Path)
+			rel = filepath.ToSlash(rel)
+			if h.Error != "" {
+				problems = append(problems, fmt.Sprintf("%s does not parse, so it is not cleared: %s", rel, h.Error))
+				continue
+			}
+			sites = append(sites, fmt.Sprintf("%s:%d", rel, h.Line))
+		}
+	}
+	sort.Strings(sites)
+	return sites, problems
+}
+
+func TestEveryPlaceThatStartsMakeIsGated(t *testing.T) {
+	requirePython(t)
+	root := repoRoot(t)
+	sites, problems := makeLaunchSites(t, root)
+	for _, p := range problems {
+		t.Errorf("%s", p)
+	}
+	for _, s := range sites {
+		if !strings.HasPrefix(s, "scripts/makegate.py:") {
+			t.Errorf("%s starts make outside scripts/makegate.py", s)
+		}
+	}
 	if len(sites) == 0 {
 		t.Fatal("the inventory found no make call at all, not even makegate.py's own: the scan is not reading the tree")
 	}
-	t.Logf("every place that starts make: %v (allowed: scripts/makegate.py)", sites)
+	t.Logf("every place the inventory matches that starts make: %v (allowed: scripts/makegate.py)", sites)
+}
+
+// Every form the inventory claims to match, planted as a real file in an
+// otherwise empty tree: each must be reported at its own line. The controls
+// that must NOT be reported keep the patterns from matching everything. The
+// planted files are never run.
+func TestTheMakeLaunchInventorySeesEveryListedForm(t *testing.T) {
+	requirePython(t)
+	const goHead = "package p\n\nimport (\n\t\"context\"\n\t\"os/exec\"\n)\n\nfunc f(ctx context.Context) {\n"
+	const goLine = 9 // the first line of f's body
+	type form struct{ name, file, src string }
+	hits := []form{
+		{"go exec.Command", "a.go", goHead + "\t_ = exec.Command(\"make\", \"ci\")\n}\n"},
+		{"go exec.CommandContext after ctx", "a.go", goHead + "\t_ = exec.CommandContext(ctx, \"make\", \"ci\")\n}\n"},
+		{"go an absolute path", "a.go", goHead + "\t_ = exec.Command(\"/usr/local/bin/make\", \"ci\")\n}\n"},
+		{"go gmake", "a.go", goHead + "\t_ = exec.Command(\"gmake\", \"ci\")\n}\n"},
+		{"go through a shell", "a.go", goHead + "\t_ = exec.CommandContext(ctx, \"sh\", \"-c\", \"cd x && make ci\")\n}\n"},
+		{"go the call split across lines", "a.go", goHead + "\t_ = exec.CommandContext(\n\t\tctx,\n\t\t\"make\",\n\t)\n}\n"},
+		{"go an aliased os/exec import", "a.go", "package p\n\nimport osexec \"os/exec\"\n\nfunc f() {\n\t_ = 0\n\t_ = 0\n\t_ = 0\n\t_ = osexec.Command(\"make\")\n}\n"},
+		{"py a subprocess list", "a.py", "import subprocess\n\n\n\n\n\n\n\nsubprocess.run([\"make\", \"ci\"])\n"},
+		{"py shell=True", "a.py", "import subprocess\n\n\n\n\n\n\n\nsubprocess.run(\"make ci\", shell=True)\n"},
+		{"py os.system", "a.py", "import os\n\n\n\n\n\n\n\nos.system(\"cd x && make ci\")\n"},
+		{"py env make", "a.py", "import subprocess\n\n\n\n\n\n\n\nsubprocess.run([\"env\", \"make\", \"ci\"])\n"},
+		{"py os.execvp", "a.py", "import os\n\n\n\n\n\n\n\nos.execvp(\"make\", [\"make\", \"ci\"])\n"},
+		{"py a from-import alias", "a.py", "from subprocess import check_call as cc\n\n\n\n\n\n\n\ncc([\"/usr/bin/make\", \"ci\"])\n"},
+		{"py a module alias", "a.py", "import subprocess as sp\n\n\n\n\n\n\n\nsp.Popen([\"gmake\"])\n"},
+		{"py the name make in argv", "a.py", "import subprocess\n\n\n\nmake = '/usr/bin/make'\n\n\n\nsubprocess.run([make, 'ci'])\n"},
+		{"py the list split across lines", "a.py", "import subprocess\n\n\n\n\n\n\n\nsubprocess.run(\n    [\n        \"make\",\n    ]\n)\n"},
+		{"sh at the start", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nmake ci\n"},
+		{"sh behind an assignment", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nFOO=1 make ci\n"},
+		{"sh after &&", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\ncd x && make ci\n"},
+		{"sh after ||", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\ntrue || make ci\n"},
+		{"sh after ;", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\ncd x; make ci\n"},
+		{"sh after |", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\necho ci | make -f -\n"},
+		{"sh in a subshell", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\n(make ci)\n"},
+		{"sh in $( )", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nout=$(make -n ci)\n"},
+		{"sh after if", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nif make -q ci; then :; fi\n"},
+		{"sh after if !", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nif ! make -q ci; then :; fi\n"},
+		{"sh after then", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nif true; then make ci; fi\n"},
+		{"sh after do", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nfor x in 1; do make ci; done\n"},
+		{"sh an absolute path", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\n/usr/local/bin/make ci\n"},
+		{"sh behind env with flags", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nenv -i PATH=/usr/bin make ci\n"},
+		{"sh behind exec", "a.sh", "#!/bin/sh\n\n\n\n\n\n\n\nexec make ci\n"},
+	}
+	misses := []form{
+		{"go a commented-out call", "a.go", goHead + "\t// _ = exec.Command(\"make\")\n}\n"},
+		{"go make in a non-exec call", "a.go", "package p\n\nimport \"fmt\"\n\nfunc f() { fmt.Println(\"make ci\") }\n"},
+		{"go a non-make program", "a.go", goHead + "\t_ = exec.Command(\"python3\", \"scripts/makegate.py\", \"--\", \"-n\")\n}\n"},
+		{"py make in a message", "a.py", "print(\"run make ci\")\n"},
+		{"py a subprocess call without make", "a.py", "import subprocess\nsubprocess.run([\"git\", \"log\"])\n"},
+		{"py a commented-out call", "a.py", "import subprocess\n# subprocess.run(['make'])\n"},
+		{"sh a comment", "a.sh", "# make ci\n"},
+		{"sh make as an argument", "a.sh", "echo make ci\n"},
+		{"sh a make-prefixed script", "a.sh", "./scripts/make-integrity-guard.sh --workflow\n"},
+		{"sh command -v make", "a.sh", "command -v make >/dev/null\n"},
+	}
+	for _, f := range hits {
+		f := f
+		t.Run("matched/"+f.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, f.file), []byte(f.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			sites, problems := makeLaunchSites(t, dir)
+			want := fmt.Sprintf("%s:%d", f.file, goLine)
+			if len(problems) != 0 || len(sites) != 1 || sites[0] != want {
+				t.Fatalf("planted %q: sites %v, problems %v; want exactly [%s]", f.src, sites, problems, want)
+			}
+			t.Logf("%s | planted and reported at %s", f.name, sites[0])
+		})
+	}
+	for _, f := range misses {
+		f := f
+		t.Run("not matched/"+f.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, f.file), []byte(f.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			sites, problems := makeLaunchSites(t, dir)
+			if len(problems) != 0 || len(sites) != 0 {
+				t.Fatalf("control %q: sites %v, problems %v; want none", f.src, sites, problems)
+			}
+		})
+	}
+	for _, f := range []form{
+		{"go that does not parse", "a.go", "package p\nfunc (\n"},
+		{"py that does not parse", "a.py", "def (:\n"},
+	} {
+		f := f
+		t.Run("fails closed/"+f.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, f.file), []byte(f.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if _, problems := makeLaunchSites(t, dir); len(problems) != 1 || !strings.Contains(problems[0], "does not parse") {
+				t.Fatalf("an unparsable %s was not reported: %v", f.file, problems)
+			}
+		})
+	}
 }
 
 // The chair's correction to core #10's probe: ONE `make -q` naming EVERY pinned
@@ -1408,6 +1672,11 @@ func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
 		{"+ recipe line", "\ninert-target:\n\t+@true\n", "prefixed `+`"},
 		{"$(MAKE) in a recipe", "\ninert-target:\n\t@echo $(MAKE) >/dev/null\n", "names $(make)"},
 		{"recipe that begins with an expansion", "\nQ := @\ninert-target:\n\t$(Q)true\n", "begins with an expansion"},
+		// M-3 (security desk review at e068e07): make also expands `$` + ONE character — an automatic
+		// variable or a one-letter name — and applies a `-`/`+` prefix produced that way. Inert: none runs.
+		{"recipe that begins with $@", "\ninert-target:\n\t$@-is-not-run\n", "begins with an expansion"},
+		{"recipe that begins with $<", "\ninert-target:\n\t$<true\n", "begins with an expansion"},
+		{"recipe that begins with $X (a one-letter variable)", "\nX := @\ninert-target:\n\t$Xtrue\n", "begins with an expansion"},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -1430,6 +1699,89 @@ func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
 			}
 			t.Logf("%s (re-pinned) | anchor exit %d, 0 make processes: %s | ci-required-guard exit %d",
 				tc.name, code, firstFail(out), gcode)
+		})
+	}
+}
+
+// The control for M-3's check: `$$` is make's escape for a literal `$` (a shell
+// variable), not an expansion make performs, so a recipe that begins with it is
+// NOT refused. Without this, "refuse every leading `$`" would pass the rows above.
+func TestARecipeBeginningWithAnEscapedDollarIsNotRefused(t *testing.T) {
+	requirePython(t)
+	dir := copyTree(t)
+	mk := filepath.Join(dir, "Makefile")
+	raw, _ := os.ReadFile(mk)
+	if err := os.WriteFile(mk, append(raw, []byte("\ninert-target:\n\t$$inert_shell_word\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repin(t, dir)
+	if out, code := anchor(t)(dir, cleanEnv()); code != 0 {
+		t.Fatalf("anchor: exit %d on a recipe beginning with `$$`; want green:\n%s", code, out)
+	}
+	if out, code := guardPy(t)(dir, cleanEnv()); code != 0 {
+		t.Fatalf("ci-required-guard: exit %d on a recipe beginning with `$$`; want green:\n%s", code, out)
+	}
+}
+
+// makeEnvRecorder runs a gate caller (argv[1]) with subprocess.run wrapped, and
+// prints, for every make process the caller starts, which of the names in
+// argv[2] were in that process's environment. It records; it changes nothing.
+const makeEnvRecorder = `
+import os, runpy, subprocess, sys
+real = subprocess.run
+names = sys.argv[2].split(",")
+def recording(argv, *a, **k):
+    if isinstance(argv, (list, tuple)) and argv and os.path.basename(str(argv[0])) in ("make", "gmake"):
+        env = k.get("env")
+        got = [n for n in names if n in (os.environ if env is None else env)]
+        print("MAKE-ENV " + " ".join(str(x) for x in argv[1:3]) + " | planted: " + (",".join(got) or "none"),
+              file=sys.stderr, flush=True)
+    return real(argv, *a, **k)
+subprocess.run = recording
+script = sys.argv[1]
+sys.argv = [script] + sys.argv[3:]
+runpy.run_path(script, run_name="__main__")
+`
+
+// M-4 (security desk review at e068e07): make imports an environment variable
+// as a recursively expanded variable, so a planted VERSION is evaluated while
+// the Makefile is read. contract-drift-guard.py opens the gate BEFORE the
+// anchor in its job, and the lane test opens it where no anchor runs. So every
+// make process makegate starts, for every caller, runs without the variables
+// the pinned makefiles take from the environment. Asserted per make process.
+func TestEnvironmentTakenVariablesNeverReachMake(t *testing.T) {
+	requirePython(t)
+	root := repoRoot(t)
+	planted := []string{"VERSION", "COMMIT", "CORE", "GOFLAGS"}
+	callers := map[string][]string{
+		"contract-drift-guard.py recipe":          {"scripts/contract-drift-guard.py", "recipe"},
+		"makegate.py -- --dry-run contract-drift": {"scripts/makegate.py", "--", "--dry-run", "--no-print-directory", "contract-drift"},
+	}
+	for name, argv := range callers {
+		name, argv := name, argv
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			env := cleanEnv("VERSION=vz-m4-planted", "COMMIT=vz-m4-planted", "CORE=vz-m4-planted", "GOFLAGS=-mod=mod")
+			args := append([]string{"-c", makeEnvRecorder, filepath.Join(root, argv[0]), strings.Join(planted, ",")}, argv[1:]...)
+			out, code := run(t, root, env, "python3", args...)
+			if code != 0 {
+				t.Fatalf("%s: exit %d with the variables planted; want the gate to pass:\n%s", name, code, out)
+			}
+			var makes []string
+			for _, l := range strings.Split(out, "\n") {
+				if strings.HasPrefix(l, "MAKE-ENV ") {
+					makes = append(makes, l)
+				}
+			}
+			if len(makes) < 2 {
+				t.Fatalf("%s: recorded %d make process(es); want at least the remake probe and the run:\n%s", name, len(makes), out)
+			}
+			for _, l := range makes {
+				if !strings.HasSuffix(l, "| planted: none") {
+					t.Errorf("%s: a make process received a variable the Makefile takes from the environment: %s", name, l)
+				}
+			}
+			t.Logf("%s | %d make process(es), none received %v: %v", name, len(makes), planted, makes)
 		})
 	}
 }

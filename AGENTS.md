@@ -518,8 +518,23 @@ surroundings**:
   **Every place a script or test in this repository starts make goes through
   one helper, `scripts/makegate.py`** — the anchor, the contract-drift shape
   check (which runs *before* the anchor in its job), and the lane test inside
-  `test-noskip` — and `TestEveryPlaceThatStartsMakeIsGated` fails on any other
-  make call it can see in a `.go`, `.py` or `.sh` file. (The pinned `make`
+  `test-noskip` — and `TestEveryPlaceThatStartsMakeIsGated` fails on any make
+  call it matches outside that helper, in exactly these forms (the list of
+  what it does not match is under "What they cannot do"): in `.go` files,
+  parsed with `go/ast`, an `os/exec` `Command`/`CommandContext` call with a
+  `make`/`gmake` string literal (any path) in ANY argument position, or a
+  string literal with make in shell command position; in `.py` files, parsed
+  with Python's `ast`, a call to any `subprocess` function or to an `os`
+  function whose name starts `system`/`popen`/`exec`/`spawn`/`posix_spawn`
+  (under any import name) with, anywhere in its arguments, a string that is
+  `make`/`gmake` (any path) — so `["env", "make", …]` too — or a string with
+  make in shell command position (`shell=True`, `os.system`), or a name
+  `make`/`gmake`; in `.sh` files, a non-comment line with make (any path,
+  e.g. `/usr/local/bin/make`) in command position: at the start, or after
+  `;` `&` `|` `(` `` ` `` `{` `!` (so `&&` and `||` too) or
+  `then`/`do`/`if`/`elif`/`else`/`while`/`until`/`time`, optionally behind
+  `VAR=value` words and `exec`/`command` (no flags) or `env`/`nohup`/`sudo`
+  (with flags and `VAR=value` words). (The pinned `make`
   workflow STEPS are the other starter; the anchor adjacent to each is their
   guard.) The helper starts make only when all of this holds, and any failure
   stops it BEFORE make:
@@ -528,7 +543,9 @@ surroundings**:
     running them), and no `GNUmakefile`/`makefile` sits beside the Makefile,
     compared case-folded;
   - the reviewed bytes contain none of these constructs, each refused BY NAME
-    (aligned with vizra-core PR #10 and its re-verification). They ignore a
+    in its LITERAL spelling at the start of a line (derived from vizra-core
+    PR #10; core has since moved on to B5b, vizra-core #11, whose
+    computed-name refusals this list does NOT have). They ignore a
     gate failure without a visible `-` (`.IGNORE`, `.DEFAULT`,
     `.EXTRA_PREREQS`), run something while make reads the file (`+` recipe
     lines and `$(MAKE)`, both of which run even under `-n` and `-q`;
@@ -536,12 +553,20 @@ surroundings**:
     on GNU Make 4.3 a pinned `.RECIPEPREFIX := >` hides a `-` prefix from a
     tab-keyed check — `.SECONDEXPANSION`, `.ONESHELL`, `.POSIX`). Also refused:
     any SHELL or .SHELLFLAGS other than the one approved line, and any
-    MAKEFLAGS, GNUMAKEFLAGS or MFLAGS, in every form (target- or
-    pattern-specific, `define`, `private`, `override`). A recipe line that
-    BEGINS with an expansion is refused too, because what it expands to — a
-    `-` prefix, say — cannot be known without running make;
+    MAKEFLAGS, GNUMAKEFLAGS or MFLAGS, in these literal forms: global,
+    target- or pattern-specific, `define`, `private`, `override`. A name make
+    COMPUTES — `$(I)ORE:`, a target-specific assignment whose variable name is
+    an expansion, a special target that is not the first word of its line — is
+    NOT refused (see the residuals). A recipe line whose body (after any
+    `@`/`-`/`+`) begins with `$` other than `$$` — `$(…)`, `${…}`, `$@`, `$<`,
+    `$X` — is refused too, because what it expands to — a `-` prefix, say —
+    cannot be known without running make;
   - `MAKEFILES` is unset, and every process runs without make's flag variables,
     `MAKEFILES`, `BASH_ENV`, `ENV` or the runner's command-file variables;
+    every make process, whichever caller opened the gate, also runs without
+    the variables the pinned makefiles take from the environment (`?=` names,
+    names referenced and never assigned, and `GOFLAGS`; today `VERSION`,
+    `COMMIT`, `BUILD_TIME`, `IMAGE`, `CORE`, `CORE_REMOTE`, `GOFLAGS`);
   - `make` is a regular file in a system directory, started by that real path;
   - **`make -q <every pinned makefile>`**, ONE invocation naming them all —
     which runs no ordinary recipe (a `+` or `$(MAKE)` recipe line still runs under -q; one can come only from the pinned, reviewed bytes) — says make would
@@ -555,8 +580,12 @@ surroundings**:
     are checked either way.
   After every make run the pinned files are re-hashed and must be unchanged,
   and the anchor names them as goals on every later make command and checks
-  that `MAKEFILE_LIST` is exactly the pinned set. `ci-required-guard.py` makes
-  the same byte, symlink, include and sibling checks without running make.
+  that `MAKEFILE_LIST` is exactly the pinned set, and it ends with the same
+  `make -q` probe again. `ci-required-guard.py` makes the same byte,
+  symlink and include checks without running make, and of the siblings it
+  checks only `GNUmakefile`/`makefile`: a remake source such as a newer
+  `Makefile.sh` is caught only by the `make -q` probe, i.e. by the anchor and
+  the other gate callers.
   `-r`/`--no-builtin-rules` is deliberately NOT used: in the probe it would
   hide the very built-in remake the unmodified pinned `make` step would
   perform. **What it guarantees, exactly:** make runs
@@ -566,9 +595,13 @@ surroundings**:
   mergeable only together with a reviewed edit to the pin
   (`shasum -a 256 Makefile`). Then, after make has read the reviewed bytes:
   make's resolved database (`make -pn`) must hold the approved SHELL and
-  .SHELLFLAGS and nothing in MAKEFLAGS; the text of every gate recipe may carry
-  no `-` prefix and no `|| true`-family suffix, and no gate target may be
-  defined twice or inside a conditional; make's own `--dry-run` must show no
+  .SHELLFLAGS and nothing in MAKEFLAGS; the text of the EXPLICIT rules of
+  the named gate targets and of their prerequisite closure (followed through
+  literal prerequisites of explicit rules only) may carry no `-` prefix and no
+  `|| true`-family suffix, and no gate target may be defined twice or inside a
+  conditional — a recipe make reaches through a pattern, suffix or built-in
+  implicit rule, `.DEFAULT`, or a `$`-named prerequisite is NOT scanned (see
+  the residuals); make's own `--dry-run` must show no
   command that EXPANDS to a swallowed exit (`cmd $(SWALLOW)`); and make's
   warnings must show no duplicate definition. They run after make has read the file and are a check on what a
   reviewer approved, not a grammar of make. Exactly one recipe line may end
@@ -606,15 +639,31 @@ surroundings**:
   read (it is refused on a required lane, not inspected). A wrapper script or
   composite action that calls make carries no `make` token; `required_invocations`
   bounds the damage, but a lane may run one in addition. Likewise
-  `TestEveryPlaceThatStartsMakeIsGated` sees literal make calls in `.go`, `.py`
-  and `.sh` files; a make started through a variable or a wrapper it cannot
-  read is review-only.
+  `TestEveryPlaceThatStartsMakeIsGated` matches only the forms listed above.
+  Review-only: make named through a variable or constant (`exec.Command(bin)`,
+  `subprocess.run([MAKE])`), a wrapper script, other exec APIs (Go
+  `syscall.Exec`, `os.StartProcess`, an `exec.Cmd{Path: …}` literal; Python
+  `asyncio`/`pty`), make in a `.sh` position not listed (`xargs make`,
+  `timeout 60 make`, `ssh host make`), and files it does not read (no `.go`/`.py`/`.sh` extension, or
+  under `docs/`, `.git/`, `testdata/`, `bin/`, `node_modules/`).
 - **A reviewer approving a malicious `Makefile` together with its pin
   update.** The digest proves the bytes were reviewed, not that the review was
   right: approved bytes run, including whatever `$(shell …)` they contain, while
   make reads them. The named constructs above and the readings after make catch
   the shapes they name and nothing else; a construct not on those lists, once
   approved, runs. Review is the control there, and CODEOWNERS is advisory.
+  Two named limits of those lists, stated because a reader could assume
+  otherwise: the named constructs are refused in their LITERAL spelling at the
+  start of a line only — a computed name (`$(I)ORE:`, a target-specific
+  assignment to a `$`-named variable) is not; and the `-`-prefix and suffix
+  scan covers the EXPLICIT rules of the named closure only — a recipe reached
+  through a pattern, suffix or built-in implicit rule, `.DEFAULT`, or a
+  `$`-named prerequisite is not scanned, and the dry-run cannot show a `-`
+  prefix. vizra-core #11 (open, B5b) refuses the computed names and the
+  non-explicit closure recipes, per the vizra-security desk review of this PR;
+  a `$`-named prerequisite is dropped from core's closure too (read at
+  29387da, its `make-integrity-guard.py:812`), so that one is refused in
+  neither repo yet. Search adopts core's anchor in a follow-up.
 - **Edits to the controls themselves.** `.github/pinned-steps.yml`,
   `.github/pinned-makefiles.yml`, `scripts/test-floors.json`, `FLOOR_LANES`,
   the guards and the workflows are all checked out from the pull request under

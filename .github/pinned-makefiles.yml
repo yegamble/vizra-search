@@ -2,7 +2,8 @@
 #
 # scripts/makegate.py is the one way this repository starts make from a script
 # or a test (the workflow anchor, the contract-drift shape check, the lane test;
-# scripts/scripts_test.go fails on any other). It starts make only when every
+# scripts/scripts_test.go fails on any other make call it matches, in the forms
+# AGENTS.md lists). It starts make only when every
 # file below is a regular file matching its digest byte for byte, no unpinned
 # GNUmakefile/makefile sits beside them, and `make -q <these files>` — which
 # runs no ordinary recipe — says none would be REMADE; afterwards it re-hashes them. The
