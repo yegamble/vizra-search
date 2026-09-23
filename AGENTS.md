@@ -501,10 +501,16 @@ surroundings**:
   variable the `Makefile` takes from the environment as the anchor reads it —
   assigned with `?=`, or referenced as `$(NAME)`/`${NAME}` and never assigned,
   computed from the `Makefile` itself (today `VERSION`, `COMMIT`,
-  `BUILD_TIME`, `IMAGE`, `CORE`, `CORE_REMOTE`) — plus `GOFLAGS`. A name read
-  any other way (`$V`, `$(V:a=b)`, `ifdef V`, `$(origin V)`, `$(value V)`, a
-  read before a later `:=`) is not refused here; every make process the gate
-  starts runs without it instead (below). The same names are refused statically as job- or workflow-level
+  `BUILD_TIME`, `IMAGE`, `CORE`, `CORE_REMOTE`) — plus `GOFLAGS`. The
+  Makefile grammar (below) lets a pinned makefile read a variable only as
+  `$(NAME)`/`${NAME}`, so `$V`, `$(V:a=b)`, `ifdef V`, `$(origin V)` and
+  `$(value V)` cannot be written at all. One read the anchor does NOT refuse
+  remains possible: an immediate `:=` value referencing a name that is
+  assigned only LATER in the file, which make takes from the environment at
+  that point. Every make process the gate starts runs without such a name
+  (below), but the lane's own pinned `make` step is not a gate process and
+  would still receive it if an earlier step planted it. Today's `Makefile`
+  has no such read. The same names are refused statically as job- or workflow-level
   `env:` of any lane that runs make or `go test`.
 - **The `Makefile`, gated on its bytes.** Reading a `Makefile` executes
   parts of it, so the anchor's own dry-run could write the next step's
@@ -554,34 +560,48 @@ surroundings**:
   - the reviewed bytes include nothing unpinned (read statically, without
     running them), and no `GNUmakefile`/`makefile` sits beside the Makefile,
     compared case-folded;
-  - the reviewed bytes contain none of these constructs, each refused BY NAME
-    and matched in its LITERAL spelling at the start of a line (derived from
-    vizra-core PR #10; core has since moved on to B5b, vizra-core #11). They
-    ignore a
-    gate failure without a visible `-` (`.IGNORE`, `.DEFAULT`,
-    `.EXTRA_PREREQS`), run something while make reads the file (`+` recipe
-    lines and `$(MAKE)`, both of which run even under `-n` and `-q`;
-    `$(eval …)`), or change what every later reading means (`.RECIPEPREFIX` —
-    on GNU Make 4.3 a pinned `.RECIPEPREFIX := >` hides a `-` prefix from a
-    tab-keyed check — `.SECONDEXPANSION`, `.ONESHELL`, `.POSIX`). Also refused:
-    any SHELL or .SHELLFLAGS other than the one approved line, and any
-    MAKEFLAGS, GNUMAKEFLAGS or MFLAGS, in these literal forms: global,
-    target- or pattern-specific, `define`, `private`, `override`.
-    `$(eval …)` is refused directly and through `$(call eval,…)`,
-    `$(call guile,…)` or `$(call $(F),…)`. The positions where make could
-    COMPUTE one of those names instead are refused outright, whatever the
-    name: a rule target that is an expansion (`$(I)ORE:`), a variable name
-    that is an expansion in any assignment — global, target- or
-    pattern-specific — or `define` (`$(M)AKEFLAGS += -i`), and any rule line
-    naming more than one target (so a special target is always the one
-    literal target of its line). Every rule line must also be SIMPLE, so that
-    every recipe line is a TAB line: a rule with an inline `;` recipe
-    (`t: ; -true`), a rule line that starts with whitespace, and a rule line
-    continued with a backslash are refused. Today's `Makefile` uses none of
-    these shapes. A TAB recipe line whose body (after any `@`/`-`/`+`) begins
-    with `$` other than `$$` — `$(…)`, `${…}`, `$@`, `$<`, `$X` — is refused
-    too, because what it expands to — a `-` prefix, say — cannot be known
-    without running make;
+  - **every line of the reviewed bytes fits the Makefile grammar** — an
+    ALLOWLIST, default-deny, like the pinned workflow steps (chair ruling
+    after the PR #5 closing re-verification: every denylist round found
+    another spelling). Each logical line (backslash-newline joined) must be
+    exactly one of:
+    - blank, or a comment (a `#` inside `$(…)` is refused, so where a
+      comment starts never depends on how a make version reads it);
+    - an assignment `NAME op value` at the start of the line, where NAME is a
+      literal identifier, `.SHELLFLAGS` or `.DEFAULT_GOAL`, op is `:=`, `?=`
+      or `=`, and the value uses only `$$`, `$(NAME)`/`${NAME}` references and
+      `$(shell …)` whose own text uses only those references;
+    - `.PHONY: names`, with literal names;
+    - a rule line `name: prerequisites`: ONE literal target, not starting
+      with `.`, then literal prerequisite words, with no `;`, `$`, `%`, `|`,
+      `=`, second `:`, `::` or `&:`;
+    - a TAB recipe line of the rule above it (blank and comment lines between
+      recipe lines keep the rule open, any other line closes it), read raw,
+      whose text uses only `$$` and `$(NAME)`/`${NAME}` references, and not
+      `$(MAKE)`. No function may be called in a recipe: this `Makefile` calls
+      none (`RECIPE_FUNCTIONS` is empty).
+
+    Any other line is refused with its line number. So a conditional,
+    `include`, `define`, `export`, `override`, `private`, `vpath`, a function
+    other than `$(shell …)` in a value, a computed name, an inline `;`
+    recipe, several targets, a special target other than `.PHONY`, or a
+    pattern or suffix rule cannot appear, in any spelling. Today's `Makefile`
+    passes unchanged (`TestTheRealMakefileFitsTheGrammar`). Within the
+    grammar, these are also refused BY NAME, as a second and more specific
+    diagnosis:
+    - any SHELL or .SHELLFLAGS assignment other than the one approved line;
+    - any MAKEFLAGS, GNUMAKEFLAGS or MFLAGS assignment;
+    - `+` recipe lines and `$(MAKE)`, both of which run even under `-n` and
+      `-q`;
+    - a TAB recipe line whose body (after any `@`/`-`/`+`) begins with `$`
+      other than `$$`, because what it expands to — a `-` prefix, say —
+      cannot be known without running make.
+
+    The older by-name checks for the constructs the grammar now excludes
+    (`.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`, `.DEFAULT`,
+    `.POSIX`, `.EXTRA_PREREQS`, `$(eval …)`, computed names, the rule-line
+    spellings) stay as diagnoses. They match only the spellings they name;
+    the grammar is what refuses the rest;
   - `MAKEFILES` is unset, and every process runs without make's flag variables,
     `MAKEFILES`, `BASH_ENV`, `ENV` or the runner's command-file variables;
     every make process, whichever caller opened the gate, also runs without
@@ -624,13 +644,12 @@ surroundings**:
   .SHELLFLAGS and nothing in MAKEFLAGS; every TAB recipe line of the
   EXPLICIT rules of the named gate targets and of their prerequisite closure
   (followed through the literal prerequisites of explicit rules, read with
-  comments stripped; recipe lines read through conditional directives) may
-  carry no `-` prefix and no `|| true`-family suffix, and no gate target may
-  be defined twice or inside a conditional — every rule line is a simple one,
-  because the gate refused the other shapes before make (above); a recipe
-  make reaches through a pattern, suffix or built-in implicit rule,
-  `.DEFAULT`, or a `$`-named prerequisite is NOT scanned (see the
-  residuals); make's own `--dry-run` must show no
+  comments stripped) may carry no `-` prefix and no `|| true`-family suffix,
+  and no gate target may be defined twice or inside a conditional. Because of
+  the grammar, a rule's recipe is exactly the TAB lines after it, and no
+  pattern, suffix or `.DEFAULT` rule or `$`-named prerequisite can be
+  written. A recipe make supplies from its BUILT-IN implicit rules is NOT
+  scanned (see the residuals); make's own `--dry-run` must show no
   command that EXPANDS to a swallowed exit (`cmd $(SWALLOW)`); and make's
   warnings must show no duplicate definition. They run after make has read the file and are a check on what a
   reviewer approved, not a grammar of make. Exactly one recipe line may end
@@ -680,22 +699,26 @@ surroundings**:
 - **A reviewer approving a malicious `Makefile` together with its pin
   update.** The digest proves the bytes were reviewed, not that the review was
   right: approved bytes run, including whatever `$(shell …)` they contain, while
-  make reads them. The named constructs above and the readings after make catch
-  the shapes they name and nothing else; a construct not on those lists, once
-  approved, runs. Review is the control there, and CODEOWNERS is advisory.
-  Two named limits of those lists, stated because a reader could assume
-  otherwise: the named constructs are matched in their LITERAL spelling; the
-  computed spellings named above (an expansion as a rule target or as an
-  assigned or defined variable name, a special target sharing its rule line)
-  are refused outright, and a spelling not named there is not. And the
+  make reads them. The grammar bounds the SHAPE of what a reviewer can
+  approve, not its meaning. Within it, approved bytes still decide:
+  - the commands every recipe runs;
+  - what each `$(shell …)` in an assignment value runs while make reads the
+    file (four today, all pinned bytes);
+  - what a variable referenced from a recipe expands to. A swallowed exit
+    produced that way is caught by the dry-run reading. A `-`/`+` prefix
+    cannot be produced that way, because a recipe body may not begin with an
+    expansion.
+
+  Review is the control there, and CODEOWNERS is advisory. One limit of the
+  readings after make, stated because a reader could assume otherwise: the
   `-`-prefix and suffix scan covers the TAB recipe lines of the EXPLICIT
-  rules of the named closure only — a recipe reached through a pattern, suffix
-  or built-in implicit rule, `.DEFAULT`, or a `$`-named prerequisite is not
-  scanned, and the dry-run cannot show a `-` prefix. vizra-core #11 (open,
-  B5b) refuses non-explicit closure recipes, per the vizra-security desk
-  review of this PR; a `$`-named prerequisite is dropped from core's closure
-  too (read at 29387da, its `make-integrity-guard.py:812`), so that one is
-  refused in neither repo yet. Search adopts core's anchor in a follow-up.
+  rules of the named closure only. A recipe make supplies from its BUILT-IN
+  implicit rules is not scanned: for a closure prerequisite with no explicit
+  rule (printed as a note; there are none today), or for a target whose
+  explicit rule has no recipe and is not `.PHONY`. The dry-run cannot show a
+  `-` prefix. vizra-core #11 (open, B5b) refuses non-explicit and non-.PHONY
+  closure targets, per the vizra-security desk review of this PR. Search
+  adopts core's anchor in a follow-up.
 - **Edits to the controls themselves.** `.github/pinned-steps.yml`,
   `.github/pinned-makefiles.yml`, `scripts/test-floors.json`, `FLOOR_LANES`,
   the guards and the workflows are all checked out from the pull request under

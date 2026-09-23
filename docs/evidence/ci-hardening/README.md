@@ -1,5 +1,51 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Closing slice, fix round 2 (on top of 888a51b): the Makefile grammar is an allowlist
+
+Input: the re-verification at 888a51b, which returned FAIL with FINDINGs 9–11 REQUIRED and 12–13 SHOULD. Every
+one of them came from calling the committed functions on inert strings. The chair's ruling was to stop denylisting
+make's grammar and allowlist it, default-deny per line, which is how the pinned workflow steps already work.
+`makegate.grammar_problems` now runs before make, for every caller and in ci-required-guard. Every logical line of
+every pinned makefile must be exactly one of:
+- blank, or a comment;
+- `NAME := | ?= | = value`, where the value uses only `$$`, `$(NAME)`/`${NAME}` and `$(shell …)`;
+- `.PHONY: names`;
+- a single-target rule line with literal prerequisites;
+- a TAB recipe line of a rule, using only `$$` and `$(NAME)`/`${NAME}`, with `RECIPE_FUNCTIONS` empty.
+
+Anything else is refused with its line number. The real Makefile passes unchanged: 133 blank or comment lines,
+15 assignments, 17 `.PHONY`, 17 rules and 24 recipe lines. The older by-name checks stay, as a more specific
+second diagnosis.
+
+Consequences, all stated in AGENTS.md:
+- **Includes.** The grammar refuses `include`. `TestTheRemakeProbeCoversEveryPinnedInclude` now asserts that a
+  pinned include is refused before make and stays byte-identical beside a newer `inc.mk.sh`. Its old control,
+  that a pinned include passes, is intentionally red now.
+- **Conditionals.** Conditionals cannot be written, so the round-1 conditional stepping in the anchor's recipe
+  reader was removed, together with demo row R08 that mutated it. The reading row it served, "- prefix inside a
+  conditional within the test recipe", moved to the before-make rows, where it is refused with 0 make processes.
+  The round-1 README line "the recipe reader steps over conditional directives" is superseded.
+- **M-4 test.** It now plants the reference forms the grammar allows: `$(V)`, `${V}`, and a read before a later
+  `:=`. `$V`, `$(V:a=b)`, `$(origin V)`, `$(value V)` and `ifdef V` are before-make grammar rows instead.
+- **Lane test.** `internal/httpapi/lane_selection_test.go`'s `TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile`
+  used `include drift.mk` to carry `-run`. It now asserts that the include is refused by the grammar before make
+  ("the `include` directive", "make was NOT invoked"), no longer "carries -run". A `-run` carried by a variable in
+  the Makefile itself is still a "carries -run" row in `TestTheLaneGuardRefusesEveryKnownBypass`.
+- **FINDING 13.** The sentence now says what holds: the grammar leaves one environment read the anchor does not
+  refuse, an immediate `:=` value referencing a name assigned only later. The lane's own pinned `make` step is
+  not a gate process and would receive such a name. Today's Makefile has no such read.
+
+| File | What it shows |
+|---|---|
+| `closing/round2/new-tests-at-888a51b-BEFORE.txt` | This round's tests against 888a51b's UNMODIFIED `makegate.py` and `make-integrity-guard.py`. All 31 new grammar rows FAIL. **24 were accepted outright** (exit 0): F9 ×3, F10, F11 private/override/undefine, the conditional within a recipe, `$V`, `$(V:a=b)`, `$(origin)`, `$(value)`, `ifdef`, a function in a value, `$X` and `$(shell)` in a recipe, `+=`, a conditional, `::`, a pattern rule, `define`, `export` and `vpath`. **7 were red, but under another check.** `include` and `load` were refused before make by the read-set check. `#` inside `$(shell)`, F12, a TAB line outside a rule and a second colon were caught only because `make -q` itself failed, so one make process had started. `.SILENT` was caught only after make ran, by the resolver. The include test and the real-Makefile grammar test also FAIL. |
+| `closing/round2/demo-red-green-round2.txt` | `scripts/ci-hardening-demo.py`, every row: exit 0, **75/75**. The first full run (`demo-red-green-round2-first-attempt.txt`, 73/75) had R01 and R04 NOT red: the grammar now also refuses those shapes, with messages holding the same words, so removing only the named check was masked. Both rows were redefined to remove both layers and are red again. R08 was removed with the conditional-stepping code it mutated. G1–G6 are this round's rows. G1: the grammar check removed, so the F9 row goes red. G2: the same removal, so a pinned include reaches make again. G3: the recipe `$` check removed. G4: the value `$` check removed, so F12 goes red. G5: the TAB-outside-a-rule check removed. G6 is a control: with `?=` removed from the grammar, the real Makefile no longer fits. Each goes red for its declared reason and green on a byte-identical restore. |
+| `closing/round2/go-meta-tests-verbose-round2.txt` | `go test -count=1 -v ./scripts/ ./internal/httpapi/`: exit 0, 479 `--- PASS`, 0 FAIL, 0 SKIP. |
+| `closing/round2/make-ci-local-round2.txt` | `make ci`: exit 0, 720 tests across 7 packages, 0 skips, every package at or above its floor; contract-drift 365; vendor selftest 17/17. |
+| `closing/round2/guards-round2.txt` | `ci-required-guard.sh`, `make-integrity-guard.sh --workflow` and `vendor-contract.py --check`: all exit 0 (make ran 21 times in the anchor). |
+
+Host: darwin/arm64, go1.27.1 (printed from inside each worktree), GNU Make 3.81, Python 3.9.6. Nothing ran on GNU
+Make 4.3. Live make behaviour of the refused lines was not measured, because no hostile Makefile was built or run.
+
 ## Closing slice, fix round 1 (on top of 617c6d9): refuse the spellings the readers miss
 
 Input: the closing re-verification at 617c6d9 (FINDING 5 to 8 and 3 NITs), and the chair's ruling: where a

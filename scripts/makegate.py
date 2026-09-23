@@ -28,25 +28,24 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
      shape core PR #10 uses) must parse, pin `Makefile`, and every pinned path must be a REGULAR,
      non-symlink file (lstat) whose sha256 matches.
   2. READ SET. From the pinned bytes, without running them: the files make will read are `Makefile`
-     plus every literal include/load target, transitively; each must be pinned. No GNUmakefile or
+     plus every literal include/load target, transitively; each must be pinned. (The grammar below
+     refuses `include` and `load`, so today the read set is `Makefile` alone.) No GNUmakefile or
      makefile may sit beside it (compared case-folded, so a case-insensitive disk cannot hide one).
-     `$(eval …)`/`$(guile …)` — also through `$(call eval,…)`, `$(call guile,…)` or `$(call $(F),…)` —
-     and computed include names are refused: the reading cannot see what they produce.
-     Refused BY NAME in the reviewed bytes (reviewed_bytes_problems), each matched in its LITERAL
-     spelling at the start of a line: `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`,
-     `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`; any SHELL / .SHELLFLAGS other than the approved line, and
-     any MAKEFLAGS / GNUMAKEFLAGS / MFLAGS, in the literal forms `NAME =`, `target: NAME =`,
-     `%: NAME =`, `define NAME`, with `private`/`override`/`export` modifiers. The places a name could
-     be COMPUTED instead are refused outright, whatever the name: a rule target that is an expansion
-     (`$(I)ORE:`), a variable name that is an expansion in any assignment or `define`
-     (`$(M)AKEFLAGS += -i`, `test: $(S)HELL = …`), and — so that a special target is always the one
-     literal target of its rule line — every rule line with more than one target. The RULE LINES
-     themselves must be simple, so every recipe line is a TAB line the checks below and the anchor
-     read: a rule with an inline `;` recipe, a rule line that starts with whitespace, and a rule line
-     continued with a backslash are refused. Also `+` recipe lines and `$(MAKE)`, which run even
-     under -n and -q; and a recipe line whose body (after any `@`/`-`/`+` prefix) begins with `$`
-     other than `$$` — `$(…)`, `${…}`, `$@`, `$<`, `$X` — whose prefix cannot be determined without
-     running make. Today's Makefile uses none of the refused rule or name shapes.
+     GRAMMAR (grammar_problems, the control for what the reviewed bytes may say): an ALLOWLIST,
+     default-deny. Every logical line of every pinned makefile must be exactly one of: blank or a
+     comment; `NAME := | ?= | = value` (NAME a literal identifier, `.SHELLFLAGS` or `.DEFAULT_GOAL`)
+     whose value uses only `$$`, `$(NAME)`/`${NAME}` references and `$(shell …)`; `.PHONY: names`; a
+     rule line `name: prerequisites` with ONE literal target (not starting with `.`) and literal
+     prerequisite words; or a TAB recipe line of the rule above it, whose text uses only `$$` and
+     `$(NAME)`/`${NAME}` references, not `$(MAKE)`. ANY other line is refused with its line number.
+     So no conditional, include, define, export, override, private, vpath, function outside
+     `$(shell …)`, computed name, inline `;` recipe, multi-target, special-target, pattern or suffix
+     rule can appear. Within that grammar, also refused BY NAME (reviewed_bytes_problems, kept as a
+     second and more specific diagnosis): any SHELL / .SHELLFLAGS assignment other than the approved
+     line and any MAKEFLAGS / GNUMAKEFLAGS / MFLAGS assignment; `+` recipe lines and `$(MAKE)`, which
+     run even under -n and -q; and a recipe line whose body (after any `@`/`-`/`+` prefix) begins with
+     `$` other than `$$`, whose prefix cannot be determined without running make. Today's Makefile
+     passes both unchanged.
   3. ENVIRONMENT. MAKEFILES must be unset (it adds makefiles nobody pinned). Every process this module
      starts runs with clean_env(): make's flag variables, MAKEFILES, BASH_ENV, ENV and the runner's
      command-file variables (and anything pointing into the runner's command-file directory) removed.
@@ -69,11 +68,11 @@ WHAT THE GATE DOES, in this order, and it starts make only if every step passes:
 
 WHAT IT DOES NOT DO. It does not judge the reviewed bytes: they run their own reviewed `$(shell …)`
 calls while being read (today four), and a malicious Makefile approved together with its pin update
-runs. Review is the control there, and CODEOWNERS is advisory. The named-construct list is matched on
-literal spellings (step 2); the computed spellings it names — an expansion as a rule target or as an
-assigned or defined variable name, a special target that is not the only target of its line — are
-refused outright, and a spelling not listed there is not. Search adopts core's anchor (vizra-core #11)
-in a follow-up. It sees only what it reads: a step
+runs. Review is the control there, and CODEOWNERS is advisory. Within the grammar (step 2), the
+reviewed bytes may still say anything those shapes can: which commands a recipe runs, what a
+`$(shell …)` in an assignment value runs while make reads the file (four such calls today), what a
+variable referenced from a recipe expands to. Search adopts core's anchor (vizra-core #11) in a
+follow-up. It sees only what it reads: a step
 that changed the machine before it ran (a forwarding make stub, a replaced toolchain) is outside it.
 It does not use `-r`/`--no-builtin-rules`: disabling the built-in rules in the probe would HIDE the
 very remake the unmodified pinned `make` step would perform, and on the resolver it would change
@@ -104,7 +103,9 @@ DEFAULT_MAKEFILE_NAMES = ("GNUmakefile", "makefile", "Makefile")
 
 _READ_DIRECTIVE_RE = re.compile(r"^[ \t]*(-include|sinclude|include|-load|load)(?:[ \t]+(.*))?$")
 # `$(eval …)`, `$(guile …)`, and `$(call eval,…)` / `$(call guile,…)` / `$(call $(F),…)`: make's `call`
-# always invokes a built-in function of that name, so `call eval` IS an eval.
+# always invokes a built-in function of that name, so `call eval` IS an eval. A named diagnosis only:
+# it misses e.g. `$(call ev$(A)al,…)`; grammar_problems refuses every function other than `$(shell …)`
+# in an assignment value, and every function in a recipe or anywhere else, in any spelling.
 _MANUFACTURES_DIRECTIVES_RE = re.compile(r"\$[({](?:eval|guile)[\s)}]|\$[({]call\s+(?:eval|guile|\$)")
 _COMPUTED_NAME_CHARS = set("$*?[%~`\\")
 _PARSE_TIME_EXEC_RE = re.compile(r"\$[({]shell[\s)}]|!=")
@@ -236,6 +237,7 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
         text = texts.get(rel)
         if text is None:
             continue
+        problems += grammar_problems(rel, text)
         problems += reviewed_bytes_problems(rel, text)
         for n, line in enumerate(text.split("\n"), 1):
             if _MANUFACTURES_DIRECTIVES_RE.search(line):
@@ -260,16 +262,193 @@ def static_read_set(root: Path, texts: dict[str, str]) -> tuple[list[str], list[
     return order, problems
 
 
+# ------------------------------------------------------ the Makefile grammar ---
+#
+# THE CONTROL for what the reviewed bytes may say (chair ruling after PR #5 closing fix round 1): an
+# ALLOWLIST of line shapes, default-deny, checked before make. Every round of review found another
+# spelling a denylist missed, because make's grammar is unbounded; this repository's Makefile uses a
+# tiny part of it, so that part is all a pinned makefile may use. Every LOGICAL line (backslash-newline
+# joined) must be exactly one of:
+#
+#   BLANK/COMMENT  empty, or a comment (`#` outside any `$(…)`/`${…}`; text after it is ignored);
+#   ASSIGNMENT     `NAME op value`: NAME a literal `[A-Za-z_][A-Za-z0-9_]*` or one of ASSIGNABLE_SPECIALS,
+#                  op one of `:=` `?=` `=`, at the start of the line; the value may use only `$$`,
+#                  `$(NAME)`/`${NAME}` references and `$(shell …)` (whose text may use the same
+#                  references); every other `$` form — a function, a substitution reference, `$X`,
+#                  a computed name — is refused;
+#   PHONY          `.PHONY: name …` with literal names;
+#   RULE           `name: prerequisite …` at the start of the line: ONE literal target (not starting with
+#                  `.`, so no special target, suffix or pattern rule), one `:`, literal prerequisite words;
+#                  no `;`, `$`, `%`, `|`, `=`, second `:`, `::` or `&:`;
+#   RECIPE         a TAB line (with its backslash-continued lines, read RAW: make hands `#` in a recipe to
+#                  the shell) while a RULE is open — blank and comment lines between recipe lines keep it
+#                  open, any other line closes it. Its text may use only `$$` and `$(NAME)`/`${NAME}`
+#                  references (RECIPE_FUNCTIONS, the functions a recipe may call, is empty: this Makefile
+#                  calls none), and not `$(MAKE)`.
+#
+# Anything else — a conditional, include, define, export, override, private, vpath, undefine, load, an
+# inline `;` recipe, several targets, a special target other than .PHONY, `+=`/`!=`/`::=`, leading
+# whitespace, a TAB line outside a rule, a `#` inside `$(…)` (so the comment boundary never depends on the make version) — is
+# refused by line number. The older by-name refusals below stay as a second, more specific diagnosis.
+ASSIGNABLE_SPECIALS = (".SHELLFLAGS", ".DEFAULT_GOAL")
+RECIPE_FUNCTIONS: tuple = ()
+_G_NAME = r"(?:[A-Za-z_][A-Za-z0-9_]*|\.SHELLFLAGS|\.DEFAULT_GOAL)"
+_G_ASSIGN_RE = re.compile(r"^(" + _G_NAME + r")[ \t]*(:=|\?=|=)(.*)$")
+_G_WORD = r"[A-Za-z0-9_][A-Za-z0-9_./-]*"
+_G_PHONY_RE = re.compile(r"^\.PHONY[ \t]*:((?:[ \t]+" + _G_WORD + r")+)[ \t]*$")
+_G_RULE_RE = re.compile(r"^(" + _G_WORD + r")[ \t]*:((?:[ \t]+" + _G_WORD + r")*)[ \t]*$")
+_G_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _dollar_problems(text: str, allow_shell: bool) -> list[str]:
+    """Every `$` use in `text` that is not `$$`, a literal `$(NAME)`/`${NAME}` reference, or (when
+    allow_shell) `$(shell …)` whose own text passes the same check without shell."""
+    out, i = [], 0
+    while i < len(text):
+        if text[i] != "$":
+            i += 1
+            continue
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        if nxt == "$":
+            i += 2
+            continue
+        if nxt not in "({":
+            out.append(f"`{text[i:i + 2]}` (only `$$`, `$(NAME)` and `${{NAME}}` are allowed)")
+            i += 2
+            continue
+        close = ")" if nxt == "(" else "}"
+        depth, j = 1, i + 2
+        while j < len(text) and depth:
+            if text[j] == nxt:
+                depth += 1
+            elif text[j] == close:
+                depth -= 1
+            j += 1
+        if depth:
+            out.append(f"`{text[i:i + 30]}` (an unterminated expansion)")
+            break
+        inner = text[i + 2:j - 1]
+        if _G_IDENT_RE.match(inner):
+            if inner == "MAKE":
+                out.append("`$(MAKE)`")
+        elif allow_shell and nxt == "(" and re.match(r"shell[ \t]", inner):
+            out += _dollar_problems(inner[6:], allow_shell=False)
+        else:
+            out.append(f"`{text[i:j][:60]}` (a function, a substitution reference or a computed name)")
+        i = j
+    return out
+
+
+def _strip_comment(line: str):
+    """(text before an unescaped `#` at expansion depth 0, problem or None)."""
+    depth, i = 0, 0
+    while i < len(line):
+        c = line[i]
+        if c == "\\" and i + 1 < len(line):
+            i += 2
+            continue
+        if c == "$" and i + 1 < len(line) and line[i + 1] in "({":
+            depth += 1
+            i += 2
+            continue
+        if c in ")}" and depth:
+            depth -= 1
+        elif c == "#":
+            if depth:
+                return line[:i], "a `#` inside `$(…)`, where whether it starts a comment is not left to the make version"
+            return line[:i], None
+        i += 1
+    return line, None
+
+
+def _grammar_lines(text: str):
+    """(first physical line number, joined logical text, is_tab) — backslash-newline joined as make does."""
+    lines = text.split("\n")
+    i = 0
+    while i < len(lines):
+        first, line = i + 1, lines[i]
+        tab = line.startswith("\t")
+        while line.endswith("\\") and (len(line) - len(line.rstrip("\\"))) % 2 == 1 and i + 1 < len(lines):
+            i += 1
+            line = line[:-1] + " " + (lines[i] if tab else lines[i].lstrip())
+        yield first, line, tab
+        i += 1
+
+
+def grammar_problems(rel: str, text: str) -> list[str]:
+    """Default-deny: every logical line must be one of the shapes in the block comment above."""
+    out: list[str] = []
+    in_rule = False
+    shapes = {"blank/comment": 0, "assignment": 0, "phony": 0, "rule": 0, "recipe": 0}
+
+    def refuse(n: int, line: str, why: str) -> None:
+        out.append(f"{rel}:{n} is outside the Makefile grammar this gate allows ({why}): `{line.strip()[:100]}`. "
+                   f"Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a "
+                   f"single-target rule `name: prerequisites`, or a TAB recipe line of a rule.")
+
+    for n, line, tab in _grammar_lines(text):
+        if tab:
+            if not in_rule:
+                refuse(n, line, "a TAB line outside a rule")
+                continue
+            shapes["recipe"] += 1
+            for d in _dollar_problems(line, allow_shell=False):
+                refuse(n, line, f"a recipe line using {d}")
+            continue
+        body, why = _strip_comment(line)
+        if why:
+            refuse(n, line, why)
+            in_rule = False
+            continue
+        if not body.strip():
+            shapes["blank/comment"] += 1
+            continue
+        in_rule = False
+        m = _G_ASSIGN_RE.match(body)
+        if m:
+            shapes["assignment"] += 1
+            for d in _dollar_problems(m.group(3), allow_shell=True):
+                refuse(n, line, f"an assignment value using {d}")
+            continue
+        if _G_PHONY_RE.match(body):
+            shapes["phony"] += 1
+            continue
+        if _G_RULE_RE.match(body):
+            shapes["rule"] += 1
+            in_rule = True
+            continue
+        first = body.split()[0]
+        if first in ("ifeq", "ifneq", "ifdef", "ifndef", "else", "endif"):
+            why = "a conditional directive"
+        elif first in ("include", "-include", "sinclude", "load", "-load"):
+            why = f"the `{first}` directive"
+        elif first in ("define", "endef", "undefine", "export", "unexport", "override", "private", "vpath"):
+            why = f"the `{first}` directive"
+        elif body[:1] in (" ", "\t"):
+            why = "a line that starts with whitespace"
+        elif ";" in body:
+            why = "an inline `;` recipe or a `;` outside a recipe"
+        elif "$" in body:
+            why = "an expansion outside an assignment value or a recipe"
+        else:
+            why = "not one of the allowed shapes"
+        refuse(n, line, why)
+    grammar_problems.last_shapes = shapes
+    return out
+
+
 # ------------------------------------------------ constructs refused by name ---
 #
 # Refused in REVIEWED bytes, by name, BEFORE make is started — derived from vizra-core PR #10 and its
-# re-verification (core has since added its own computed-name refusals in B5b, vizra-core #11). Each one either runs something while make reads the file (so the `make -q` probe would not be
-# recipe-free), or changes what the anchor's later readings mean, or ignores a gate failure without a
-# `-` prefix any reading could see. The regexes below match the LITERAL name at the start of a line
-# (after an optional `target:` for assignments); the positions where make could compute a name instead
-# are refused outright by rule_line_problems and computed_name_problems. This
-# is a list of named constructs over reviewed text, not a grammar of make; the control for what a
-# reviewer approves is still review.
+# re-verification. These are a SECOND, more specific diagnosis kept beside grammar_problems (above), which
+# is the control: grammar_problems refuses every line outside its few shapes, whatever the spelling. The
+# functions below recognise only the spellings they name — the regexes match a LITERAL name at the start
+# of a line, and rule_line_problems / computed_name_problems / _MANUFACTURES_DIRECTIVES_RE have known
+# misses (a `;` recipe whose text holds `=`, a `private`/`override` first word, `$(call ev$(A)al,…)`;
+# PR #5 closing re-verification at 888a51b) that grammar_problems refuses. Within the grammar, the ones
+# that still matter on their own are the SHELL/.SHELLFLAGS/MAKEFLAGS-family assignments, `+` and
+# `$(MAKE)` recipe lines, and a recipe body beginning with `$`. The control for what a reviewer approves
+# is still review.
 APPROVED_SHELL_LINES = {"SHELL := /bin/bash", ".SHELLFLAGS := -eu -o pipefail -c"}
 _CONTROLLED_VARS = r"(SHELL|\.SHELLFLAGS|MAKEFLAGS|GNUMAKEFLAGS|MFLAGS|\.RECIPEPREFIX|\.EXTRA_PREREQS)"
 _MODIFIERS = r"(?:(?:export|override|private|unexport)\s+)*"
@@ -373,10 +552,9 @@ def _assigned_name(text: str):
 
 
 def computed_name_problems(rel: str, n: int, raw: str) -> list[str]:
-    """A variable name that is an expansion — in an assignment (global, target- or pattern-specific) or a
-    `define` — is refused before make: the named-construct list above matches literal names, and a
-    computed one (`$(M)AKEFLAGS += -i`) would pass it (PR #5 security desk review, M-2). Rule TARGETS
-    that are expansions are refused by rule_line_problems."""
+    """Named diagnosis for a variable name that is an expansion in an assignment or `define`
+    (`$(M)AKEFLAGS += -i`). grammar_problems already refuses every such line, and any spelling this
+    function misses."""
     words = raw.split()
     if not words or words[0] in _NON_ASSIGNING_DIRECTIVES:
         return []
@@ -395,13 +573,10 @@ def computed_name_problems(rel: str, n: int, raw: str) -> list[str]:
 
 
 def rule_line_problems(rel: str, n: int, raw: str, physical: str) -> list[str]:
-    """Rule-line spellings refused before make, so every rule the text readings see is a SIMPLE rule line.
-
-    The anchor finds a target's definition as `^<target>\\s*:` and reads the TAB lines after it. A rule
-    written any other way would hide its recipe from that reading (PR #5 closing VERIFY, FINDING 5), so
-    each of these is refused: an inline `;` recipe on the rule line; more than one target on a rule line
-    (grouped `&:` included); a target name that is an expansion; a rule line that starts with whitespace;
-    a rule line continued with a backslash. Today's Makefile uses none of them.
+    """Named diagnosis for rule-line spellings: an inline `;` recipe, several targets, an expansion as a
+    target, a leading-whitespace or backslash-continued rule line. grammar_problems is the control (it
+    refuses every rule line that is not `name: prerequisites`); this function misses spellings it does
+    not name, e.g. a `;` recipe whose text holds `=` or a rule line starting `private`/`override`.
     """
     first = raw.split(None, 1)[0] if raw.split() else ""
     if first in _DIRECTIVES:

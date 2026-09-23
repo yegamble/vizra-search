@@ -632,7 +632,6 @@ func reviewedBytesEvasions() []mutation {
 		// PR #5 closing re-verification, FINDING 5 class: make continues a recipe past a conditional
 		// directive, so the reading must too; and a rule line whose comment holds `=` must still have
 		// its prerequisites followed into the closure. Inert: `-true`.
-		{name: "- prefix inside a conditional within the test recipe", file: "Makefile", old: testRecipe, new: testRecipe + "ifndef VIZRA_NEVER_SET\n\t-true\nendif\n", want: "prefixed `-`"},
 		{name: "- prefix on a lane reached from a ci line whose comment holds =", file: "Makefile", old: "vendor-contract-selftest ## Every required lane, in order\n", new: "vendor-contract-selftest inert-lane ## lanes=every one\n\ninert-lane:\n\t-true\n", want: "gate target `inert-lane` has a recipe line prefixed `-`"},
 	}
 }
@@ -1658,12 +1657,14 @@ func TestTheMakeLaunchInventorySeesEveryListedForm(t *testing.T) {
 }
 
 // The chair's correction to core #10's probe: ONE `make -q` naming EVERY pinned
-// file. -q applies in the remake phase only to makefiles named on the command
-// line, so a probe that named only `Makefile` would still let make remake a
-// pinned INCLUDE from a newer sibling and re-read it. This tree pins only the
-// Makefile today, so the case pins an include the way a reviewed edit would:
-// Makefile gains `include inc.mk`, both are pinned, and a newer `inc.mk.sh`
-// sits beside inc.mk.
+// file, because -q applies in the remake phase only to makefiles named on the
+// command line and a newer `inc.mk.sh` could otherwise remake a pinned include.
+// Since the closing slice's fix round 2 the Makefile GRAMMAR refuses `include`
+// outright (makegate.grammar_problems), so a pinned include never reaches make
+// at all: the control that used to pass ("a reviewed Makefile with a pinned
+// include") is now refused before make, and the newer sibling still leaves
+// inc.mk byte-identical. The one-invocation probe itself is still what the
+// anchor runs for the pinned Makefile (TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake).
 func TestTheRemakeProbeCoversEveryPinnedInclude(t *testing.T) {
 	requirePython(t)
 	dir := copyTree(t)
@@ -1686,8 +1687,9 @@ func TestTheRemakeProbeCoversEveryPinnedInclude(t *testing.T) {
 	if err := os.WriteFile(pin, append(p, []byte("  inc.mk: "+digest(inc)+"\n")...), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if out, code := anchor(t)(dir, cleanEnv()); code != 0 {
-		t.Fatalf("control: a reviewed Makefile with a pinned include should pass:\n%s", out)
+	if out, code := anchor(t)(dir, cleanEnv()); code == 0 || !strings.Contains(out, "the `include` directive") ||
+		!strings.Contains(out, "make was NOT invoked (0 make process(es) started)") {
+		t.Fatalf("a reviewed, pinned include: exit %d; want it refused by the grammar before make:\n%s", code, out)
 	}
 	plantNewerSibling(t, dir, "inc.mk.sh")
 	// plantNewerSibling dates the sibling from the Makefile; date it from inc.mk too.
@@ -1701,10 +1703,10 @@ func TestTheRemakeProbeCoversEveryPinnedInclude(t *testing.T) {
 	if digest(after) != digest(inc) {
 		t.Fatalf("make REWROTE the pinned include inc.mk:\n%s", out)
 	}
-	if code == 0 || !strings.Contains(out, "`make -q Makefile inc.mk`") {
-		t.Fatalf("exit %d; want the one-invocation remake probe to refuse:\n%s", code, out)
+	if code == 0 || !strings.Contains(out, "make was NOT invoked (0 make process(es) started)") {
+		t.Fatalf("exit %d; want the include refused before make, with the newer sibling present:\n%s", code, out)
 	}
-	t.Logf("pinned include + newer inc.mk.sh | anchor exit %d: %s | inc.mk sha256 %s unchanged",
+	t.Logf("pinned include + newer inc.mk.sh | anchor exit %d, 0 make processes: %s | inc.mk sha256 %s unchanged",
 		code, firstFail(out), digest(inc)[:12])
 }
 
@@ -1765,6 +1767,41 @@ func TestNamedMakefileConstructsAreRefusedBeforeMake(t *testing.T) {
 		{"a computed variable name, target-specific", "\ntest: $(S)HELL = /bin/sh\n", "assigns a variable whose name is an expansion"},
 		{"define with a computed name", "\ndefine $(M)AKEFLAGS\n-i\nendef\n", "defines a variable whose name is an expansion"},
 		{"$(call eval,…)", "\nINERT := $(call eval,INERT2 := 1)\n", "calls $(eval"},
+		// THE GRAMMAR (chair ruling after the closing re-verification at 888a51b): every line outside the
+		// allowed shapes is refused by line number, whatever its spelling. FINDING 9-12 first, then other
+		// lines outside the grammar. Inert: nothing here is run.
+		{"F9 inline recipe holding = (-run=Foo)", "\ninert-target: ; -go test -run=Foo ./...\n", "outside the makefile grammar"},
+		{"F9 inline recipe with a prerequisite, holding X=1", "\ninert-target: dep ; -false X=1\n", "outside the makefile grammar"},
+		{"F9 inline recipe echo a=b", "\ninert-target: ; @echo a=b\n", "outside the makefile grammar"},
+		{"F10 a non-TAB line inside a conditional within a recipe", "\ninert-target:\n\ttrue\nifeq (a,b)\nINERT := 1\nendif\n\t-false\n", "outside the makefile grammar"},
+		{"a conditional within a recipe (moved from the reading rows)", "\ninert-target:\n\ttrue\nifndef VIZRA_NEVER_SET\n\t-true\nendif\n", "outside the makefile grammar"},
+		{"F11 private rule line with an inline recipe", "\nprivate inert-target: ; -true\n", "outside the makefile grammar"},
+		{"F11 override rule line with an inline recipe", "\noverride inert-target: ; -true\n", "outside the makefile grammar"},
+		{"F11 private rule line with a TAB recipe", "\nprivate inert-target:\n\t-true\n", "outside the makefile grammar"},
+		{"F11 undefine rule line", "\nundefine inert-target: ; -true\n", "outside the makefile grammar"},
+		{"F11 load rule line", "\nload inert-target: ; -true\n", "outside the makefile grammar"},
+		{"F12 call with a partly computed function name", "\nINERT := $(call ev$(A)al,x)\n", "outside the makefile grammar"},
+		{"grammar: include", "\ninclude inert.mk\n", "outside the makefile grammar"},
+		{"grammar: define", "\ndefine INERT\nx\nendef\n", "outside the makefile grammar"},
+		{"grammar: export", "\nexport INERT\n", "outside the makefile grammar"},
+		{"grammar: vpath", "\nvpath %.c src\n", "outside the makefile grammar"},
+		{"grammar: a conditional", "\nifeq (a,b)\nendif\n", "outside the makefile grammar"},
+		{"grammar: a second colon", "\ninert-target: a: b\n", "outside the makefile grammar"},
+		{"grammar: a double-colon rule", "\ninert-target:: a\n", "outside the makefile grammar"},
+		{"grammar: a pattern rule", "\n%.o: %.c\n", "outside the makefile grammar"},
+		{"grammar: a special target (.SILENT)", "\n.SILENT:\n", "outside the makefile grammar"},
+		{"grammar: a += assignment", "\nINERT += 1\n", "outside the makefile grammar"},
+		{"grammar: a TAB line outside a rule", "\nINERT := 1\n\t-true\n", "outside the makefile grammar"},
+		{"grammar: a # inside $(shell …)", "\nINERT := $(shell echo # x)\n", "outside the makefile grammar"},
+		{"grammar: a substitution reference in a value", "\nINERT := $(PKG:a=b)\n", "outside the makefile grammar"},
+		{"grammar: a function in a value", "\nINERT := $(foreach f,a,b)\n", "outside the makefile grammar"},
+		{"grammar: $X in a recipe", "\ninert-target:\n\techo $X\n", "outside the makefile grammar"},
+		{"grammar: $(shell …) in a recipe", "\ninert-target:\n\techo $(shell true)\n", "outside the makefile grammar"},
+		// FINDING 7's reference forms other than $(V)/${V}: refused before make, so they cannot read the environment.
+		{"grammar: $V in a value", "\nINERT := $Q\n", "outside the makefile grammar"},
+		{"grammar: $(origin V) in a value", "\nINERT := $(origin VZ_M4_ORIGIN)\n", "outside the makefile grammar"},
+		{"grammar: $(value V) in a value", "\nINERT := $(value VZ_M4_VALUE)\n", "outside the makefile grammar"},
+		{"grammar: ifdef V", "\nifdef VZ_M4_IFDEF\nendif\n", "outside the makefile grammar"},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -1838,20 +1875,20 @@ runpy.run_path(script, run_name="__main__")
 // make process makegate starts, for every caller, runs without the variables
 // the pinned makefiles can read from the environment. Asserted per make
 // process. FINDING 7 (closing re-verification): make reads an environment
-// variable through more forms than `$(NAME)`/`${NAME}`, so the copy's
-// re-pinned Makefile gains one inert line per form — `$V`, `$(V:a=b)`,
-// `ifdef V`, `$(origin V)`, `$(value V)` and a read before a later `:=` — and
-// every one of those names is planted too. Nothing in the block runs a command.
-const envReferenceForms = "\n# inert fixture: the ways make reads an environment variable\n" +
-	"VZ_M4_READ := $(VZ_M4_PAREN) ${VZ_M4_BRACE} $(VZ_M4_SUBST:a=b) $Q $(origin VZ_M4_ORIGIN) $(value VZ_M4_VALUE) $(VZ_M4_EARLY)\n" +
-	"VZ_M4_EARLY := later\n" +
-	"ifdef VZ_M4_IFDEF\n" +
-	"endif\n"
+// variable through more forms than `$(NAME)`/`${NAME}`. Since fix round 2 the
+// Makefile grammar lets a pinned makefile write only `$(NAME)`/`${NAME}`, so
+// `$V`, `$(V:a=b)`, `ifdef V`, `$(origin V)` and `$(value V)` are refused
+// before make (rows "grammar: …" in TestNamedMakefileConstructsAreRefusedBeforeMake).
+// The copy's re-pinned Makefile gains the grammatical forms: `$(V)`, `${V}`
+// and a read before a later `:=`, which environment_taken does not see; all
+// planted. Nothing in the block runs a command.
+const envReferenceForms = "\n# inert fixture: the ways the grammar lets make read an environment variable\n" +
+	"VZ_M4_READ := $(VZ_M4_PAREN) ${VZ_M4_BRACE} $(VZ_M4_EARLY)\n" +
+	"VZ_M4_EARLY := later\n"
 
 func TestEnvironmentTakenVariablesNeverReachMake(t *testing.T) {
 	requirePython(t)
-	planted := []string{"VERSION", "COMMIT", "CORE", "GOFLAGS", "VZ_M4_PAREN", "VZ_M4_BRACE", "VZ_M4_SUBST", "Q",
-		"VZ_M4_ORIGIN", "VZ_M4_VALUE", "VZ_M4_EARLY", "VZ_M4_IFDEF"}
+	planted := []string{"VERSION", "COMMIT", "CORE", "GOFLAGS", "VZ_M4_PAREN", "VZ_M4_BRACE", "VZ_M4_EARLY"}
 	callers := map[string][]string{
 		"contract-drift-guard.py recipe":          {"scripts/contract-drift-guard.py", "recipe"},
 		"makegate.py -- --dry-run contract-drift": {"scripts/makegate.py", "--", "--dry-run", "--no-print-directory", "contract-drift"},
@@ -1896,5 +1933,49 @@ func TestEnvironmentTakenVariablesNeverReachMake(t *testing.T) {
 				t.Logf("%s | %d make process(es), none received any of %v", name, len(makes), planted)
 			}
 		})
+	}
+}
+
+// The grammar is not wider than it needs to be, and not narrower: the REAL
+// Makefile, unchanged, fits it with zero problems, and every allowed shape is
+// actually exercised (so the check is not passing because it classified
+// nothing). The allowlist's refusals are TestNamedMakefileConstructsAreRefusedBeforeMake's
+// "grammar"/F9-F12 rows.
+func TestTheRealMakefileFitsTheGrammar(t *testing.T) {
+	requirePython(t)
+	root := repoRoot(t)
+	prog := `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("makegate", sys.argv[1] + "/scripts/makegate.py")
+mg = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mg)
+problems = mg.grammar_problems("Makefile", open(sys.argv[1] + "/Makefile").read())
+print(json.dumps({"problems": problems, "shapes": mg.grammar_problems.last_shapes, "recipe_functions": list(mg.RECIPE_FUNCTIONS)}))
+`
+	out, code := run(t, root, cleanEnv(), "python3", "-c", prog, root)
+	if code != 0 {
+		t.Fatalf("the grammar check did not run: exit %d\n%s", code, out)
+	}
+	var got struct {
+		Problems        []string       `json:"problems"`
+		Shapes          map[string]int `json:"shapes"`
+		RecipeFunctions []string       `json:"recipe_functions"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("unreadable result: %v\n%s", err, out)
+	}
+	if len(got.Problems) != 0 {
+		t.Fatalf("the real Makefile does not fit the grammar:\n%s", strings.Join(got.Problems, "\n"))
+	}
+	for _, shape := range []string{"blank/comment", "assignment", "phony", "rule", "recipe"} {
+		if got.Shapes[shape] == 0 {
+			t.Errorf("the real Makefile has no %q line, so this test does not show the grammar reads that shape: %v", shape, got.Shapes)
+		}
+	}
+	if len(got.RecipeFunctions) != 0 {
+		t.Errorf("RECIPE_FUNCTIONS is %v; AGENTS.md says it is empty because this Makefile calls no function in a recipe", got.RecipeFunctions)
+	}
+	if !t.Failed() {
+		t.Logf("the real Makefile fits the grammar: %v; RECIPE_FUNCTIONS = %v", got.Shapes, got.RecipeFunctions)
 	}
 }

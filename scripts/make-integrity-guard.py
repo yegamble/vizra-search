@@ -41,12 +41,13 @@ Then three readings of those reviewed bytes, because a reviewer can approve a mi
   TEXT      those same files, read: a `-`/`+` prefix, a `|| true`-family suffix, any SHELL/.SHELLFLAGS/
             MAKEFLAGS/GNUMAKEFLAGS/MFLAGS assignment, `.ONESHELL`, a gate target defined twice or inside a
             make conditional. The recipe prefix/suffix scan covers the EXPLICIT rules of the named
-            closure (prerequisite_closure): every TAB recipe line of each one, through conditional
-            directives. makegate has already refused, before make, every rule line the reading could
-            misattribute: an inline `;` recipe, several targets on one line, a target name that is an
-            expansion, a rule line that starts with whitespace or is continued with a backslash. A recipe
-            make reaches through a pattern, suffix or built-in implicit rule, `.DEFAULT`, or a `$`-named
-            prerequisite is NOT scanned. Blind to a value computed at run time (`$(eval …)`).
+            closure (prerequisite_closure): every TAB recipe line of each one. makegate's grammar has
+            already refused, before make, every line that is not blank, a comment, an assignment, a
+            `.PHONY:` line, a single-target rule line or a TAB recipe line of a rule, so a rule's recipe
+            is exactly the TAB lines after it, and no pattern, suffix or `.DEFAULT` rule and no
+            `$`-named prerequisite can be written. NOT scanned: a recipe make supplies from its BUILT-IN
+            implicit rules, for a closure target with no explicit rule (printed as a note) or with an
+            explicit rule that has no recipe and is not `.PHONY`.
   WARNINGS  `make --dry-run` stderr: a duplicate target ("overriding commands" on GNU Make 3.81,
             "overriding recipe" on 4.x — both matched).
 
@@ -85,24 +86,21 @@ WHAT IT DOES NOT DO — stated, not implied. This list is not called complete.
   * It does not judge what a reviewer approved. The digest gate guarantees that make runs only on
     reviewed bytes — and the reviewed bytes run their own `$(shell …)` calls while being read (today
     four: `go env GOROOT`, `git describe`, `git rev-parse HEAD`, `date`). A malicious Makefile approved
-    TOGETHER with its pin update runs. A named list of constructs in reviewed bytes is refused BEFORE
-    make, each in its LITERAL spelling at the start of a line (makegate.reviewed_bytes_problems:
-    `.RECIPEPREFIX`, `.SECONDEXPANSION`, `.ONESHELL`, `.IGNORE`, `.DEFAULT`, `.POSIX`, `.EXTRA_PREREQS`,
-    literal SHELL/.SHELLFLAGS/MAKEFLAGS-family assignments — global, target- or pattern-specific,
-    `define`, `private`, `override` — `$(eval)` (also through `$(call eval,…)`), `+` and `$(MAKE)` TAB
-    recipe lines, TAB recipe lines whose body begins with `$` other than `$$`; the positions a name
-    could be COMPUTED in, whatever the name — an expansion as a rule target or as an assigned or
-    defined variable name, and several targets on one rule line; and, so that the TAB checks see every
-    recipe line, a rule with an inline `;` recipe and a rule line that starts with whitespace or is
-    continued with a backslash); a construct not on it, once approved, runs. The resolver and text readings then refuse the known no-op shapes in reviewed bytes
-    (a SHELL/MAKEFLAGS override, a `-` prefix, a swallowed exit, `.ONESHELL`, a duplicate or
-    conditional gate target), but they run AFTER make has read the file and are not a grammar of make;
-    the `-` prefix and suffix scan reads every TAB recipe line of the EXPLICIT rules of the named
-    closure, not a recipe reached through a pattern, suffix or implicit rule, `.DEFAULT`, or a
-    `$`-named prerequisite. vizra-core #11 (open, B5b) refuses non-explicit closure recipes, per the
-    vizra-security desk review of this PR; a `$`-named prerequisite is dropped from core's closure too
-    (read at 29387da, its make-integrity-guard.py:812), so that one is refused in neither repo yet.
-    Search adopts core's anchor in a follow-up. Review is the control there, and CODEOWNERS is advisory
+    TOGETHER with its pin update runs. BEFORE make, every line of the reviewed bytes must fit
+    makegate's grammar (makegate.grammar_problems — an allowlist, default-deny): blank or a comment,
+    `NAME := | ?= | = value` whose value uses only `$$`, `$(NAME)`/`${NAME}` and `$(shell …)`,
+    `.PHONY: names`, a single-target rule line with literal prerequisites, or a TAB recipe line of a
+    rule using only `$$` and `$(NAME)`/`${NAME}`; anything else is refused by line number. Within it,
+    SHELL/.SHELLFLAGS other than the approved lines, MAKEFLAGS-family assignments, `+` and `$(MAKE)`
+    recipe lines and a recipe body beginning with `$` are also refused by name. What the grammar lets a
+    reviewer write — the commands a recipe runs, what a `$(shell …)` in a value runs while make reads
+    the file, what a referenced variable expands to — runs once approved. The resolver and text
+    readings then refuse the known no-op shapes in reviewed bytes (a SHELL/MAKEFLAGS override, a `-`
+    prefix, a swallowed exit, a duplicate gate target), after make has read the file; the `-` prefix
+    and suffix scan reads every TAB recipe line of the EXPLICIT rules of the named closure, not a
+    recipe make supplies from its built-in implicit rules. vizra-core #11 (open, B5b) refuses
+    non-explicit and non-.PHONY closure targets, per the vizra-security desk review of this PR. Search
+    adopts core's anchor in a follow-up. Review is the control there, and CODEOWNERS is advisory
     until the owner's ruleset exists.
   * Without `--workflow` the ENVIRONMENT check is not a control. That is the local-parity mode the Go
     meta-tests use: make exports MAKEFLAGS to a recipe, so the words are checked against an ALLOWLIST of
@@ -409,20 +407,17 @@ def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list
     lane added to `ci` as an explicit rule is covered without editing this file.
 
     It reads rule lines through makegate's logical lines (comments stripped,
-    continuations joined) and its rule/assignment split. Every rule line it can
-    meet is a simple one: makegate refuses, before make, an inline `;` recipe,
-    several targets on one line, an expansion as a target name, and a rule line
-    that starts with whitespace or is continued with a backslash.
+    continuations joined) and its rule/assignment split. makegate's grammar has
+    already refused every rule line that is not `name: literal prerequisites`,
+    so there is no pattern, suffix or `.DEFAULT` rule and no `$`-named
+    prerequisite to follow.
 
-    What it does NOT follow, so what check_recipe never scans: pattern rules
-    (`%` targets are skipped), old-style suffix rules and make's built-in
-    implicit rules, `.DEFAULT`, and any prerequisite written as an expansion
-    (`$`-named, dropped here). A closure prerequisite with no explicit rule is
-    only printed as a note; the recipe make would use for it is not read.
-    vizra-core #11 (open, B5b) refuses non-explicit and non-.PHONY closure
-    targets, per the vizra-security desk review of this PR; its closure drops a
-    `$`-named prerequisite as this one does (read at 29387da). Search adopts
-    core's anchor in a follow-up.
+    What it does NOT follow, so what check_recipe never scans: a recipe make
+    supplies from its BUILT-IN implicit rules — for a closure prerequisite with
+    no explicit rule (only printed as a note), or for a target whose explicit
+    rule has no recipe and is not `.PHONY`. vizra-core #11 (open, B5b) refuses
+    non-explicit and non-.PHONY closure targets, per the vizra-security desk
+    review of this PR. Search adopts core's anchor in a follow-up.
     """
     prereqs: dict[str, list[str]] = {}
     for rel in files:
@@ -466,18 +461,16 @@ def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list
 def logical_recipe_lines(lines: list[str], start: int):
     """Collect one target's recipe from Makefile text, joining continuations.
 
-    make processes conditional directives inside a recipe and the recipe continues after them, so a
-    conditional line is stepped over, not taken as the end of the recipe: the TAB lines of EVERY
-    branch are read.
+    makegate's grammar (makegate.grammar_problems) has already refused, before make, every line that
+    is not blank, a comment, an assignment, a `.PHONY:` line, a single-target rule line or a TAB recipe
+    line of a rule — no conditional, no inline `;` recipe — so a rule's recipe is exactly the TAB lines
+    after it, up to the next line of another shape.
     """
     recipe = []
     i = start
     while i < len(lines):
         line = lines[i]
         if line.strip() == "" or line.lstrip().startswith("#"):
-            i += 1
-            continue
-        if line.split()[0] in MAKE_CONDITIONALS + ("else", "endif"):
             i += 1
             continue
         if not line.startswith("\t"):

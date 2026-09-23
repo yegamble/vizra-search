@@ -526,9 +526,14 @@ func TestTheLaneGuardIsAnchoredInTheWorkflow(t *testing.T) {
 	}
 }
 
-// An included makefile is resolved by make, so a variable defined there is
-// expanded before this guard ever sees the recipe. This is its own case because
-// it needs a second file.
+// An included makefile would be resolved by make, so a variable defined there
+// would be expanded before this guard ever saw the recipe. This is its own case
+// because it needs a second file. Since the PR #5 closing slice's fix round 2,
+// the Makefile grammar (scripts/makegate.py grammar_problems) refuses `include`
+// outright, so the lane is refused before make reads either file: the refusal
+// names the include, and make is never started. (A -run carried by a variable
+// in the Makefile itself is still a "carries -run" row in
+// TestTheLaneGuardRefusesEveryKnownBypass.)
 func TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile(t *testing.T) {
 	f := newLaneFixture(t)
 	writeFile(t, filepath.Join(f.dir, "drift.mk"), "TESTFLAGS := -run=TestNothingAtAll\n", 0o644)
@@ -538,8 +543,8 @@ func TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile(t *testing.T) {
 	if code == 0 {
 		t.Fatalf("the guard ACCEPTED a lane whose -run came from an included makefile:\n%s", out)
 	}
-	if !strings.Contains(out, "carries -run") {
-		t.Errorf("expected a -run refusal, got:\n%s", out)
+	if !strings.Contains(out, "the `include` directive") || !strings.Contains(out, "make was NOT invoked") {
+		t.Errorf("expected the include refused by the Makefile grammar before make, got:\n%s", out)
 	}
 }
 
