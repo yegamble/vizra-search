@@ -212,17 +212,25 @@ def load_pin(root: Path) -> dict[str, str]:
 # static_read_set, the parse-time sites, environment_taken, environment_words here; prerequisite_closure,
 # check_text and logical_recipe_lines in the anchor; makefile_env_names, check_makefile_selection and
 # check_local_parity in ci-required-guard; check_makefile_text in contract-drift-guard — gets its lines from
-# makefile_lines(), over text decoded by decode_makefile(). TestEveryMakefileReaderConsumesTheOneLineReader holds
-# this three ways: rewriting the text inside makefile_lines changes every named reader's verdict (POISON); those
-# readers split, decode and read nothing themselves; and, over the whole of makegate.py, make-integrity-guard.py,
-# ci-required-guard.py and contract-drift-guard.py, every spelling that splits text into lines, reads a file as
-# text or bytes, decodes bytes, opens a file or sets a multi-line regex flag (found by AST, so an uncalled
-# reference, an alias import or an inline `(?m)` counts too) is one of the NAMED reads that test lists by
-# (function, spelling), each of an input that is not a makefile — the pin file, the workflows, the manifest,
-# make's and the shell's output, the test report — or is makefile_lines/decode_makefile themselves. A helper
-# planted anywhere else is refused (TestTheOneReaderSourceCheckRefusesAPlantedReader). NOT seen: a makefile read
-# added INSIDE one of those named functions using the spelling already allowed there, and a name built at run
-# time (getattr, exec). The grammar then refuses, before make,
+# makefile_lines(), over text decoded by decode_makefile(). TestEveryMakefileReaderConsumesTheOneLineReader checks
+# three things, and no more than these:
+#   POISON  rewriting the text inside makefile_lines changes every named reader's verdict;
+#   READERS the source of each named reader function contains none of the regex matches `split("\n")`,
+#           `.splitlines(`, `.read_text(`, `open(` (not after a word character or `.`), `.decode(`, `re.M`,
+#           `re.MULTILINE`, `.readlines(`;
+#   FILES   across makegate.py, make-integrity-guard.py, ci-required-guard.py and contract-drift-guard.py, the
+#           AST holds these spellings ONLY at the NAMED reads that test lists by (function, spelling), each of a
+#           non-makefile input (the pin file, workflows, manifest, make's or the shell's output, the test report)
+#           or makefile_lines/decode_makefile themselves: an attribute named splitlines, readlines, read_text,
+#           read_bytes, decode or open (called or not); the bare name `open`; an import of a name spelled like one
+#           of those, or M or MULTILINE; an attribute MULTILINE, or `re.M`; a string constant holding an inline
+#           `(?…m…)` flag group; and a `.split(…)`/`.rsplit(…)` call whose first argument is the literal "\n",
+#           b"\n" or "\r\n". A helper planted with one of these spellings outside the named reads is refused
+#           (TestTheOneReaderSourceCheckRefusesAPlantedReader).
+# Every OTHER way to read or split makefile text is review's to catch, not this test's. For example:
+# `re.split(r"\n", t)`, `t.split(NL)` with the newline held in a variable, iterating `io.StringIO(t)`, and
+# `subprocess.check_output(["cat", "Makefile"])`. So are a makefile read added inside a named function with the
+# spelling already allowed there, and a name built at run time (getattr, exec). The grammar then refuses, before make,
 # every byte on which make's own line reading could still differ from this one (a CR, a NUL, any other control
 # or invisible character, non-ASCII whitespace, a comment continued by a backslash).
 

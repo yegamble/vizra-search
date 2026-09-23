@@ -572,13 +572,28 @@ surroundings**:
     readings, the anchor's closure, definition and recipe readings,
     `ci-required-guard`'s selection and parity readings and
     `contract-drift-guard`'s lane reading; none of them splits the text
-    itself (`TestEveryMakefileReaderConsumesTheOneLineReader`). Across the
-    four files, every other line split, file read, decode or multi-line regex
-    flag is a NAMED read of a non-makefile input, listed in that test by
-    function; a reader planted elsewhere is red
-    (`TestTheOneReaderSourceCheckRefusesAPlantedReader`). A makefile read
-    added inside one of those named functions with the spelling already
-    allowed there is not seen. Before any
+    itself (`TestEveryMakefileReaderConsumesTheOneLineReader`). That test
+    also scans the AST of the four files (`makegate.py`, the anchor,
+    `ci-required-guard.py`, `contract-drift-guard.py`) for exactly these
+    spellings, and allows each only at a NAMED read of a non-makefile input,
+    listed in the test by function:
+    - an attribute named `splitlines`, `readlines`, `read_text`,
+      `read_bytes`, `decode` or `open`, called or not;
+    - the bare name `open`;
+    - an import of a name spelled like one of those, or `M` or `MULTILINE`;
+    - an attribute `MULTILINE`, or `re.M`;
+    - a string constant holding an inline `(?…m…)` flag group;
+    - a `.split(…)`/`.rsplit(…)` call whose first argument is the literal
+      `"\n"`, `b"\n"` or `"\r\n"`.
+
+    A helper planted with one of those spellings anywhere else is red
+    (`TestTheOneReaderSourceCheckRefusesAPlantedReader`). **Any other way to
+    read or split Makefile text is review's to catch, not the test's.** For
+    example: `re.split(r"\n", t)`; `t.split(NL)` with the newline in a
+    variable; iterating `io.StringIO(t)`; `subprocess.check_output(["cat",
+    "Makefile"])`. The same holds for a Makefile read added inside a named
+    function with the spelling already allowed there, and for a name built
+    at run time. Before any
     shape is judged, a line is refused if it holds a byte on which make's
     own line reading could still differ from that one: a carriage return
     (anywhere, so CRLF too), a NUL or any other control character except
