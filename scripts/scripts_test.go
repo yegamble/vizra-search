@@ -354,6 +354,10 @@ func guardEvasions() []mutation {
 		{name: "lane dropped from make ci", file: "Makefile", old: " tidy-check vendor-contract-selftest ## Every required lane", new: " tidy-check ## Every required lane", want: "`ci:` and the required lanes disagree"},
 		{name: "pins: unknown key", file: pinsYML, old: "", new: "\nextra_allowance: []\n", want: "unknown key"},
 		{name: "pins: a body nothing requires", file: pinsYML, old: "  - |\n    make vendor-contract-selftest\n", new: "  - |\n    make vendor-contract-selftest\n  - |\n    make ci\n", want: "that no job is required to run"},
+		{name: "Makefile edited, pin not updated", file: "Makefile", old: "SHELL := /bin/bash\n", new: "SHELL := /bin/bash \n", want: "does not match its pin"},
+		{name: "makefile pin emptied", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\n# Makefile: ", want: "pins nothing"},
+		{name: "makefile pin: Makefile not covered", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nOther: ", want: "does not pin `makefile`"},
+		{name: "makefile pin: not a sha256", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nMakefile: x", want: "not `relative/path: <64 lowercase hex>`"},
 		{name: "pins: duplicate key", file: pinsYML, old: "", new: "\nanchor_step: |\n  ./scripts/make-integrity-guard.sh\n", want: "duplicate key 'anchor_step'"},
 	}
 }
@@ -461,65 +465,54 @@ func anchor(t *testing.T, args ...string) func(dir string, env []string) (string
 	}
 }
 
-// One line in the Makefile that no-ops every recipe, each refused BY NAME by
-// the anchor reading this repository's REAL Makefile.
-func makefileEvasions() []mutation {
-	const shellPin = "SHELL := /bin/bash\n"
-	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
-	const testRecipe = "\tgo test -race -count=1 $(PKG)\n"
-	return []mutation{
-		{name: "SHELL := /usr/bin/true", file: "Makefile", old: shellPin, new: "SHELL := /usr/bin/true\n", want: "shell"},
-		{name: "MAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "MAKEFLAGS += -i\n", want: "assigns makeflags"},
-		{name: "GNUMAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "GNUMAKEFLAGS += -i\n", want: "assigns gnumakeflags"},
-		{name: ".SHELLFLAGS without -e", file: "Makefile", old: flagsPin, new: ".SHELLFLAGS := -c\n", want: ".shellflags"},
-		{name: ".ONESHELL", file: "Makefile", old: flagsPin, new: flagsPin + ".ONESHELL:\n", want: "oneshell"},
-		{name: "- prefix on the test recipe", file: "Makefile", old: testRecipe, new: "\t-go test -race -count=1 $(PKG)\n", want: "prefixed `-`"},
-		{name: "+ prefix on the test recipe", file: "Makefile", old: testRecipe, new: "\t+go test -race -count=1 $(PKG)\n", want: "prefixed `+`"},
-		{name: "|| true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG) || true\n", want: "ending `|| true`"},
-		{name: "; true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG); true\n", want: "ending `; true`"},
-		{name: "the exempt line in another target", file: "Makefile", old: "\tgo vet $(PKG)\n", new: "\tgo vet $(PKG)\n\tgo test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true\n", want: "ending `|| true`"},
-		{name: "duplicate test target", file: "Makefile", old: "", new: "\ntest:\n\t@true\n", want: "defined 2 times"},
-		{name: "test target inside a conditional", file: "Makefile", old: "test: ## Full test suite with the race detector\n" + testRecipe, new: "ifndef VIZRA_NEVER_SET\ntest: ## Full test suite with the race detector\n" + testRecipe + "endif\n", want: "conditional"},
-		{name: "MAKEFLAGS in an included makefile", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "MAKEFLAGS += -i\n"}, want: "inc.mk"},
-		{name: "a NEW ?= variable, set in the environment", file: "Makefile", old: flagsPin, new: flagsPin + "GOCMD ?= go\n", env: []string{"GOCMD=true"}, want: "the environment sets gocmd='true'"},
+// repin rewrites the copy's .github/pinned-makefiles.yml to the Makefile's
+// current digest — what a reviewer does when approving a Makefile edit.
+func repin(t *testing.T, dir string) {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(dir, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pin := filepath.Join(dir, ".github", "pinned-makefiles.yml")
+	old, err := os.ReadFile(pin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(string(old), "\n")
+	n := 0
+	for i, l := range lines {
+		if strings.HasPrefix(l, "Makefile: ") {
+			lines[i] = "Makefile: " + digest(b)
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("the pin file has %d Makefile lines, want 1", n)
+	}
+	if err := os.WriteFile(pin, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestMakeIntegrityGuardRefusesEveryNeuteredMakefile(t *testing.T) {
-	requirePython(t)
-	for _, m := range makefileEvasions() {
-		m := m
-		t.Run(m.name, func(t *testing.T) {
-			t.Parallel()
-			redThenGreen(t, m, anchor(t))
-		})
-	}
-}
-
-// Reading a Makefile EXECUTES parts of it, so the anchor's own `make -pn` could
-// write `MAKEFLAGS=-i` to $GITHUB_ENV for the NEXT step after the anchor passed
-// — core PR#9's R-1 reached through the Makefile. Measured on the port before
-// the pre-flight existed: `$(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")` gave
-// anchor exit 0 with the env file written. Each construct below must now be
-// refused BY NAME without make ever running, and the env file must stay empty.
-func TestTheAnchorExecutesNothingWhileReadingTheMakefile(t *testing.T) {
+// THE CONTROL: make runs only on the pinned, reviewed bytes. Any byte change
+// to the Makefile without a reviewed pin update is refused BEFORE make is
+// invoked — which is why the runner's env file stays empty even for the line
+// that first showed the anchor's own `make -pn` writing it. The two constructs
+// the vizra-security desk review found past the retired text scanner
+// (`.SECONDEXPANSION`, `.RECIPEPREFIX`) are here as plain directive lines: red
+// because the bytes changed, whatever make would do with them.
+func TestTheAnchorRunsMakeOnlyOnPinnedBytes(t *testing.T) {
 	requirePython(t)
 	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
-	const vet = "\tgo vet $(PKG)\n"
 	cases := []mutation{
-		{name: "$(shell) writes the env file", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "neither a plain variable reference"},
-		{name: "$(shell) in a recipe line", file: "Makefile", old: vet, new: vet + "\t@echo $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "neither a plain variable reference"},
-		{name: "$(file >>)", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(file >>$(GITHUB_ENV),MAKEFLAGS=-i)\n", want: "neither a plain variable reference"},
-		{name: "$(call shell,…)", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(call shell,echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "neither a plain variable reference"},
-		{name: "$(eval)", file: "Makefile", old: flagsPin, new: flagsPin + "$(eval POISON := x)\n", want: "neither a plain variable reference"},
-		{name: "computed variable name", file: "Makefile", old: flagsPin, new: flagsPin + "N := shell\nPOISON := $($(N))\n", want: "neither a plain variable reference"},
-		{name: "!= assignment", file: "Makefile", old: flagsPin, new: flagsPin + "POISON != echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"\n", want: "`!=` (shell) assignment"},
-		{name: "+ recipe line", file: "Makefile", old: vet, new: vet + "\t+@echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"\n", want: "prefixed `+`"},
-		{name: "$(MAKE) in a recipe line", file: "Makefile", old: vet, new: vet + "\t@echo $(MAKE) >/dev/null; echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"\n", want: "references $(make)"},
-		{name: "a rule that remakes the Makefile", file: "Makefile", old: "", new: "\nMakefile: ; @echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"\n", want: "declares a rule for `makefile`"},
-		{name: "an included makefile with a remake rule", file: "Makefile", old: flagsPin, new: flagsPin + "include gen.mk\ngen.mk: ; @echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"; touch gen.mk\n", want: "include/load directive"},
-		{name: "a match-anything pattern rule", file: "Makefile", old: "", new: "\n%: ; @echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\"\n", want: "declares a rule for `%`"},
-		{name: "load directive", file: "Makefile", old: flagsPin, new: flagsPin + "load ./poison.so\n", want: "include/load directive"},
+		{name: "one byte changed", file: "Makefile", old: "SHELL := /bin/bash\n", new: "SHELL := /bin/bash \n", want: "does not match its pinned digest"},
+		{name: "a comment added", file: "Makefile", old: "", new: "# harmless\n", want: "does not match its pinned digest"},
+		{name: ".SECONDEXPANSION line (desk review FINDING 1)", file: "Makefile", old: flagsPin, new: flagsPin + ".SECONDEXPANSION:\n", want: "does not match its pinned digest"},
+		{name: ".RECIPEPREFIX line (desk review FINDING 2)", file: "Makefile", old: "", new: ".RECIPEPREFIX := >\n", want: "does not match its pinned digest"},
+		{name: "an include line", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "X := 1\n"}, want: "does not match its pinned digest"},
+		{name: "the line that wrote the env file during the anchor", file: "Makefile", old: flagsPin, new: flagsPin + "POISON := $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n", want: "does not match its pinned digest"},
+		{name: "the pin itself edited", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nMakefile: 0", want: "is not a `path: <sha256>` pin"},
+		{name: "the pin no longer covers Makefile", file: ".github/pinned-makefiles.yml", old: "\nMakefile: ", new: "\nOther: ", want: "does not pin `makefile`"},
 	}
 	for _, m := range cases {
 		m := m
@@ -536,24 +529,135 @@ func TestTheAnchorExecutesNothingWhileReadingTheMakefile(t *testing.T) {
 			}
 			out, code := anchor(t)(dir, cleanEnv("GITHUB_ENV="+envFile))
 			written, _ := os.ReadFile(envFile)
-			if code == 0 || !strings.Contains(strings.ToLower(out), m.want) {
+			if code == 0 || !strings.Contains(strings.ToLower(out), strings.ToLower(m.want)) {
 				t.Fatalf("%s: exit %d, want a refusal naming %q:\n%s", m.name, code, m.want, out)
-			}
-			if len(written) != 0 {
-				t.Fatalf("%s: the anchor was refused, but reading the Makefile had ALREADY written the runner's "+
-					"env file: %q", m.name, written)
 			}
 			if !strings.Contains(out, "make was NOT invoked") {
 				t.Fatalf("%s: refused, but only after make ran:\n%s", m.name, out)
 			}
+			if len(written) != 0 {
+				t.Fatalf("%s: the runner's env file was written: %q", m.name, written)
+			}
 			a.restore(t, m)
 			out2, code2 := anchor(t)(dir, cleanEnv("GITHUB_ENV="+envFile))
-			written, _ = os.ReadFile(envFile)
-			if code2 != 0 || len(written) != 0 {
-				t.Fatalf("%s: after a byte-identical restore: exit %d, env file %q\n%s", m.name, code2, written, out2)
+			if code2 != 0 {
+				t.Fatalf("%s: still red after a byte-identical restore:\n%s", m.name, out2)
 			}
-			t.Logf("%s | Makefile sha256 %s -> %s -> restored %s | RED exit %d, make not invoked, env file empty: %s | restored: GREEN",
-				m.name, a.before[:12], a.after[:12], a.before[:12], code, firstFail(out))
+			t.Logf("%s | %s sha256 %s -> %s -> restored %s | RED exit %d, make NOT invoked, env file empty: %s | restored: GREEN",
+				m.name, m.file, a.before[:12], a.after[:12], a.before[:12], code, firstFail(out))
+		})
+	}
+
+	// An unpinned GNUmakefile beside the Makefile: make would read it INSTEAD.
+	t.Run("an unpinned GNUmakefile", func(t *testing.T) {
+		t.Parallel()
+		dir := copyTree(t)
+		gm := filepath.Join(dir, "GNUmakefile")
+		if err := os.WriteFile(gm, []byte("ci:\n\t@true\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		out, code := anchor(t)(dir, cleanEnv())
+		if code == 0 || !strings.Contains(out, "GNUmakefile exists") || !strings.Contains(out, "make was NOT invoked") {
+			t.Fatalf("exit %d:\n%s", code, out)
+		}
+		if err := os.Remove(gm); err != nil {
+			t.Fatal(err)
+		}
+		if _, code2 := anchor(t)(dir, cleanEnv()); code2 != 0 {
+			t.Fatal("still red after removing GNUmakefile")
+		}
+		t.Logf("an unpinned GNUmakefile | RED exit %d, make NOT invoked: %s | removed: GREEN", code, firstFail(out))
+	})
+
+	// An included file that is NOT pinned, with the Makefile re-pinned as if the
+	// include line had been reviewed: make then reads bytes nobody reviewed, and
+	// MAKEFILE_LIST says so.
+	t.Run("an extra included file, Makefile re-pinned", func(t *testing.T) {
+		t.Parallel()
+		m := mutation{name: "include", file: "Makefile", old: flagsPin, new: flagsPin + "include inc.mk\n", create: map[string]string{"inc.mk": "X := 1\n"}}
+		dir := copyTree(t)
+		pinBefore, _ := os.ReadFile(filepath.Join(dir, ".github", "pinned-makefiles.yml"))
+		a, err := apply(dir, m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		repin(t, dir)
+		out, code := anchor(t)(dir, cleanEnv())
+		if code == 0 || !strings.Contains(out, "make read ['Makefile', 'inc.mk']") {
+			t.Fatalf("exit %d:\n%s", code, out)
+		}
+		a.restore(t, m)
+		if err := os.WriteFile(filepath.Join(dir, ".github", "pinned-makefiles.yml"), pinBefore, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, code2 := anchor(t)(dir, cleanEnv()); code2 != 0 {
+			t.Fatal("still red after restoring the Makefile and the pin")
+		}
+		t.Logf("extra included file, Makefile re-pinned | Makefile sha256 %s -> %s | RED exit %d: %s | restored: GREEN",
+			a.before[:12], a.after[:12], code, firstFail(out))
+	})
+}
+
+// THE RESIDUAL, exercised: a reviewer approved a Makefile edit TOGETHER with
+// its pin update. The digest then passes, make runs on the approved bytes, and
+// the readings that run afterwards still refuse the known no-op shapes by name.
+// This is defence in depth for reviewed bytes, not a grammar of make: anything
+// else a reviewer approves runs.
+func reviewedBytesEvasions() []mutation {
+	const shellPin = "SHELL := /bin/bash\n"
+	const flagsPin = ".SHELLFLAGS := -eu -o pipefail -c\n"
+	const testRecipe = "\tgo test -race -count=1 $(PKG)\n"
+	return []mutation{
+		{name: "SHELL := /usr/bin/true", file: "Makefile", old: shellPin, new: "SHELL := /usr/bin/true\n", want: "shell"},
+		{name: "MAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "MAKEFLAGS += -i\n", want: "assigns makeflags"},
+		{name: "GNUMAKEFLAGS += -i", file: "Makefile", old: flagsPin, new: flagsPin + "GNUMAKEFLAGS += -i\n", want: "assigns gnumakeflags"},
+		{name: ".SHELLFLAGS without -e", file: "Makefile", old: flagsPin, new: ".SHELLFLAGS := -c\n", want: ".shellflags"},
+		{name: ".ONESHELL", file: "Makefile", old: flagsPin, new: flagsPin + ".ONESHELL:\n", want: "oneshell"},
+		{name: ".SECONDEXPANSION", file: "Makefile", old: flagsPin, new: flagsPin + ".SECONDEXPANSION:\n", want: "declares `.secondexpansion`"},
+		{name: ".RECIPEPREFIX", file: "Makefile", old: "", new: ".RECIPEPREFIX := >\n", want: "assigns `.recipeprefix`"},
+		{name: "- prefix on the test recipe", file: "Makefile", old: testRecipe, new: "\t-go test -race -count=1 $(PKG)\n", want: "prefixed `-`"},
+		{name: "|| true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG) || true\n", want: "ending `|| true`"},
+		{name: "; true on the test recipe", file: "Makefile", old: testRecipe, new: "\tgo test -race -count=1 $(PKG); true\n", want: "ending `; true`"},
+		{name: "the exempt line in another target", file: "Makefile", old: "\tgo vet $(PKG)\n", new: "\tgo vet $(PKG)\n\tgo test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true\n", want: "ending `|| true`"},
+		{name: "duplicate test target", file: "Makefile", old: "", new: "\ntest:\n\t@true\n", want: "defined 2 times"},
+		{name: "test target inside a conditional", file: "Makefile", old: "test: ## Full test suite with the race detector\n" + testRecipe, new: "ifndef VIZRA_NEVER_SET\ntest: ## Full test suite with the race detector\n" + testRecipe + "endif\n", want: "conditional"},
+		{name: "a NEW ?= variable, set in the environment", file: "Makefile", old: flagsPin, new: flagsPin + "GOCMD ?= go\n", env: []string{"GOCMD=true"}, want: "the environment sets gocmd='true'"},
+	}
+}
+
+func TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes(t *testing.T) {
+	requirePython(t)
+	for _, m := range reviewedBytesEvasions() {
+		m := m
+		t.Run(m.name, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			pinPath := filepath.Join(dir, ".github", "pinned-makefiles.yml")
+			pinBefore, err := os.ReadFile(pinPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			a, err := apply(dir, m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			repin(t, dir)
+			out, code := anchor(t)(dir, cleanEnv(m.env...))
+			if code == 0 || !strings.Contains(strings.ToLower(out), m.want) {
+				t.Fatalf("%s: exit %d, want a refusal naming %q:\n%s", m.name, code, m.want, out)
+			}
+			if !strings.Contains(out, "make runs only on reviewed bytes") {
+				t.Fatalf("%s: the digest gate did not pass on the re-pinned bytes, so this case tests nothing:\n%s", m.name, out)
+			}
+			a.restore(t, m)
+			if err := os.WriteFile(pinPath, pinBefore, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if out2, code2 := anchor(t)(dir, cleanEnv()); code2 != 0 {
+				t.Fatalf("%s: still red after restoring the Makefile and the pin:\n%s", m.name, out2)
+			}
+			t.Logf("%s | Makefile sha256 %s -> %s (re-pinned, as a reviewer would) | digest ok, RED exit %d: %s | restored: GREEN",
+				m.name, a.before[:12], a.after[:12], code, firstFail(out))
 		})
 	}
 }
@@ -647,6 +751,8 @@ func TestMakeIntegrityGuardPassesOnTheRealMakefile(t *testing.T) {
 	}
 	for _, want := range []string{
 		"[--workflow (strict)]",
+		"make runs only on reviewed bytes: Makefile sha256",
+		"MAKEFILE_LIST is exactly the pinned set: ['Makefile']",
 		"resolves SHELL to the approved /bin/bash",
 		"none of the 7 variable(s) the makefiles take from the environment is set",
 		"gate target `test` is defined exactly once",

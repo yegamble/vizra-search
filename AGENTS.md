@@ -503,21 +503,38 @@ surroundings**:
   `VERSION`, `COMMIT`, `BUILD_TIME`, `IMAGE`, `CORE`, `CORE_REMOTE`) — plus
   `GOFLAGS`. The same names are refused statically as job- or workflow-level
   `env:` of any lane that runs make or `go test`.
-- **The `Makefile`, read before make runs.** Reading a `Makefile` executes
+- **The `Makefile`, gated on its bytes.** Reading a `Makefile` executes
   parts of it, so the anchor's own dry-run could write the next step's
   environment. *Found while porting, not in core's history:* with
   `POISON := $(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")` the ported anchor
-  exited 0 and the runner's env file then held `MAKEFLAGS=-i`. Now, before
-  make is invoked at all, every `$(…)` must be a plain variable or one of four
-  pinned `$(shell …)` calls, and `$(file …)`, `$(eval …)`, `$(call …)`, `!=`,
-  a `+` or `$(MAKE)` recipe line, `include`/`load`, and a rule that remakes a
-  makefile or a pattern rule are refused by name. Then three readings — make's
-  resolved database (`make -pn`), the text of every file make read, and make's
-  duplicate-target warnings — refuse a `SHELL`, `.SHELLFLAGS`, `MAKEFLAGS` or
-  `GNUMAKEFLAGS` override, `.ONESHELL`, a `-` prefix, a `|| true`-family
-  suffix, and a gate target defined twice or inside a conditional. Exactly one
-  recipe line may end `|| true`: contract-drift's `go test` line, keyed to that
-  target and those bytes, because its next line `ran` is the lane's verdict.
+  exited 0 and the runner's env file then held `MAKEFLAGS=-i`. The first fix
+  was a default-deny scanner over the `Makefile` text. The vizra-security desk
+  review of PR #5 showed two constructs make evaluates that it missed
+  (secondary expansion of a `$$`-escaped prerequisite, and `.RECIPEPREFIX`),
+  and why that shape of control cannot be sound: it has to re-implement make's
+  parser. **So the control moved from grammar to digest.**
+  `.github/pinned-makefiles.yml` pins the sha256 of every file make may read
+  (today only `Makefile`). Before make is invoked at all, the anchor requires
+  the on-disk bytes to match the pin and refuses an unpinned `GNUmakefile` or
+  `makefile` beside it (make would read it first); after make has read the
+  file, `MAKEFILE_LIST` must be exactly the pinned set, so an unpinned
+  `include` is red. The digest gate applies with and without `--workflow`, and
+  `ci-required-guard.py` asserts the pin exists, is non-empty, covers
+  `Makefile` and matches the tree. **What it guarantees, exactly:** make runs
+  only on reviewed bytes — and those reviewed bytes run their own reviewed
+  `$(shell …)` calls while being read (today four: `go env GOROOT`,
+  `git describe`, `git rev-parse HEAD`, `date`). A `Makefile` edit is
+  mergeable only together with a reviewed edit to the pin
+  (`shasum -a 256 Makefile`). Then three readings of the reviewed bytes —
+  make's resolved database (`make -pn`), the text of every file make read, and
+  make's duplicate-target warnings — still refuse, by name, a `SHELL`,
+  `.SHELLFLAGS`, `MAKEFLAGS` or `GNUMAKEFLAGS` override, `.ONESHELL`,
+  `.SECONDEXPANSION`, a `.RECIPEPREFIX` assignment, a `-` prefix, a
+  `|| true`-family suffix, and a gate target defined twice or inside a
+  conditional. They run after make has read the file and are a check on what a
+  reviewer approved, not a grammar of make. Exactly one recipe line may end
+  `|| true`: contract-drift's `go test` line, keyed to that target and those
+  bytes, because its next line `ran` is the lane's verdict.
 - **Strict YAML.** A duplicate key or a merge key (`<<:`) anywhere in a
   workflow or the pins file is refused, so the guard never reads a different
   value than a reviewer sees first. `defaults.run`, a job `container:`, a
@@ -548,9 +565,14 @@ surroundings**:
   read (it is refused on a required lane, not inspected). A wrapper script or
   composite action that calls make carries no `make` token; `required_invocations`
   bounds the damage, but a lane may run one in addition.
+- **A reviewer approving a malicious `Makefile` together with its pin
+  update.** The digest proves the bytes were reviewed, not that the review was
+  right: approved bytes run, including whatever `$(shell …)` they contain, while
+  make reads them. The readings after make catch the known no-op shapes and
+  nothing else. Review is the control there, and CODEOWNERS is advisory.
 - **Edits to the controls themselves.** `.github/pinned-steps.yml`,
-  `scripts/test-floors.json`, `FLOOR_LANES`, `APPROVED_SHELL_CALLS`, the
-  guards and the workflows are all checked out from the pull request under
+  `.github/pinned-makefiles.yml`, `scripts/test-floors.json`, `FLOOR_LANES`,
+  the guards and the workflows are all checked out from the pull request under
   test. Widening a pin, lowering a floor or editing a guard is **visible** in a
   reviewed diff; it is not **prevented**.
 - **CODEOWNERS is advisory.** These paths are owner-assigned, but no ruleset

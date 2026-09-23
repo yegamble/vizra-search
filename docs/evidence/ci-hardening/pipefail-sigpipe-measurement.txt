@@ -1,0 +1,2 @@
+printf | grep -q (pipefail, match on line 1, 300 KB after): exit 141
+here-string: exit 0

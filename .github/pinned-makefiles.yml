@@ -1,0 +1,20 @@
+# pinned-makefiles.yml — the sha256 of EVERY file make may read in this repository.
+#
+# scripts/make-integrity-guard.py (the pinned workflow anchor) refuses to invoke
+# make at all unless each file below matches its digest byte for byte, no
+# unpinned GNUmakefile/makefile sits beside them, and — after make has read them
+# — MAKEFILE_LIST is exactly this set. scripts/ci-required-guard.py asserts this
+# file exists, pins Makefile, and matches the tree.
+#
+# Why bytes: reading a Makefile EXECUTES parts of it ($(shell …), $(file …),
+# remake rules, secondary expansion …), including during the anchor's own
+# `make -pn`. A grammar of make, checked from outside, kept missing constructs
+# (vizra-security desk review of PR #5). A digest does not.
+#
+# CHANGING THIS FILE: a Makefile edit is mergeable only together with a reviewed
+# edit here. Regenerate with:  shasum -a 256 Makefile
+# Format (shared with vizra-core): one "path: <64 lowercase hex>" per line.
+# What this does NOT do: judge what a reviewer approves together with a pin
+# update. Review is the control there; CODEOWNERS is advisory.
+
+Makefile: 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726

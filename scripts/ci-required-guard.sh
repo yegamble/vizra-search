@@ -241,7 +241,11 @@ for fixture in "${present[@]}"; do
         want_key="$(printf '%s' "$rule" | cut -d'|' -f2)"
         want_value="$(printf '%s' "$rule" | cut -d'|' -f3)"
         want_line="VIOLATION $fixture at=$want_at key=$want_key value=$want_value"
-        if ! printf '%s\n' "$out" | grep -qF "$want_line"; then
+        # A here-string, not `printf | grep -q`: under `set -o pipefail`, grep -q
+        # exits at the first match and printf can then die of SIGPIPE, making the
+        # pipeline FAIL on a match. That was a latent flake on main, seen red once
+        # under heavy host load (docs/evidence/ci-hardening/demo-red-green-round1.txt, 1g).
+        if ! grep -qF "$want_line" <<< "$out"; then
           echo "WRONG RULE TRIPPED: $fixture was rejected, but not for the rule it declares."
           echo "  declared: $want_line"
           echo "  reported:"

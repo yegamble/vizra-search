@@ -11,7 +11,9 @@
 # EVERY `make` STEP below is byte-equal to an entry in .github/pinned-steps.yml,
 # carries no key but name/run/id, and is IMMEDIATELY preceded by the pinned
 # anchor `./scripts/make-integrity-guard.sh --workflow`. The anchor runs outside
-# make and refuses, by name, a Makefile that no-ops its recipes (a SHELL or
+# make. It invokes make only on the reviewed bytes pinned in
+# .github/pinned-makefiles.yml (reading a Makefile executes parts of it), then
+# refuses, by name, reviewed bytes that no-op their recipes (a SHELL or
 # MAKEFLAGS override, a `-` prefix, a swallowed exit, a duplicate target) and an
 # environment that would (MAKEFLAGS and its family, MAKELEVEL and make's other
 # recipe variables, MAKEFILES, BASH_ENV, ENV, a `make` that is not a system

@@ -42,6 +42,8 @@ and this port starts from the inverted design:
                MAKE_RESTARTS, MAKEOVERRIDES, MAKECMDGOALS, SHELL, PATH, BASH_ENV, ENV, GOFLAGS) or a
                variable the Makefile takes from the environment (`?=`, or referenced and never
                assigned — computed from the Makefile by the same code the anchor uses).
+  DIGEST       .github/pinned-makefiles.yml exists, pins Makefile by sha256, and the tree matches it —
+               the same gate the anchor applies before it will invoke make at all.
   STRICT YAML  A duplicate mapping key and a YAML merge key (`<<:`) are refused anywhere in a
                workflow or in the pins file, so this guard never reads a different value than a
                reviewer sees first.
@@ -635,6 +637,46 @@ def check_local_parity(g: Guard, makefile: Path, pins: Pins) -> None:
         g.ok(f"`make ci` runs exactly the required make lanes plus test-noskip: {local}")
 
 
+def check_makefile_pins(g: Guard, path: Path, root: Path, verify_bytes: bool) -> None:
+    """DIGEST: .github/pinned-makefiles.yml exists, is non-empty, pins Makefile, and matches the tree.
+
+    The anchor refuses to run make on unpinned bytes; this says the same thing in
+    `ci-required`, so a Makefile edit without its reviewed pin update is red there
+    too, by name. The format — `path: <64 lowercase hex>` — is shared with
+    vizra-core, and the anchor reads it without a YAML parser; both must agree.
+    """
+    if not path.is_file():
+        g.fail(f"{path} is missing. make is gated on pinned Makefile bytes; without the pin there is no gate.")
+        return
+    try:
+        doc = safe_load_strict(path.read_text())
+    except yaml.YAMLError as e:
+        g.fail(f"{path} is refused by the strict YAML reader: {e}")
+        return
+    if not isinstance(doc, dict) or not doc:
+        g.fail(f"{path} pins nothing (it must be a non-empty `path: sha256` mapping).")
+        return
+    bad = [f"{k!r}: {v!r}" for k, v in doc.items()
+           if not isinstance(k, str) or not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{64}", v)
+           or k.startswith("/") or ".." in k.split("/")]
+    if bad:
+        g.fail(f"{path} has entries that are not `relative/path: <64 lowercase hex>`:", *bad)
+        return
+    if "Makefile" not in doc:
+        g.fail(f"{path} does not pin `Makefile`.")
+        return
+    if verify_bytes:
+        import hashlib
+        for rel, want in sorted(doc.items()):
+            f = root / rel
+            got = hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else "(missing)"
+            if got != want:
+                g.fail(f"{rel} sha256 {got} does not match its pin {want} in {path.name}.",
+                       "A Makefile edit is mergeable only together with a reviewed edit to the pin.")
+                return
+    g.ok(f"{path.name} pins {sorted(doc)} by sha256" + ("; the tree matches" if verify_bytes else ""))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     root = Path(__file__).resolve().parent.parent
@@ -642,6 +684,7 @@ def main() -> int:
     ap.add_argument("--manifest", type=Path, default=root / ".github" / "required-checks.txt")
     ap.add_argument("--makefile", type=Path, default=root / "Makefile")
     ap.add_argument("--pins", type=Path, default=root / ".github" / "pinned-steps.yml")
+    ap.add_argument("--makefile-pins", type=Path, default=root / ".github" / "pinned-makefiles.yml")
     ap.add_argument("--skip-makefile", action="store_true", help="for fixture runs that ship no Makefile")
     args = ap.parse_args()
 
@@ -742,6 +785,7 @@ def main() -> int:
     if not args.skip_makefile:
         check_makefile_selection(g, args.makefile)
         check_local_parity(g, args.makefile, pins)
+    check_makefile_pins(g, args.makefile_pins, args.makefile.parent, not args.skip_makefile)
 
     bad_runners: list[str] = []
     unpinned: list[str] = []

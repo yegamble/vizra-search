@@ -1,0 +1,58 @@
+fmt-check: clean
+go vet ./...
+echo-containment: Echo is confined to internal/httpapi
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=4476ad5-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=4476ad58aa3fbd7cd70604ad0b94ec10deea6b2d -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-23T08:05:20Z' -o bin/vizra-search ./cmd/vizra-search
+./scripts/contract-drift-guard.py recipe
+contract-drift lane: 4 package(s) selected with no test-selecting flag (internal/config, internal/contract, internal/hmacauth, internal/httpapi)
+go test -count=1 -json ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/ > .contract-drift-report.json || true
+./scripts/contract-drift-guard.py ran .contract-drift-report.json
+contract-drift: 365 tests ran across 4 package(s), 0 failures, none deselected
+go test -race -count=1 ./...
+ok  	github.com/yegamble/vizra-search/cmd/vizra-search	5.432s
+ok  	github.com/yegamble/vizra-search/internal/buildinfo	2.891s
+ok  	github.com/yegamble/vizra-search/internal/config	3.033s
+ok  	github.com/yegamble/vizra-search/internal/contract	2.837s
+ok  	github.com/yegamble/vizra-search/internal/hmacauth	3.304s
+ok  	github.com/yegamble/vizra-search/internal/httpapi	19.189s
+ok  	github.com/yegamble/vizra-search/scripts	63.615s
+go-test-report: suite 'unit' from .test-events.json
+  packages ok:              7
+  packages failed:          0
+  packages [no test files]: 0
+  tests executed:           554  (floor: 470)
+    top-level:              196
+    passed:                 554
+    failed:                 0
+    skipped:                0
+  `go test` exit code:      0
+  github.com/yegamble/vizra-search/cmd/vizra-search: 16 test(s) (floor: 14)
+  github.com/yegamble/vizra-search/internal/buildinfo: 6 test(s) (floor: 4)
+  github.com/yegamble/vizra-search/internal/config: 84 test(s) (floor: 71)
+  github.com/yegamble/vizra-search/internal/contract: 26 test(s) (floor: 22)
+  github.com/yegamble/vizra-search/internal/hmacauth: 109 test(s) (floor: 93)
+  github.com/yegamble/vizra-search/internal/httpapi: 146 test(s) (floor: 124)
+  github.com/yegamble/vizra-search/scripts: 167 test(s) (floor: 141)
+go-test-report: ok — 554 test(s) executed across 7 package(s), 0 skips, every package at or above its floor (suite floor 470)
+tidy-check: tidy
+./scripts/vendor-contract-selftest.py
+vendor-contract-selftest: 17 fixtures, no network
+  tag named 'main'                   OK  (exit 1)
+  tag shadowing origin/main          OK  (exit 1)
+  branch 'fake/main'                 OK  (exit 1)
+  local branch refs/heads/main       OK  (exit 1)
+  non-ancestor --commit              OK  (exit 1)
+  foreign origin URL                 OK  (exit 1)
+  foreign origin (scp-like ssh)      OK  (exit 1)
+  foreign origin, 4-segment path     OK  (exit 1)
+  userinfo redacted in output        OK  (exit 1)
+  no refs/remotes/origin/main        OK  (exit 1)
+  shallow clone                      OK  (exit 1)
+  forged tip: a refname              OK  (exit 1)
+  forged tip: 40 zeros               OK  (exit 1)
+  forged tip: no such commit         OK  (exit 1)
+  forged tip: a commit off the ref   OK  (exit 1)
+  forged tip: older than the commit  OK  (exit 1)
+  happy path accepted                OK  (exit 0)
+
+vendor-contract-selftest: all 17 fixtures behaved as documented
+EXIT=0

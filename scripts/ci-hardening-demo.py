@@ -85,13 +85,19 @@ ROWS = [
          cmd=GUARD_SH, want="job-level env sets makelevel"),
     dict(id="1j", item=1, name="workflow: duplicate run key", file=CI, old=MAKE_TEST,
          new="        run: make -i test\n" + MAKE_TEST, cmd=GUARD_SH, want="duplicate key 'run'"),
-    dict(id="1k", item=1, name="Makefile: MAKEFLAGS += -i", file="Makefile", old=FLAGS_PIN,
-         new=FLAGS_PIN + "MAKEFLAGS += -i\n", cmd=ANCHOR, want="assigns makeflags"),
-    dict(id="1l", item=1, name="Makefile: SHELL := /usr/bin/true", file="Makefile", old="SHELL := /bin/bash\n",
-         new="SHELL := /usr/bin/true\n", cmd=ANCHOR, want="shell"),
-    dict(id="1m", item=1, name="Makefile: $(shell) writes $GITHUB_ENV while being read", file="Makefile",
-         old=FLAGS_PIN, new=FLAGS_PIN + "POISON := $(shell echo MAKEFLAGS=-i >> \"$$GITHUB_ENV\")\n",
-         cmd=ANCHOR, want="make was not invoked"),
+    dict(id="1k", item=1, name="Makefile: one byte changed (the digest gate)", file="Makefile",
+         old="SHELL := /bin/bash\n", new="SHELL := /bin/bash \n", cmd=ANCHOR, want="make was not invoked"),
+    dict(id="1l", item=1, name="Makefile: an include line + an unpinned included file", file="Makefile",
+         old=FLAGS_PIN, new=FLAGS_PIN + "include inc.mk\n", create={"inc.mk": "X := 1\n"}, cmd=ANCHOR,
+         want="make was not invoked"),
+    dict(id="1m", item=1, name="Makefile: a .SECONDEXPANSION line (desk review FINDING 1)", file="Makefile",
+         old=FLAGS_PIN, new=FLAGS_PIN + ".SECONDEXPANSION:\n", cmd=ANCHOR, want="make was not invoked"),
+    dict(id="1m2", item=1, name="Makefile: a .RECIPEPREFIX line (desk review FINDING 2)", file="Makefile",
+         old="", new=".RECIPEPREFIX := >\n", cmd=ANCHOR, want="make was not invoked"),
+    dict(id="1m3", item=1, name="Makefile: MAKEFLAGS += -i", file="Makefile", old=FLAGS_PIN,
+         new=FLAGS_PIN + "MAKEFLAGS += -i\n", cmd=ANCHOR, want="does not match its pinned digest"),
+    dict(id="1m4", item=1, name="ci-required: Makefile edited without a pin update", file="Makefile",
+         old="SHELL := /bin/bash\n", new="SHELL := /bin/bash \n", cmd=GUARD_SH, want="does not match its pin"),
     dict(id="1n", item=1, name="env: MAKELEVEL=1 MAKEFLAGS=-ki (strictness is not the environment's)",
          env={"MAKELEVEL": "1", "MAKEFLAGS": "-ki"}, cmd=ANCHOR, want="makelevel"),
     dict(id="1o", item=1, name="env: VERSION=x (a Makefile ?= variable)", env={"VERSION": "x"}, cmd=ANCHOR,
@@ -100,11 +106,11 @@ ROWS = [
          old="            if i == 0 or trim_one_newline(step_run(steps[i - 1]) or \"\") != pins.anchor:\n",
          new="            if False:\n",
          cmd=gotest("./scripts/", "TestCIRequiredGuardRefusesEveryEvasion/anchor"), want="green (exit 0) after the mutation"),
-    dict(id="1q", item=1, name="implementation: parse-time pre-flight removed",
+    dict(id="1q", item=1, name="implementation: the digest gate disabled",
          file="scripts/make-integrity-guard.py",
-         old="    if not check_parse_time_side_effects(g, root):\n",
-         new="    if False and not check_parse_time_side_effects(g, root):\n",
-         cmd=gotest("./scripts/", "TestTheAnchorExecutesNothingWhileReadingTheMakefile"),
+         old="    pinned = check_makefile_digests(g, root)\n    if pinned is None:\n",
+         new="    pinned = check_makefile_digests(g, root) or [\"Makefile\"]\n    if pinned is None:\n",
+         cmd=gotest("./scripts/", "TestTheAnchorRunsMakeOnlyOnPinnedBytes"),
          want="--- fail"),
     # ---------------------------------------------------------------- item 2
     dict(id="2a", item=2, name="a planted t.Skip, through the pinned direct body", file="internal/buildinfo/buildinfo_test.go",
@@ -282,6 +288,9 @@ def main() -> int:
                 if path:
                     before = sha(path)
                     orig = apply_edit(path, r.get("old", ""), r.get("new", ""), r.get("remove", False))
+                    for cf, body in (r.get("create") or {}).items():
+                        with open(os.path.join(tmp, cf), "w") as fh:
+                            fh.write(body)
                     for (xf, xo, xn) in r.get("extra", []):
                         xp = os.path.join(tmp, xf)
                         extras.append((xp, apply_edit(xp, xo, xn, False)))
@@ -311,6 +320,8 @@ def main() -> int:
                         fh.write(xorig)
                 with open(path, "wb") as fh:
                     fh.write(orig)
+                for cf in (r.get("create") or {}):
+                    os.remove(os.path.join(tmp, cf))
                 restored = sha(path)
                 identical = restored == before
                 print(f"    restored  sha256 {restored} ({'byte-identical' if identical else '*** NOT IDENTICAL'})")

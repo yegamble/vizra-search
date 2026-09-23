@@ -13,6 +13,11 @@
 # from outside make, and refuses a no-op by name. The `test-noskip` lane runs the
 # suite WITHOUT make, so a failing test fails a required lane whatever this file
 # says. See AGENTS.md § "The make lanes cannot be silenced".
+#
+# THIS FILE IS PINNED BY ITS BYTES. The anchor refuses to invoke make unless
+# this file matches its sha256 in .github/pinned-makefiles.yml, so an edit here
+# is mergeable only together with a reviewed edit to that pin:
+#   shasum -a 256 Makefile
 
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
