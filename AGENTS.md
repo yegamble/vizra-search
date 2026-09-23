@@ -572,7 +572,13 @@ surroundings**:
     readings, the anchor's closure, definition and recipe readings,
     `ci-required-guard`'s selection and parity readings and
     `contract-drift-guard`'s lane reading; none of them splits the text
-    itself (`TestEveryMakefileReaderConsumesTheOneLineReader`). Before any
+    itself (`TestEveryMakefileReaderConsumesTheOneLineReader`). Across the
+    four files, every other line split, file read, decode or multi-line regex
+    flag is a NAMED read of a non-makefile input, listed in that test by
+    function; a reader planted elsewhere is red
+    (`TestTheOneReaderSourceCheckRefusesAPlantedReader`). A makefile read
+    added inside one of those named functions with the spelling already
+    allowed there is not seen. Before any
     shape is judged, a line is refused if it holds a byte on which make's
     own line reading could still differ from that one: a carriage return
     (anywhere, so CRLF too), a NUL or any other control character except
@@ -588,7 +594,7 @@ surroundings**:
       literal identifier other than a directive keyword (`ifdef`, `ifndef`,
       `ifeq`, `ifneq`, `else`, `endif`, `include`, `-include`, `sinclude`,
       `define`, `endef`, `export`, `unexport`, `override`, `private`,
-      `undefine`, `vpath`, `load`), `.SHELLFLAGS` or `.DEFAULT_GOAL`, op is `:=`, `?=`
+      `undefine`, `vpath`, `load`, `-load`), `.SHELLFLAGS` or `.DEFAULT_GOAL`, op is `:=`, `?=`
       or `=`, and the value uses only `$$`, `$(NAME)`/`${NAME}` references and
       `$(shell …)` whose own text uses only those references;
     - `.PHONY: names`, with literal names;

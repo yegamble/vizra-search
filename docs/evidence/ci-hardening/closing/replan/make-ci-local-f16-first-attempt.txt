@@ -1,0 +1,14 @@
+# FINDING 16 follow-up tree: HEAD 854a337 + this commit's changes; Darwin arm64; go version go1.27.1 darwin/arm64; GNU Make 3.81; python 3.9.6; 2026-09-23T15:42:46Z
+# git diff --stat 854a337 -- Makefile .github api: []
+# command: make ci
+fmt-check: clean
+go vet ./...
+echo-containment: Echo is confined to internal/httpapi
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X github.com/yegamble/vizra-search/internal/buildinfo.Version=854a337-dirty -X github.com/yegamble/vizra-search/internal/buildinfo.Commit=854a3376f005dc7cca3358d9b815205616f7b2fb -X github.com/yegamble/vizra-search/internal/buildinfo.BuildTime=2026-09-23T15:42:46Z' -o bin/vizra-search ./cmd/vizra-search
+./scripts/contract-drift-guard.py recipe
+CONTRACT-DRIFT LANE REFUSED: package 'scripts' contains a test that reads a vendored contract file, but the
+  contract-drift lane does not run it, so a mutation of that file survives the
+  lane. Add ./scripts/ to the contract-drift recipe.
+  lane packages: ['internal/config', 'internal/contract', 'internal/hmacauth', 'internal/httpapi']
+make: *** [contract-drift] Error 1
+# exit: 2

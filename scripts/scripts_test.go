@@ -1957,7 +1957,7 @@ import importlib.util, json, sys
 spec = importlib.util.spec_from_file_location("makegate", sys.argv[1] + "/scripts/makegate.py")
 mg = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mg)
-problems = mg.grammar_problems("Makefile", open(sys.argv[1] + "/Makefile").read())
+problems = mg.grammar_problems("Makefile", mg.read_makefile_text(sys.argv[1] + "/Makefile"))
 print(json.dumps({"problems": problems, "shapes": mg.grammar_problems.last_shapes, "recipe_functions": list(mg.RECIPE_FUNCTIONS)}))
 `
 	out, code := run(t, root, cleanEnv(), "python3", "-c", prog, root)
@@ -2133,7 +2133,7 @@ func TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently(t *testing.T) {
 //
 // The fixture is written to a temporary directory and never run.
 const oneReaderProbe = `
-import ast, contextlib, hashlib, importlib.util, inspect, io, json, re, sys, tempfile
+import ast, contextlib, hashlib, importlib.util, inspect, io, json, re, sys
 from pathlib import Path
 scripts = Path(sys.argv[1]) / "scripts"
 
@@ -2161,7 +2161,7 @@ MAKEFILE = (
     "\t./scripts/contract-drift-guard.py recipe\n"
     "\tgo test -count=1 -json ./internal/x\n"
 )
-root = Path(tempfile.mkdtemp(prefix="one-reader-"))
+root = Path(sys.argv[2])  # the Go test's t.TempDir(), removed by the test framework
 mk = root / "Makefile"
 mk.write_bytes(MAKEFILE.encode())
 (root / ".github").mkdir()
@@ -2293,16 +2293,91 @@ for mod, fname in readers:
     for pat in forbidden:
         if re.search(pat, src):
             result["source"].append("%s.%s reads makefile text itself (%s)" % (mod.__name__, fname, pat))
-splitters = set()
-for node in ast.walk(ast.parse((scripts / "makegate.py").read_text())):
-    if isinstance(node, ast.FunctionDef) and re.search(forbidden[0], ast.get_source_segment((scripts / "makegate.py").read_text(), node) or ""):
-        splitters.add(node.name)
-if splitters != {"makefile_lines", "load_pin"}:
-    result["source"].append("makegate functions that split text on a newline: %s; want exactly makefile_lines "
-                            "(and load_pin, the pin YAML)" % sorted(splitters))
-for f in ("make-integrity-guard.py", "ci-required-guard.py", "contract-drift-guard.py"):
-    if re.search(forbidden[0], (scripts / f).read_text()):
-        result["source"].append("%s splits text on a newline itself" % f)
+# FILE-LEVEL SOURCE (FINDING 16): in the four files, every spelling that splits text into lines, reads a
+# file as text or bytes, decodes bytes, opens a file or sets a multi-line regex flag, found by AST (so
+# comments and docstrings do not count, and a reference without a call, an alias import or an inline (?m)
+# does), must be one of the NAMED reads below, allowed by (function, spelling). Each named read is of an
+# input that is not a makefile. Anything else, anywhere in these files, is refused.
+TEXT_ATTRS = {"splitlines", "readlines", "read_text", "read_bytes", "decode", "open"}
+
+def text_reads(src):
+    out = set()
+    def visit(node, owner):
+        for child in ast.iter_child_nodes(node):
+            o = owner
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                o = child.name if owner == "<module>" else owner + "." + child.name
+            k = None
+            if isinstance(child, ast.Attribute) and child.attr in TEXT_ATTRS:
+                k = child.attr
+            elif isinstance(child, ast.Name) and child.id == "open":
+                k = "open"
+            elif isinstance(child, ast.alias) and (child.name in TEXT_ATTRS or child.name in ("M", "MULTILINE")):
+                k = "import " + child.name
+            elif isinstance(child, ast.Attribute) and (child.attr == "MULTILINE" or (
+                    child.attr == "M" and isinstance(child.value, ast.Name) and child.value.id == "re")):
+                k = "re.M"
+            elif isinstance(child, ast.Constant) and isinstance(child.value, str) and re.search(
+                    r"\(\?[aiLmsux]*m[aiLmsux]*[):]", child.value):
+                k = "re.M"
+            elif isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and child.func.attr in (
+                    "split", "rsplit") and child.args and isinstance(child.args[0], ast.Constant) and \
+                    child.args[0].value in ("\n", b"\n", "\r\n"):
+                k = "split-newline"
+            if k:
+                out.add((o, k))
+            visit(child, o)
+    visit(ast.parse(src), "<module>")
+    return out
+
+NAMED_READS = {
+    "makegate.py": {
+        ("makefile_lines", "split-newline"): "THE line reader",
+        ("decode_makefile", "decode"): "THE decoding",
+        ("read_makefile_text", "read_bytes"): "the bytes THE decoding decodes",
+        ("check_pinned_bytes", "read_bytes"): "the bytes it digests, then decodes through decode_makefile",
+        ("recheck", "read_bytes"): "the bytes it re-digests; never decoded",
+        ("load_pin", "read_bytes"): "the pin file .github/pinned-makefiles.yml",
+        ("load_pin", "decode"): "the pin file",
+        ("load_pin", "split-newline"): "the pin file",
+        ("resolve_make", "splitlines"): "the shell's stdout (type -t make; command -v make)",
+        ("remake_probe", "splitlines"): "make -q's output, quoted in the refusal",
+        ("main", "splitlines"): "this module's own docstring",
+    },
+    "make-integrity-guard.py": {
+        ("resolve_database", "splitlines"): "make -pn's stdout and stderr",
+        ("check_warnings", "splitlines"): "make --dry-run's stderr",
+        ("check_expanded_commands", "splitlines"): "make --dry-run's stdout",
+        ("main", "splitlines"): "this module's own docstring",
+    },
+    "ci-required-guard.py": {
+        ("<module>", "re.M"): "MAKE_INVOCATION / GO_TEST_INVOCATION, applied to workflow step text",
+        ("load_workflows", "read_text"): "the workflow YAML files",
+        ("load_pins", "read_text"): ".github/pinned-steps.yml",
+        ("check_makefile_pins", "read_text"): ".github/pinned-makefiles.yml",
+        ("main", "read_text"): ".github/required-checks.txt",
+        ("main", "splitlines"): ".github/required-checks.txt",
+    },
+    "contract-drift-guard.py": {
+        ("resolved_recipe", "splitlines"): "make --dry-run's stdout",
+        ("check_make_warnings", "splitlines"): "make --dry-run's stderr",
+        ("indent", "splitlines"): "message text being indented",
+        ("vendored_markers", "open"): "the vendored-contract manifest (MANIFEST)",
+        ("packages_guarding_vendored_files", "open"): "*_test.go files",
+        ("cmd_workflow", "open"): ".github/workflows/ci.yml",
+        ("cmd_ran", "open"): "the go test -json report",
+    },
+}
+result["named_reads"] = 0
+for f, named in NAMED_READS.items():
+    got = text_reads((scripts / f).read_text())
+    for owner, kind in sorted(got - set(named)):
+        result["source"].append("%s: %s uses %s, which is not a named read of a non-makefile input; makefile text "
+                                "is read only through makegate.makefile_lines" % (f, owner, kind))
+    for owner, kind in sorted(set(named) - got):
+        result["source"].append("%s: the named read (%s, %s) no longer exists; remove it from NAMED_READS so the "
+                                "allowance cannot be reused" % (f, owner, kind))
+    result["named_reads"] += len(named)
 print(json.dumps(result))
 `
 
@@ -2313,7 +2388,7 @@ print(json.dumps(result))
 func TestEveryMakefileReaderConsumesTheOneLineReader(t *testing.T) {
 	requirePython(t)
 	root := repoRoot(t)
-	out, code := run(t, root, cleanEnv(), "python3", "-c", oneReaderProbe, root)
+	out, code := run(t, root, cleanEnv(), "python3", "-c", oneReaderProbe, root, t.TempDir())
 	if code != 0 {
 		t.Fatalf("the reader probe did not run: exit %d\n%s", code, out)
 	}
@@ -2429,5 +2504,69 @@ print(json.dumps(out))
 		if string(b) != w {
 			t.Errorf("%s: the anchor's recipe for test is %s; want %s (make's reading)", name, b, w)
 		}
+	}
+}
+
+// plantedReaders are second readers of the Makefile, each planted into a copy
+// of one of the four files as a helper nobody calls. The file-level SOURCE
+// check of oneReaderProbe must name each one. Inert: nothing calls them.
+var plantedReaders = []struct{ name, file, code, want string }{
+	{"read_text + split in the anchor", "scripts/make-integrity-guard.py",
+		"\n\ndef _planted_reader(root):\n    return (root / \"Makefile\").read_text().split(\"\\n\")\n",
+		"make-integrity-guard.py: _planted_reader uses read_text"},
+	{"open + iterate in contract-drift-guard", "scripts/contract-drift-guard.py",
+		"\n\ndef _planted_reader(path):\n    with open(path) as fh:\n        return [line for line in fh]\n",
+		"contract-drift-guard.py: _planted_reader uses open"},
+	{"a multi-line regex over the Makefile in ci-required-guard", "scripts/ci-required-guard.py",
+		"\n\ndef _planted_reader(text):\n    return re.findall(r\"^test:\", text, re.M)\n",
+		"ci-required-guard.py: _planted_reader uses re.m"},
+	{"an inline (?m) flag in ci-required-guard", "scripts/ci-required-guard.py",
+		"\n\ndef _planted_reader(text):\n    return re.findall(r\"(?m)^test:\", text)\n",
+		"ci-required-guard.py: _planted_reader uses re.m"},
+	{"read_bytes + decode in makegate", "scripts/makegate.py",
+		"\n\ndef _planted_reader(path):\n    return Path(path).read_bytes().decode()\n",
+		"makegate.py: _planted_reader uses decode"},
+	{"splitlines in makegate", "scripts/makegate.py",
+		"\n\ndef _planted_reader(text):\n    return text.splitlines()\n",
+		"makegate.py: _planted_reader uses splitlines"},
+	{"an aliased open in the anchor", "scripts/make-integrity-guard.py",
+		"\n\n_planted_open = open\n",
+		"make-integrity-guard.py: <module> uses open"},
+}
+
+// FINDING 16 (re-verification at 854a337): the file-level SOURCE check is not
+// only for split("\n"). Each planted second reader above turns the one-reader
+// probe red by name; the unplanted tree is green (TestEveryMakefileReaderConsumesTheOneLineReader).
+func TestTheOneReaderSourceCheckRefusesAPlantedReader(t *testing.T) {
+	requirePython(t)
+	for _, p := range plantedReaders {
+		p := p
+		t.Run(p.name, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			path := filepath.Join(dir, p.file)
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, append(raw, []byte(p.code)...), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			out, code := run(t, dir, cleanEnv(), "python3", "-c", oneReaderProbe, dir, t.TempDir())
+			if code != 0 {
+				t.Fatalf("the probe did not run on the planted copy: exit %d\n%s", code, out)
+			}
+			var got struct {
+				Source []string `json:"source"`
+			}
+			if err := json.Unmarshal([]byte(out), &got); err != nil {
+				t.Fatalf("unreadable: %v\n%s", err, out)
+			}
+			joined := strings.ToLower(strings.Join(got.Source, "\n"))
+			if !strings.Contains(joined, strings.ToLower(p.want)) {
+				t.Fatalf("planted %q in %s; the SOURCE check reported %q, want %q", p.code, p.file, got.Source, p.want)
+			}
+			t.Logf("%s | refused: %s", p.name, got.Source[0])
+		})
 	}
 }

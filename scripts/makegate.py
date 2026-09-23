@@ -212,8 +212,17 @@ def load_pin(root: Path) -> dict[str, str]:
 # static_read_set, the parse-time sites, environment_taken, environment_words here; prerequisite_closure,
 # check_text and logical_recipe_lines in the anchor; makefile_env_names, check_makefile_selection and
 # check_local_parity in ci-required-guard; check_makefile_text in contract-drift-guard — gets its lines from
-# makefile_lines(), over text decoded by decode_makefile(). No other function in those files splits makefile
-# text, and TestEveryMakefileReaderConsumesTheOneLineReader holds that. The grammar then refuses, before make,
+# makefile_lines(), over text decoded by decode_makefile(). TestEveryMakefileReaderConsumesTheOneLineReader holds
+# this three ways: rewriting the text inside makefile_lines changes every named reader's verdict (POISON); those
+# readers split, decode and read nothing themselves; and, over the whole of makegate.py, make-integrity-guard.py,
+# ci-required-guard.py and contract-drift-guard.py, every spelling that splits text into lines, reads a file as
+# text or bytes, decodes bytes, opens a file or sets a multi-line regex flag (found by AST, so an uncalled
+# reference, an alias import or an inline `(?m)` counts too) is one of the NAMED reads that test lists by
+# (function, spelling), each of an input that is not a makefile — the pin file, the workflows, the manifest,
+# make's and the shell's output, the test report — or is makefile_lines/decode_makefile themselves. A helper
+# planted anywhere else is refused (TestTheOneReaderSourceCheckRefusesAPlantedReader). NOT seen: a makefile read
+# added INSIDE one of those named functions using the spelling already allowed there, and a name built at run
+# time (getattr, exec). The grammar then refuses, before make,
 # every byte on which make's own line reading could still differ from this one (a CR, a NUL, any other control
 # or invisible character, non-ASCII whitespace, a comment continued by a backslash).
 
@@ -877,7 +886,8 @@ _FUNCTIONS = {
     "firstword", "lastword", "abspath", "realpath", "if", "or", "and", "origin", "value",
     "addprefix", "addsuffix", "basename", "suffix", "join", "findstring", "flavor", "file",
 }
-_ASSIGN_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_][A-Za-z0-9_.]*)\s*(\?=|:{1,3}=|\+=|!=|=)", re.M)
+# Matched against ONE logical line at a time (environment_taken), so it carries no multi-line flag.
+_ASSIGN_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_][A-Za-z0-9_.]*)\s*(\?=|:{1,3}=|\+=|!=|=)")
 # `$(NAME)` / `${NAME}` — but not the shell's `$${NAME}` inside a recipe.
 _REF_RE = re.compile(r"(?<!\$)\$[({]([A-Za-z_][A-Za-z0-9_]*)[)}]")
 

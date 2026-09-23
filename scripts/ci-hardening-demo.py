@@ -64,6 +64,7 @@ INVENTORY = gotest("./scripts/", "TestEveryPlaceThatStartsMakeIsGated")
 # Re-plan (one line reader): the inert-string grammar test and the reader-identity test. Neither starts make.
 GRAMMAR_STRINGS = gotest("./scripts/", "TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently")
 ONE_READER = gotest("./scripts/", "TestEveryMakefileReaderConsumesTheOneLineReader")
+PLANTED = gotest("./scripts/", "TestTheOneReaderSourceCheckRefusesAPlantedReader")
 
 ROWS = [
     # ---------------------------------------------------------------- item 1
@@ -375,6 +376,14 @@ ROWS = [
          file="scripts/makegate.py", old="        if bad:\n", new="        if False:\n",
          cmd=gotest("./scripts/", "TestNamedMakefileConstructsAreRefusedBeforeMake/F14"),
          want="f14_a_lone_cr_inside_a_comment"),
+    # FINDING 16 (re-verification at 854a337): the file-level SOURCE check covers every text-reading spelling.
+    dict(id="C21", item="C", name="F16: the file-level SOURCE check no longer sees attribute reads (read_text, splitlines, decode…)",
+         file="scripts/scripts_test.go",
+         old='TEXT_ATTRS = {"splitlines", "readlines", "read_text", "read_bytes", "decode", "open"}\n',
+         new="TEXT_ATTRS = set()\n", cmd=PLANTED, want="read_text_+_split_in_the_anchor"),
+    dict(id="C22", item="C", name="F16: the file-level SOURCE check reports nothing outside the named reads",
+         file="scripts/scripts_test.go", old="    for owner, kind in sorted(got - set(named)):\n",
+         new="    for owner, kind in []:\n", cmd=PLANTED, want="splitlines_in_makegate"),
 ]
 
 

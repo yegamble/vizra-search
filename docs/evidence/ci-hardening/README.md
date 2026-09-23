@@ -1,5 +1,33 @@
 # Evidence — CI gates cannot be silenced or pass vacuously (war-room queue 2g)
 
+## Re-plan follow-up (on top of 854a337): FINDING 16 and three nits
+
+The re-verification at 854a337 returned PASS, held for one commit because a comment claimed more than its test.
+- **FINDING 16.** The makegate comment said no other function "splits makefile text", but the probe's file-level
+  SOURCE check looked only for `split("\n")`. Two changes:
+  - The check now finds, by AST, every line split, `splitlines`, `readlines`, `read_text`, `read_bytes`,
+    `decode`, `open` (called, referenced or alias-imported), `re.M`/`re.MULTILINE` and inline `(?m)`, anywhere
+    in makegate.py, make-integrity-guard.py, ci-required-guard.py and contract-drift-guard.py.
+  - Each hit must be one of 28 NAMED reads, listed by (function, spelling), each of a non-makefile input or
+    `makefile_lines`/`decode_makefile` themselves. A named read that disappears must be removed from the list.
+
+  `makegate._ASSIGN_RE` lost its `re.M` flag, which had no effect: it is matched against one logical line. The
+  comment now says what the test holds, including what it does not see: a makefile read added inside a named
+  function using the spelling already allowed there, and names built at run time.
+  `TestTheOneReaderSourceCheckRefusesAPlantedReader` plants seven inert second readers.
+- **NITs.** The probe's fixture now lives in the Go test's `t.TempDir()` (removed by the framework) instead of
+  a leaked `mkdtemp`. AGENTS.md's keyword list gains `-load`, matching the code. `TestTheRealMakefileFitsTheGrammar`
+  reads the Makefile through `makegate.read_makefile_text` instead of `open().read()`.
+
+| File | What it shows |
+|---|---|
+| `closing/replan/f16-planted-readers-at-854a337-BEFORE.txt` | The new planted-reader test appended to 854a337's `scripts_test.go`, whose file-level check sought only `split("\n")`. exit 1, **7/7 FAIL**: six plants were reported by nothing at all (`[]`); `read_text().split("\n")` only as "splits text on a newline itself". |
+| `closing/replan/demo-red-green-f16.txt` | the full demo at this commit's tree, including C21 (attribute reads unseen) and C22 (nothing reported outside the named reads): each is red on the planted-reader test, restored byte-identically, then green. |
+| `closing/replan/make-ci-local-f16.txt`, `go-meta-tests-verbose-f16.txt`, `guards-f16.txt` | The lanes at this commit's tree, all exit 0:
+<ul><li>`make ci`: test-noskip **809 tests / 7 pkgs / 0 skips**, contract-drift 365, selftest 17/17;</li><li>`go test -v`: **568 PASS / 0 FAIL / 0 SKIP**;</li><li>guards and `vendor-contract --check`: exit 0.</li></ul>
+The demo was **87/87**. |
+| `closing/replan/*-f16-first-attempt.txt` | The first run: `make ci` exit 2, `go test` 4 FAIL, demo 82/87. The cause is one mistake of mine. The allowlist's reason text named the vendored manifest's file name inside `scripts_test.go`. contract-drift-guard therefore correctly refused a lane that no longer ran every package whose test mentions a vendored file. I rewrote the reason text, and everything above is the rerun. |
+
 ## Re-plan (on top of e711d33): one line reader
 
 Input: the re-verification at e711d33, which returned FAIL with FINDING 14 REQUIRED, FINDING 15 SHOULD and an NBSP
