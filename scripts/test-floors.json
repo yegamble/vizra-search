@@ -1,0 +1,40 @@
+{
+  "_why": [
+    "`go test ./...` exits 0 when it ran nothing, a non-verbose run prints nothing for a skipped test, and a",
+    "whole-suite floor does not notice one small package being emptied inside a large one's headroom (vizra-core",
+    "PR#6 VERIFY FINDING 3, PR#9 VERIFY FINDING 7). These floors are what make each of those red in the",
+    "`test-noskip` lane, which runs the suite WITHOUT make (.github/pinned-steps.yml) and judges it with",
+    "scripts/go-test-report.py. They are a FLOOR, not an expected count: they catch a suite being emptied or a",
+    "package disappearing, not churn.",
+    "",
+    "EVERY package carries a floor, and a package that runs tests with no floor is refused, so a new package",
+    "cannot arrive unprotected. There is NO skip allowlist: go-test-report.py refuses a non-empty allowed_skips,",
+    "because a required test that is skipped is not a pass (AGENTS.md, Q-001).",
+    "",
+    "MEASURED on this branch before its first push (darwin/arm64, go1.26.2 host toolchain; CI runs go1.27.1 on",
+    "ubuntu-24.04), `go test -count=1 -json ./...`: 553 executed, 0 skips —",
+    "  cmd/vizra-search 16, internal/buildinfo 6, internal/config 84, internal/contract 26,",
+    "  internal/hmacauth 109, internal/httpapi 146, scripts 166.",
+    "Generated with `--emit-floors`: 15% headroom, at least 2 tests of slack, never below 1.",
+    "",
+    "Lowering a floor is a REVIEWED diff. Floors only rise. To regenerate after the suite grows:",
+    "  go test -count=1 -json ./... > e.json; echo $? > x.txt",
+    "  python3 scripts/go-test-report.py --events e.json --suite unit \\",
+    "    --floors scripts/test-floors.json --go-exit-file x.txt --emit-floors"
+  ],
+  "suites": {
+    "unit": {
+      "min_tests": 470,
+      "min_package_tests": {
+        "github.com/yegamble/vizra-search/cmd/vizra-search": 14,
+        "github.com/yegamble/vizra-search/internal/buildinfo": 4,
+        "github.com/yegamble/vizra-search/internal/config": 71,
+        "github.com/yegamble/vizra-search/internal/contract": 22,
+        "github.com/yegamble/vizra-search/internal/hmacauth": 93,
+        "github.com/yegamble/vizra-search/internal/httpapi": 124,
+        "github.com/yegamble/vizra-search/scripts": 141
+      },
+      "allowed_skips": {}
+    }
+  }
+}

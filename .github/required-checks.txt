@@ -10,9 +10,10 @@
 # PR as the code it guards.
 #
 # A PR may ADD a lane here. It may not REMOVE one of the floor lanes — build,
-# test, test-noskip, contract-drift, govulncheck — because this manifest is read
-# from the checkout under test, so a PR could otherwise stop gating itself by
-# deleting a line. The floor lives in scripts/ci-required-guard.sh, not here.
+# test, test-noskip, contract-drift, govulncheck, vendor-contract-selftest —
+# because this manifest is read from the checkout under test, so a PR could
+# otherwise stop gating itself by deleting a line. The floor lives in
+# scripts/ci-required-guard.py (FLOOR_LANES), not here.
 # Entries must be bare job names: no trailing comment, no "optional" marker.
 
 fmt
@@ -24,4 +25,5 @@ test
 test-noskip
 tidy-check
 govulncheck
+vendor-contract-selftest
 docker-build

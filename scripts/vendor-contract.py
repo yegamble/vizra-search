@@ -89,7 +89,7 @@ to refs/remotes/<remote>/main), --commit (pin a specific ancestor), --note
 (replace the manifest's $provenance_note).
 
 It never runs a command that could modify the core checkout: only `remote
-get-url`, `rev-parse`, `for-each-ref`, `log`, `merge-base` and `show`.
+get-url`, `rev-parse`, `for-each-ref`, `log`, `merge-base`, `cat-file` and `show`.
 """
 
 import argparse
@@ -173,9 +173,13 @@ def parse_remote_url(url):
     if path.endswith(".git"):
         path = path[: -len(".git")]
     parts = [p for p in path.split("/") if p]
-    if len(parts) < 2:
+    # EXACTLY two path segments. `parts[-2:]` accepted
+    # https://github.com/attacker/x/yegamble/vizra-core as yegamble/vizra-core
+    # (PR#3 VERIFY, FINDING 6). github.com serves a repository at owner/repo and
+    # nowhere deeper, so anything else is not the canonical repository.
+    if len(parts) != 2:
         return host or None, None
-    return host, "/".join(parts[-2:])
+    return host, "/".join(parts)
 
 
 def check_remote_is_canonical(core, remote):
@@ -474,6 +478,18 @@ def check(args):
             "source_commit is %r; a full 40-character SHA is required so the consumed "
             "version is unambiguous" % m.get("source_commit")
         )
+    # source_ref_tip: the tip the resolved ref pointed at when this was vendored.
+    # It was written and never read, so a hand-edit to anything at all left
+    # every check green (PR#3 VERIFY, FINDING 4). Without a core checkout it
+    # can still be held to its SHAPE: a full 40-character lowercase SHA that is
+    # not the null object id.
+    recorded_tip = m.get("source_ref_tip")
+    if not isinstance(recorded_tip, str) or not re.fullmatch(r"[0-9a-f]{40}", recorded_tip) \
+            or recorded_tip == "0" * 40:
+        problems.append(
+            "source_ref_tip is %r; it must be the full 40-character lowercase SHA the resolved ref "
+            "pointed at when the files were vendored (and never the null object id)" % (recorded_tip,)
+        )
     recorded_ref = m.get("source_ref") or ""
     if not recorded_ref.startswith("refs/remotes/"):
         problems.append(
@@ -526,6 +542,37 @@ def check(args):
                 "the manifest records source_ref %r, but this checkout resolves %r"
                 % (recorded_ref, full_ref)
             )
+        # With the checkout in hand the recorded tip is checked against what it
+        # CLAIMS to be — a commit that was the tip of this ref at vendoring
+        # time: it must exist, be on the ref today (a remote-tracking main only
+        # moves forward), and contain the pinned source_commit. A tip that has
+        # merely moved on since is NOT a failure here — that is staleness, and
+        # the api/-commit comparison below is what says "re-vendor".
+        if isinstance(recorded_tip, str) and re.fullmatch(r"[0-9a-f]{40}", recorded_tip):
+            _, _, rc_obj = git_raw(core, "cat-file", "-e", recorded_tip + "^{commit}")
+            if rc_obj != 0:
+                problems.append(
+                    "source_ref_tip %s is not a commit in %s at all — the manifest names a tip "
+                    "that never existed there" % (recorded_tip, core)
+                )
+            else:
+                _, _, rc_on = git_raw(core, "merge-base", "--is-ancestor", recorded_tip, full_ref)
+                if rc_on != 0:
+                    problems.append(
+                        "source_ref_tip %s is NOT on %s (current tip %s): it was never the tip of the "
+                        "ref this manifest records" % (recorded_tip, full_ref, tip)
+                    )
+                sc = m.get("source_commit") or ""
+                _, _, rc_sc = git_raw(core, "merge-base", "--is-ancestor", sc, recorded_tip)
+                if rc_sc != 0:
+                    problems.append(
+                        "source_commit %s is not contained in source_ref_tip %s: the pinned commit "
+                        "could not have been reached from the tip the manifest says it came from"
+                        % (sc, recorded_tip)
+                    )
+            if recorded_tip != tip:
+                print("note: source_ref_tip %s is behind the current tip %s of %s (staleness, "
+                      "not forgery — see the api/ commit check)" % (recorded_tip[:12], tip[:12], full_ref))
         if commit != m.get("source_commit"):
             problems.append(
                 "the manifest pins %s, but the current last api/ commit on %s is %s — re-vendor"

@@ -70,22 +70,14 @@ place, and each turns a required check red:
 
 What they do NOT stop, stated rather than implied:
 
-  - a Makefile-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is
-    ONE line, and either makes every recipe in this repository a no-op —
-    `contract-drift`, `test` and `test-noskip` alike. Measured at this commit
-    with a vendored file edited in place: `make contract-drift`, `make test` and
-    `make test-noskip` all exit 0. No check written inside a Makefile can
-    prevent that, and no CI lane catches it today, because the workflows invoke
-    `make test` and `make test-noskip` rather than `go test`: the only command
-    that goes red is a direct `go test ./internal/httpapi/`, which nothing in CI
-    runs. (`resolved_recipe` drops a `MAKEFLAGS` inherited from the ENVIRONMENT;
-    this is the in-file assignment, which it cannot drop.) The exposure is
-    generic to any make-driven gate, is equally true of `main`, and is not new
-    here — what is new is that it is written down. Closing it is queued as a
-    cross-repo hardening item: an out-of-make check that refuses a `SHELL`,
-    `.SHELLFLAGS` or `MAKEFLAGS` override anywhere in the Makefile, plus one
-    required lane that runs `go test` without make. Until that lands, the only
-    backstop is human review of the Makefile diff;
+  - a Makefile-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i` used to be
+    listed here: ONE line that no-ops every recipe in this repository, with no
+    CI lane to catch it. It is now refused by name BEFORE `make contract-drift`
+    runs, by the pinned `./scripts/make-integrity-guard.sh --workflow` anchor
+    step in `.github/workflows/ci.yml`, from outside make — and the `test-noskip`
+    lane runs every package, the drift guards included, without make. See
+    AGENTS.md § "The make lanes cannot be silenced". Nothing in THIS program
+    changed; it still cannot see such a line from inside the recipe;
   - editing `.github/workflows/ci.yml` as well removes reading 2. That is a
     second file and a second diff, and `ci-required` goes red while the step is
     missing — but `ci-required-guard.sh` is itself checked out from the PR under

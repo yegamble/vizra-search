@@ -1,0 +1,32 @@
+ci-hardening-demo: 3 row(s); tree = HEAD 3ea410304bdc6d937df750c40be0e8e7485505dc + working-tree changes
+  GNU Make 3.81; go version go1.27.1 darwin/arm64; python 3.9.6
+
+=== 5a (item 5) implementation: parse_remote_url back to parts[-2:]
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  c3ccec8a3b616bfac7432dbe7323edd72545ebda55f64020d5189b4982ebf866
+    MUTATED : exit 1 -> RED as declared
+              vendor-contract-selftest: FAIL: foreign origin, 4-segment path: expected a refusal, got exit 0
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 5b (item 5) implementation: the source_ref_tip shape check removed
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  571ccfb69b5d4a31cb556b151ce50f91e502cb1780a93bf9d44927452f1e28ec
+    MUTATED : exit 1 -> RED as declared
+              vendor-contract-selftest: FAIL: forged tip: a refname: --check ACCEPTED a forged source_ref_tip 'refs/remotes/origin/evil'
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 5c (item 5) implementation: the with-core tip checks removed
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  1463bb3b6dd3a2e7a506f872c3931e042dbc134f301d2c54a1c9d6a100e6c37c
+    MUTATED : exit 1 -> RED as declared
+              vendor-contract-selftest: FAIL: forged tip: no such commit: --check --core /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-dqe3b54f/core-tip-absent ACCEPTED a forged source_ref_tip 'deadbeefdead
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 3/3 row(s) behaved as declared
+EXIT=0

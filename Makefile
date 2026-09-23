@@ -3,6 +3,16 @@
 # `make ci` is the complete gate. Every lane below is listed in
 # .github/required-checks.txt, and a lane that does not run is a failure, never
 # a pass (ADR-002 § CI fan-in).
+#
+# CI does not trust this file to be honest about itself. One line here —
+# `SHELL := /usr/bin/true`, `MAKEFLAGS += -i` — would no-op every recipe, and no
+# check inside a Makefile can stop that. So every `make` step in
+# .github/workflows/ci.yml is byte-equal to an entry in .github/pinned-steps.yml
+# and is IMMEDIATELY preceded by `./scripts/make-integrity-guard.sh --workflow`,
+# which reads this file (and anything it includes) and the step's environment
+# from outside make, and refuses a no-op by name. The `test-noskip` lane runs the
+# suite WITHOUT make, so a failing test fails a required lane whatever this file
+# says. See AGENTS.md § "The make lanes cannot be silenced".
 
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -30,11 +40,11 @@ help: ## List the targets
 # ------------------------------------------------------------------- lanes ---
 
 .PHONY: ci
-ci: fmt-check vet echo-containment build contract-drift test test-noskip tidy-check ## Every required lane, in order
+ci: fmt-check vet echo-containment build contract-drift test test-noskip tidy-check vendor-contract-selftest ## Every required lane, in order
 
 .PHONY: fmt-check
 fmt-check: ## Fail if any file is not gofmt-clean
-	@unformatted="$$($(GOFMT) -l cmd internal)"; \
+	@unformatted="$$($(GOFMT) -l cmd internal scripts)"; \
 	if [ -n "$$unformatted" ]; then \
 		echo "these files are not gofmt-clean:"; echo "$$unformatted"; exit 1; \
 	fi
@@ -94,19 +104,17 @@ build: ## Build the binary
 # reaches it, and scripts/ci-required-guard.sh asserts that step is there,
 # unconditional and able to fail.
 #
-# What none of this stops, and AGENTS.md says the same: a Makefile-level
-# `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is one line and makes
-# EVERY recipe in this file a no-op, so contract-drift, test and test-noskip all
-# exit 0 with a vendored file edited in place. CI invokes `make test` and
-# `make test-noskip`, so they are no-opped too; only a direct
-# `go test ./internal/httpapi/` goes red, and no CI lane runs that. Nothing
-# inside a Makefile can prevent it; an out-of-make check refusing such overrides
-# is queued as a cross-repo hardening item. Until then the backstop is review of
-# this file's diff, under a CODEOWNERS entry nothing enforces yet.
+# A Makefile-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i` — one line that
+# no-ops every recipe here — used to be listed as what none of this stops. It is
+# now refused BY NAME before `make contract-drift` runs, by the pinned
+# make-integrity-guard anchor step in ci.yml, from outside make; and the
+# `test-noskip` lane runs every package, the drift guards included, without make.
 #
 # `|| true` on the test line is not swallowing the result: the `ran` step is the
 # authority on pass/fail, it prints the real test output, and `recipe` refuses
-# the lane if that step is not the last command.
+# the lane if that step is not the last command. It is the ONE swallowing suffix
+# scripts/make-integrity-guard.py accepts, keyed to this target and these exact
+# bytes (SWALLOW_EXEMPT); the same suffix anywhere else in a gate recipe is red.
 DRIFT_PKGS   := ./internal/httpapi/ ./internal/contract/ ./internal/hmacauth/ ./internal/config/
 DRIFT_REPORT := .contract-drift-report.json
 
@@ -120,17 +128,19 @@ contract-drift: ## Compare the handlers and the HMAC scheme against the canonica
 test: ## Full test suite with the race detector
 	go test -race -count=1 $(PKG)
 
-# test-noskip proves the claim "nothing skipped or fake" of Q-001: the lane
-# fails if any test reports a skip, and fails if the run collects no tests.
+# test-noskip proves the claim "nothing skipped or fake" of Q-001. It is local
+# parity for the `test-noskip` CI lane, which runs the SAME `go test -json` and
+# the same report DIRECTLY, without make (.github/pinned-steps.yml). The report
+# fails on any skipped test and any package with no test files, holds EVERY
+# package to its executed-test floor in scripts/test-floors.json, refuses a
+# package that has no floor, judges `go test`'s own exit code, and prints the
+# counts.
 .PHONY: test-noskip
-test-noskip: ## Fail if any test was skipped, or if no test ran
-	@go test -count=1 -json $(PKG) > .test-report.json || { cat .test-report.json; rm -f .test-report.json; exit 1; }
-	@skipped="$$(grep -c '"Action":"skip"' .test-report.json || true)"; \
-	passed="$$(grep -c '"Action":"pass"' .test-report.json || true)"; \
-	rm -f .test-report.json; \
-	if [ "$$skipped" != "0" ]; then echo "test-noskip: $$skipped skipped test(s); Q-001 requires that nothing is skipped"; exit 1; fi; \
-	if [ "$$passed" -lt 40 ]; then echo "test-noskip: only $$passed pass events; the suite did not run"; exit 1; fi; \
-	echo "test-noskip: $$passed pass events, 0 skips"
+test-noskip: ## Fail on any skip, any package under its executed-test floor, or any package with no floor
+	@rc=0; go test -count=1 -json $(PKG) > .test-events.json || rc=$$?; echo "$$rc" > .test-exit.txt; \
+	python3 scripts/go-test-report.py --events .test-events.json --suite unit \
+		--floors scripts/test-floors.json --go-exit-file .test-exit.txt || exit 1; \
+	exit "$$rc"
 
 .PHONY: tidy-check
 tidy-check: ## Fail if go.mod/go.sum are not tidy
@@ -153,14 +163,15 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 # api/search-hmac-testvectors.json and api/CONTRACT-SOURCE.json.
 #
 # CORE points at a vizra-core checkout, which the script only ever reads
-# (remote get-url / rev-parse / for-each-ref / log / merge-base / show). It is
+# (remote get-url / rev-parse / for-each-ref / log / merge-base / cat-file / show). It is
 # NOT run in CI: CI has no core checkout, and `contract-drift` already fails on
 # any drift from the manifest.
 #
 # vendor-contract-selftest is different: it builds throwaway repositories with
-# `git init` and needs no core checkout and no network, so it COULD be a CI
-# lane. Adding it to `ci:` is out of scope for this slice and is proposed to the
-# chair instead.
+# `git init` and needs no core checkout and no network, so it IS a required CI
+# lane (`vendor-contract-selftest` in ci.yml, .github/required-checks.txt and the
+# FLOOR_LANES of scripts/ci-required-guard.py) and part of `ci:`. Removing a
+# refusal from vendor-contract.py is therefore red in CI, not only locally.
 CORE ?= ../vizra-core
 CORE_REMOTE ?= origin
 
@@ -206,4 +217,4 @@ docker-build: ## Build the image natively (no emulation)
 
 .PHONY: clean
 clean: ## Remove build output
-	rm -rf bin .test-report.json $(DRIFT_REPORT)
+	rm -rf bin .test-report.json .test-events.json .test-exit.txt $(DRIFT_REPORT)

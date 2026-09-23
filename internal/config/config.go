@@ -331,10 +331,14 @@ func (v *validator) mode() Mode {
 // The message names the two variables and the runtime vocabulary — all
 // constants in this file — and never the supplied value. That holds for every
 // refusal this loader can emit, not only this one:
-// TestNoRefusalEchoesTheSuppliedValue provokes every `v.addf` site in this file
-// (17 as of 2026-09-21) and fails if a supplied value comes back, and
-// TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses this file to keep that
-// count honest — a refusal added here without a row in that table is red.
+// TestNoRefusalEchoesTheSuppliedValue provokes every `v.addf` site in this
+// package (17 as of 2026-09-21, all in this file) and fails if a supplied value
+// comes back; TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses every non-test
+// file of the package to keep that count honest — a refusal added without a
+// row in that table is red, in this file or any other; and
+// TestNoRefusalBypassesTheNoEchoTable refuses the other ways to build one here
+// (fmt.Errorf/errors.New beyond the three reviewed ones, a helper that writes
+// v.problems itself, a custom Error type). Refuse through v.addf.
 // Where a site cannot take an arbitrary marker (this one fires only for the
 // retired vocabulary), the row says so and asserts the supplied SHAPE instead.
 func (v *validator) retiredModeName() {

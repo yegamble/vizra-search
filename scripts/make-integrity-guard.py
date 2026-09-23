@@ -1,0 +1,1029 @@
+#!/usr/bin/env python3
+"""make-integrity-guard — refuse a Makefile, or an environment, that turns a make lane into a no-op.
+
+Ported from vizra-core `scripts/make-integrity-guard.py` at eeeea068a20118f7af721f024264603b436a1528
+(core PR #9, three verifier rounds), adapted to this repository's Makefile: the approved SHELL is
+`/bin/bash`, the gate targets are the ones `.github/workflows/ci.yml` invokes, and exactly one recipe
+line is allowed a swallowing suffix (see SWALLOW_EXEMPT).
+
+WHY THIS EXISTS
+---------------
+
+Every make lane in this repository runs through `make`. A verifier measured, on this repository, that
+ONE line in the Makefile makes every one of them exit 0 without running anything:
+
+    SHELL := /usr/bin/true     make contract-drift = 0   make test = 0   make test-noskip = 0
+    MAKEFLAGS += -i            (the same)
+
+(docs/evidence/warroom/2026-09-20-vizra-search-pr2-revendor-VERIFY.md, FINDING 8.) Until this program
+existed no CI lane caught it. No check written INSIDE a Makefile can prevent it, because the neutering
+disarms that check too. So this program runs OUTSIDE make — as its own workflow step, byte-equal to the
+`anchor_step` in .github/pinned-steps.yml, IMMEDIATELY before every `make` step of a required lane.
+
+WHAT IT CHECKS
+--------------
+
+First, BEFORE make is invoked at all, a parse-time pre-flight over the Makefile TEXT (see
+check_parse_time_side_effects): reading a Makefile executes parts of it — `$(shell …)`, `$(file …)`,
+`!=`, a `+` or `$(MAKE)` recipe line, a rule that remakes a makefile — so the anchor's own dry-run
+could write the NEXT step's environment through $GITHUB_ENV. Every expansion must be a plain variable
+or one of four pinned shell calls, and the other constructs are refused; on any refusal make is never
+run. Then three readings, because no single one sees everything:
+
+  RESOLVER  `make -pn TARGET`: SHELL, .SHELLFLAGS and MAKEFLAGS as make itself resolved them — through
+            variables, includes and duplicate definitions — and MAKEFILE_LIST, every file make read.
+            Blind to a `-` recipe prefix: the dry-run prints the command without it.
+  TEXT      those same files, read: a `-`/`+` prefix, a `|| true`-family suffix, any SHELL/.SHELLFLAGS/
+            MAKEFLAGS/GNUMAKEFLAGS/MFLAGS assignment, `.ONESHELL`, a gate target defined twice or inside a
+            make conditional. Blind to a value computed at run time (`$(eval …)`).
+  WARNINGS  `make --dry-run` stderr: a duplicate target ("overriding commands" on GNU Make 3.81,
+            "overriding recipe" on 4.x — both matched).
+
+Plus the ENVIRONMENT, because `MAKEFLAGS=-i make ci` never appears in any file. With `--workflow` — the
+only form a required lane can use, because ci-required-guard.py pins the anchor byte-for-byte — the
+environment check is STRICT, and the mode is chosen by that argument, never by the environment (core
+PR#9 re-verification, R-2: MAKELEVEL's mere presence once selected a lenient mode):
+
+  * MAKEFLAGS, GNUMAKEFLAGS and MFLAGS must be UNSET (not merely empty);
+  * MAKELEVEL, MAKE_RESTARTS, MAKEOVERRIDES and MAKECMDGOALS must be ABSENT — the anchor is not a make
+    recipe, so if one is present something planted it (typically an earlier `$GITHUB_ENV` write);
+  * every variable the makefiles take from the environment — assigned with `?=`, or referenced and never
+    assigned — must be ABSENT, plus GOFLAGS, which the go command reads directly. Today that is
+    VERSION, COMMIT, BUILD_TIME, IMAGE, CORE, CORE_REMOTE and GOFLAGS; the anchor prints the list it
+    computed in its own log;
+  * in both modes MAKEFILES, BASH_ENV and ENV must be unset and SHELL must be a real shell;
+  * `make` must resolve to a FILE named make (or gmake) in a system directory — not a function, an alias,
+    or a stub a `$GITHUB_PATH` write put earlier on PATH.
+
+Because the anchor is adjacent to make, a `$GITHUB_ENV` or `$GITHUB_PATH` write by any EARLIER step is in
+this process when it runs, exactly as it will be in make's.
+
+WHAT IT DOES NOT DO — stated, not implied. This list is not called complete.
+
+  * It never reads the workflow's own `make` step. The step's argv and keys are ci-required-guard.py's
+    job: it pins them to byte-equal literals in .github/pinned-steps.yml rather than parsing them.
+  * It checks a NAMED set of environment variables, not the whole environment. A `$GITHUB_ENV` write of
+    any other variable — Go's own GOTOOLCHAIN, GOENV, GODEBUG, CGO_ENABLED, … — is not refused here. The
+    per-package floors in the direct test step turn a suite made to run nothing red; anything subtler is
+    review-only.
+  * It cannot see what an earlier step did to the MACHINE: a replaced Go toolchain, a rewritten test file,
+    a swapped python3. It checks what `make` IS (a file named make in a system directory), not what it
+    DOES: a forwarding stub planted in /usr/local/bin by an earlier step passes. Review is the control,
+    and CODEOWNERS is advisory until the owner's ruleset exists.
+  * Without `--workflow` it is not a control. That is the local-parity mode the Go meta-tests use: make
+    exports MAKEFLAGS to a recipe, so the words are checked against an ALLOWLIST of what GNU Make 3.81 and
+    4.3 export, and variables the makefiles take from the environment are reported, not refused.
+  * This file, the workflow and the pins are checked out from the pull request under test. Every edit to
+    them is visible in a reviewed diff; none is prevented.
+
+Usage:
+    make-integrity-guard.py [--root DIR] [--targets a,b,c] [--workflow]
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# THE GATE TARGETS.
+#
+# Every make target a CI lane invokes (.github/pinned-steps.yml `make_steps`),
+# plus `ci`, the local complete gate, so its prerequisite closure is scanned too.
+# The closure is COMPUTED from the rules, so a lane added to `ci` is covered
+# without editing this list.
+# ---------------------------------------------------------------------------
+GATE_TARGETS = [
+    "ci",  # local parity: every lane, in order
+    "fmt-check",  # fmt
+    "vet",  # vet
+    "echo-containment",  # echo-containment
+    "build",  # build
+    "contract-drift",  # contract-drift
+    "test",  # test
+    "tidy-check",  # tidy-check
+    "vendor-contract-selftest",  # vendor-contract-selftest
+]
+
+# The ONLY accepted values. Anything else — including another shell that happens
+# to be a real shell — is refused, because this guard cannot know whether an
+# unfamiliar shell honours `-e`.
+APPROVED_SHELL = "/bin/bash"
+APPROVED_SHELLFLAGS = "-eu -o pipefail -c"
+
+# Special variables whose assignment can disarm every recipe at once.
+FORBIDDEN_ASSIGNMENTS = ("MAKEFLAGS", "GNUMAKEFLAGS", "MFLAGS")
+CONTROLLED_ASSIGNMENTS = ("SHELL", ".SHELLFLAGS")
+
+# Make's recipe-line prefixes. `-` is the dangerous one and is invisible to
+# `make --dry-run`; `+` forces execution even under `-n` and is not something a
+# gate recipe has any use for.
+RECIPE_PREFIX_CHARS = "@-+"
+
+# Suffixes that throw away a command's exit status.
+SWALLOWING_SUFFIXES = (
+    "|| true", "|| :", "|| exit 0", "|| /bin/true", "|| /usr/bin/true",
+    "; true", "; :", "; exit 0",
+)
+
+# The ONE recipe line allowed to end with a swallowing suffix, byte-equal, and
+# only in this target. contract-drift's `go test` line ends `|| true` because the
+# NEXT line, `./scripts/contract-drift-guard.py ran`, is the authority on the
+# lane's verdict: it fails on any failed test, any failed package, any listed
+# package that ran zero tests, and an empty or missing report — and
+# contract-drift-guard.py `recipe` (run both in the recipe and as its own
+# workflow step) refuses a lane whose last command is not that `ran`. A default-
+# deny exemption, keyed by target AND exact text: the same suffix anywhere else,
+# or this line in any other target, is refused.
+SWALLOW_EXEMPT = {
+    ("contract-drift", "go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true"),
+}
+
+# GNU make 3.81 says "overriding commands for target"; GNU make 4.x says
+# "overriding recipe for target". Matching only one wording is how a check
+# silently stops working on the platform that actually gates merges.
+DUPLICATE_TARGET_RE = re.compile(r"(overriding|ignoring old)\s+(commands|recipe)\s+for\s+target", re.I)
+
+# Flags that make a failing recipe not fail the build, or make recipes not run
+# at all. `n` and `p` are OURS — this guard invokes `make -pn` — so they are
+# expected; anything else is refused by name whatever it is.
+DANGEROUS_FLAG_WORDS = (
+    "--ignore-errors", "--keep-going", "--touch", "--question", "--dry-run",
+    "--just-print", "--recon", "--old-file", "--assume-old",
+)
+
+MAKE_CONDITIONALS = ("ifeq", "ifneq", "ifdef", "ifndef")
+
+
+class Guard:
+    def __init__(self) -> None:
+        self.failures = 0
+
+    @property
+    def failed(self) -> bool:
+        return self.failures > 0
+
+    def ok(self, msg: str) -> None:
+        print(f"  ok    {msg}", flush=True)
+
+    def fail(self, msg: str, *detail: str) -> None:
+        print(f"  FAIL  {msg}", file=sys.stderr, flush=True)
+        for d in detail:
+            print(f"        {d}", file=sys.stderr, flush=True)
+        self.failures += 1
+
+
+# The runner's step-command files. A process the anchor starts must not be able
+# to write the NEXT step's environment or PATH through them. Defence in depth:
+# the pre-flight below is what stops a Makefile from running anything at all.
+RUNNER_COMMAND_FILES = ("GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STATE", "GITHUB_STEP_SUMMARY")
+
+
+def clean_env() -> dict:
+    """The environment for every process this guard starts.
+
+    make's own flag variables are removed — they are checked SEPARATELY
+    (check_environment), and an inherited `MAKEFLAGS=-i` must not pollute what
+    the resolver reports about the FILES. BASH_ENV/ENV are removed so the shell
+    this guard asks about `make` sources nothing. And the runner's command-file
+    variables are removed, so nothing this guard runs can address them by name.
+    """
+    drop = {"MAKEFLAGS", "MFLAGS", "GNUMAKEFLAGS", "MAKELEVEL", "BASH_ENV", "ENV", *RUNNER_COMMAND_FILES}
+    return {k: v for k, v in os.environ.items() if k not in drop}
+
+
+# ------------------------------------------------------ parse-time pre-flight ---
+#
+# FOUND WHILE PORTING (not in vizra-core's verification history): the anchor's
+# own `make -pn` is not side-effect free. Reading a Makefile EXECUTES parts of
+# it — `$(shell …)` in any assignment or recipe, `$(file >…)`, a `!=`
+# assignment, a `+` recipe line (run even under -n), a line naming `$(MAKE)`
+# (likewise), and a rule that remakes the Makefile or an included one (GNU make
+# remakes makefiles even under -n). One such line can write
+# `MAKEFLAGS=-i` to `$GITHUB_ENV` DURING THE ANCHOR STEP, which GitHub applies
+# to the NEXT step — the pinned `make` step — after the anchor has already
+# passed. Measured with `POISON := $(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")`:
+# anchor exit 0, and the runner's env file then held MAKEFLAGS=-i
+# (docs/evidence/ci-hardening/). It is core PR#9 FINDING R-1 again, reached
+# through the Makefile instead of the workflow.
+#
+# So before make is invoked at all, the Makefile TEXT is held to a default-deny
+# shape: every `$(…)`/`${…}` is a plain variable reference or one of the EXACT
+# shell calls pinned below; no make function of any other kind; no reference to
+# MAKE; no include/load directive; no `!=`; no `+` recipe prefix; no rule whose
+# target is a makefile, and no pattern rule. Anything else is refused BY NAME
+# and make is never run. Widening APPROVED_SHELL_CALLS is a visible diff.
+APPROVED_SHELL_CALLS = {
+    "shell go env GOROOT",
+    "shell git describe --tags --always --dirty 2>/dev/null || echo dev",
+    "shell git rev-parse HEAD 2>/dev/null || echo unknown",
+    "shell date -u +%Y-%m-%dT%H:%M:%SZ",
+}
+_PLAIN_VAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_DIRECTIVE = re.compile(r"^\s*(-?include|sinclude|-?load)\b")
+_MAKEFILE_NAMES = ("Makefile", "makefile", "GNUmakefile")
+
+
+def _expansions(text: str):
+    """Yield (line_no, inner_text) for every make expansion `$(…)` / `${…}`.
+
+    `$$` is make's escape for a literal `$` (a shell expansion inside a recipe)
+    and is skipped. Nesting is followed, so `$(shell a $(X))` yields the outer
+    call and, separately, `X`.
+    """
+    i, n, line = 0, len(text), 1
+    stack: list[tuple[int, int, str]] = []  # (start, line, closer)
+    while i < n:
+        c = text[i]
+        if c == "\n":
+            line += 1
+        if c == "$" and i + 1 < n:
+            nxt = text[i + 1]
+            if nxt == "$":
+                i += 2
+                continue
+            if nxt in "({":
+                stack.append((i + 2, line, ")" if nxt == "(" else "}"))
+                i += 2
+                continue
+        if stack and c == stack[-1][2]:
+            start, ln, _ = stack.pop()
+            yield ln, text[start:i]
+        elif stack and c in "({":
+            # an unrelated bracket inside an expansion: track it so its closer
+            # does not end the expansion early.
+            stack.append((-1, line, ")" if c == "(" else "}"))
+        i += 1
+    for start, ln, _ in stack:
+        if start >= 0:
+            yield ln, text[start:] + " <unterminated>"
+
+
+def check_parse_time_side_effects(g: Guard, root: Path) -> bool:
+    """Refuse, from the TEXT alone, anything that reading the Makefile would execute.
+
+    Returns False when make must not be invoked at all.
+    """
+    path = root / "Makefile"
+    try:
+        text = path.read_text()
+    except OSError as err:
+        g.fail(f"cannot read {path}: {err}")
+        return False
+    before = g.failures
+    for ln, inner in _expansions(text):
+        body = inner.strip()
+        if body in APPROVED_SHELL_CALLS:
+            continue
+        if _PLAIN_VAR.match(body):
+            if body in ("MAKE", "MAKEFILES"):
+                g.fail(f"Makefile:{ln} references $({body}).",
+                       "A recipe line that names $(MAKE) is EXECUTED even under `make -n`, so the",
+                       "anchor's own dry-run would run it. Nothing here needs a recursive make.")
+            continue
+        g.fail(
+            f"Makefile:{ln} expands `$({inner})`, which is neither a plain variable reference nor one of",
+            f"the pinned shell calls {sorted(APPROVED_SHELL_CALLS)}.",
+            "Reading a Makefile EXECUTES its functions — `$(shell …)`, `$(file >…)`, `$(eval …)`,",
+            "`$(call shell,…)` — including during this anchor's own `make -pn`, and one of them can write",
+            "`MAKEFLAGS=-i` to $GITHUB_ENV for the NEXT step after the anchor has passed. Default-deny:",
+            "add an exact shell call to APPROVED_SHELL_CALLS in a reviewed diff if it is really needed.",
+        )
+    for n, raw in enumerate(text.split("\n"), 1):
+        if raw.startswith("\t"):
+            body = raw[1:]
+            prefix = ""
+            while body and body[0] in "@-+ ":
+                prefix += body[0]
+                body = body[1:]
+            if "+" in prefix:
+                g.fail(f"Makefile:{n} is a recipe line prefixed `+`: `{raw.strip()}`",
+                       "make runs a `+` line even under -n, so the anchor's dry-run would execute it.")
+            continue
+        stripped = raw.split("#", 1)[0]
+        if _DIRECTIVE.match(stripped):
+            g.fail(f"Makefile:{n} is an include/load directive: `{raw.strip()}`",
+                   "An included file is a second makefile, and one make can REMAKE — by running its",
+                   "recipe — even under -n. Keep the gate in this one file.")
+        if re.match(r"^[^=#]*!=", stripped) and not stripped.lstrip().startswith(("ifneq", "ifeq")):
+            g.fail(f"Makefile:{n} is a `!=` (shell) assignment: `{raw.strip()}`",
+                   "It runs a shell command when the file is read, including during the anchor.")
+        m = re.match(r"^([^\t:=#][^:=#]*):(?!=)", stripped)
+        if m:
+            for target in m.group(1).split():
+                if "%" in target or target in _MAKEFILE_NAMES or target.endswith((".mk", "/Makefile")):
+                    g.fail(f"Makefile:{n} declares a rule for `{target}`: `{raw.strip()}`",
+                           "make REMAKES a makefile it read — running that rule's recipe — even under -n,",
+                           "and a pattern rule can match one. The anchor's dry-run would execute it.")
+    if g.failures == before:
+        g.ok(f"parse-time pre-flight: every expansion is a plain variable or one of the "
+             f"{len(APPROVED_SHELL_CALLS)} pinned shell calls; no include/load, `!=`, `+`, $(MAKE), "
+             f"makefile-remaking or pattern rule — so reading this Makefile executes nothing else")
+        return True
+    return False
+
+
+def run_make(root: Path, args: list[str]):
+    return subprocess.run(
+        ["make", *args],
+        cwd=str(root),
+        env=clean_env(),
+        capture_output=True,
+        text=True,
+    )
+
+
+# --------------------------------------------------------------- resolver ---
+
+
+def resolve_database(g: Guard, root: Path, target: str):
+    """Ask make for its resolved variable database.
+
+    `make -pn TARGET` expands variables, applies `include`s and resolves
+    duplicate-target overrides before printing, so this is what will REALLY be
+    used — not what the file looks like. Returns (variables, makefile_list) or
+    (None, None) if make could not resolve the target at all.
+    """
+    proc = run_make(root, ["-pn", target])
+    if proc.returncode != 0:
+        g.fail(
+            f"`make -pn {target}` failed (exit {proc.returncode}); the lane's real shape could not be established.",
+            "A gate whose shape cannot be determined is not a gate.",
+            *(proc.stderr or proc.stdout).strip().splitlines()[:8],
+        )
+        return None, None
+
+    variables: dict[str, str] = {}
+    oneshell = False
+    for line in proc.stdout.splitlines():
+        if line.startswith(".ONESHELL:"):
+            oneshell = True
+            continue
+        m = re.match(r"^([A-Za-z_.][A-Za-z0-9_.-]*)\s*[:+?]?=\s?(.*)$", line)
+        if m and m.group(1) not in variables:
+            variables[m.group(1)] = m.group(2)
+    variables["__ONESHELL__"] = "yes" if oneshell else ""
+    files = [f for f in variables.get("MAKEFILE_LIST", "").split() if f]
+    return variables, files
+
+
+def check_resolved(g: Guard, target: str, variables: dict) -> None:
+    shell = variables.get("SHELL")
+    if shell is None:
+        g.fail(f"make reports no SHELL at all while resolving `{target}`")
+    elif shell.strip() != APPROVED_SHELL:
+        g.fail(
+            f"make resolves SHELL to {shell.strip()!r} while resolving `{target}`, not {APPROVED_SHELL!r}.",
+            "A SHELL pointed at a no-op (`/usr/bin/true`, `:`, `/bin/echo`) makes EVERY recipe in this",
+            "repository exit 0 without running — `make ci` included — while every gate stays green.",
+            "This is the single line that turns the whole merge rule into a formality.",
+        )
+    else:
+        g.ok(f"`{target}`: make resolves SHELL to the approved {APPROVED_SHELL}")
+
+    flags = variables.get(".SHELLFLAGS")
+    if flags is None:
+        g.fail(f"make reports no .SHELLFLAGS while resolving `{target}`")
+    elif flags.strip() != APPROVED_SHELLFLAGS:
+        g.fail(
+            f"make resolves .SHELLFLAGS to {flags.strip()!r} while resolving `{target}`, not {APPROVED_SHELLFLAGS!r}.",
+            "Dropping `-e` makes a recipe continue after a failing command and report the exit status of",
+            "the LAST one; dropping `-o pipefail` hides a failure on the left of a pipe.",
+        )
+    else:
+        g.ok(f"`{target}`: make resolves .SHELLFLAGS to the approved {APPROVED_SHELLFLAGS!r}")
+
+    if variables.get("__ONESHELL__"):
+        g.fail(
+            f"`.ONESHELL:` is in effect while resolving `{target}`.",
+            "Under .ONESHELL make passes the WHOLE recipe to one shell invocation, and the `@`/`-`",
+            "prefixes then apply only to the first line — which changes what every other check here",
+            "means. A gate recipe has no use for it.",
+        )
+    else:
+        g.ok(f"`{target}`: `.ONESHELL:` is not in effect")
+
+    # MAKEFLAGS. This guard invoked make as `-pn`, so `p` and `n` are ours.
+    # Anything else was added by a file or by the environment.
+    raw = variables.get("MAKEFLAGS", "")
+    words = raw.split()
+    cluster = ""
+    rest = []
+    for w in words:
+        if not cluster and not w.startswith("-") and "=" not in w:
+            cluster = w
+        else:
+            rest.append(w)
+    extra = sorted(set(cluster) - set("pn"))
+    bad_words = [w for w in rest if w in DANGEROUS_FLAG_WORDS or w in ("-i", "-k", "-t", "-q")]
+    if extra or bad_words:
+        g.fail(
+            f"make resolves MAKEFLAGS to {raw!r} while resolving `{target}`.",
+            f"This guard invoked `make -pn`, so 'p' and 'n' are its own; everything else was added: "
+            f"{''.join(extra) or ''}{' ' if extra and bad_words else ''}{' '.join(bad_words)}",
+            "`-i` / `--ignore-errors` makes make ignore EVERY recipe's exit status, so `make ci` exits 0",
+            "with the whole gate failing underneath it. `-k`, `-t` and `-q` are the same class.",
+        )
+    else:
+        g.ok(f"`{target}`: MAKEFLAGS carries nothing beyond this guard's own -pn ({raw!r})")
+
+
+def check_warnings(g: Guard, root: Path, target: str) -> None:
+    """A duplicate target means the recipe a reader sees is not the one that runs."""
+    proc = run_make(root, ["--dry-run", "--no-print-directory", target])
+    stderr = proc.stderr or ""
+    if DUPLICATE_TARGET_RE.search(stderr):
+        g.fail(
+            f"make reports a DUPLICATE definition while resolving `{target}`:",
+            *[ln for ln in stderr.splitlines() if DUPLICATE_TARGET_RE.search(ln)],
+            "make runs the LAST definition. A reader — and any text-based check — sees the first, so a",
+            "duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.",
+        )
+        return
+    # Other warnings are REPORTED but do not fail: GNU make 4.3 emits a benign
+    # "modification time in the future" warning on some mounted filesystems, and
+    # a guard that goes red for that is a guard people route around. Saying so
+    # here rather than silently ignoring them.
+    others = [ln for ln in stderr.splitlines() if "warning:" in ln.lower()]
+    if others:
+        print(f"  note  make emitted {len(others)} non-duplicate warning(s) resolving `{target}` (not a failure):")
+        for ln in others[:5]:
+            print(f"        {ln}")
+    g.ok(f"`{target}`: make reports no duplicate-definition override")
+
+
+# ------------------------------------------------------------------- text ---
+
+
+RULE_RE = re.compile(r"^([^\t#=:][^#=:]*):(?!=)([^=]*)$")
+
+
+def prerequisite_closure(root: Path, files: list[str], seeds: list[str]) -> list[str]:
+    """Expand the named gate targets to everything they depend on.
+
+    `ci` is one word in a workflow and ten lanes in the Makefile. Checking only
+    the word would leave `test`'s recipe — the actual test run — outside
+    every recipe check here, which is precisely the gap a `-` prefix would use.
+    So the closure is COMPUTED from the rules rather than listed, and a lane
+    added to `ci` is covered without editing this file.
+    """
+    prereqs: dict[str, list[str]] = {}
+    for rel in files:
+        try:
+            text = (root / rel).read_text()
+        except OSError:
+            continue
+        for line in text.split("\n"):
+            if line.startswith("\t") or line.lstrip().startswith("#"):
+                continue
+            m = RULE_RE.match(line)
+            if not m:
+                continue
+            names = m.group(1).split()
+            deps = m.group(2).split("#")[0].replace("|", " ").split()
+            for n in names:
+                if n.startswith(".") or "%" in n:
+                    continue  # .PHONY, .SHELLFLAGS, pattern rules
+                prereqs.setdefault(n, [])
+                prereqs[n].extend(d for d in deps if not d.startswith("$"))
+
+    out: list[str] = []
+    queue = list(seeds)
+    while queue:
+        t = queue.pop(0)
+        if t in out:
+            continue
+        out.append(t)
+        for d in prereqs.get(t, []):
+            if d not in out:
+                queue.append(d)
+    return out
+
+
+def logical_recipe_lines(lines: list[str], start: int):
+    """Collect one target's recipe from Makefile text, joining continuations."""
+    recipe = []
+    i = start
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "" or line.lstrip().startswith("#"):
+            i += 1
+            continue
+        if not line.startswith("\t"):
+            break
+        first, body = i, line[1:]
+        while body.rstrip().endswith("\\") and i + 1 < len(lines):
+            i += 1
+            body = body.rstrip()[:-1] + " " + lines[i].lstrip("\t")
+        recipe.append((first + 1, body.strip()))
+        i += 1
+    return recipe
+
+
+# Make's own variables, which a makefile may reference without assigning.
+_MAKE_BUILTIN_VARS = {
+    "MAKE", "MAKEFILE_LIST", "CURDIR", "MAKEFLAGS", "MAKECMDGOALS", "SHELL", "MAKELEVEL",
+    ".SHELLFLAGS", "MAKE_VERSION", "MAKE_HOST", ".DEFAULT_GOAL", "MFLAGS", "MAKEFILES",
+    "VPATH", ".RECIPEPREFIX", ".VARIABLES", ".FEATURES", ".INCLUDE_DIRS", "SUFFIXES",
+}
+_FUNCTIONS = {
+    "shell", "wildcard", "eval", "info", "error", "warning", "foreach", "call", "patsubst",
+    "subst", "filter", "filter-out", "sort", "dir", "notdir", "strip", "word", "words",
+    "firstword", "lastword", "abspath", "realpath", "if", "or", "and", "origin", "value",
+    "addprefix", "addsuffix", "basename", "suffix", "join", "findstring", "flavor", "file",
+}
+_ASSIGN_RE = re.compile(r"^\s*(?:export\s+|override\s+)*([A-Za-z_][A-Za-z0-9_.]*)\s*(\?=|:{1,3}=|\+=|!=|=)", re.M)
+# `$(NAME)` / `${NAME}` — but not the shell's `$${NAME}` inside a recipe.
+_REF_RE = re.compile(r"(?<!\$)\$[({]([A-Za-z_][A-Za-z0-9_]*)[)}]")
+
+
+def check_environment_overrides(g: Guard, root: Path, files: list[str], workflow: bool) -> None:
+    """In the WORKFLOW invocation, nothing in the environment may change what a recipe runs.
+
+    Found in vizra-core while fixing PR #9 round 2: its Makefile has
+    `GO ?= go`, and `?=` means the ENVIRONMENT wins. `GO=true make test-race`
+    exited 0 over a planted failing test where `make test-race` exited 2, and
+    the anchor passed it. Here `VERSION ?= …` and `COMMIT ?= …` feed `-ldflags`
+    and `CORE ?= …` names the checkout `vendor-contract` reads — the same class.
+    An earlier step's `$GITHUB_ENV` write reaches make exactly as MAKEFLAGS does.
+
+    So, from every file make read (MAKEFILE_LIST, includes too): a variable
+    assigned with `?=`, or referenced as `$(NAME)` without ever being assigned,
+    is one the environment can set — and in `--workflow` mode it must be ABSENT.
+    `GOFLAGS` is refused as well whether or not a makefile names it, because
+    the go command reads it directly. Local mode only reports them: a developer
+    may legitimately run `VERSION=v0.0.1 make build`.
+    """
+    assigned: dict[str, str] = {}
+    refs: set[str] = set()
+    for rel in files:
+        path = root / rel if not Path(rel).is_absolute() else Path(rel)
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        for m in _ASSIGN_RE.finditer(text):
+            if m.group(1) not in assigned or m.group(2) == "?=":
+                assigned[m.group(1)] = m.group(2)
+        refs |= set(_REF_RE.findall(text))
+    from_env = {n for n, op in assigned.items() if op == "?="}
+    from_env |= {n for n in refs if n not in assigned} - _MAKE_BUILTIN_VARS - _FUNCTIONS
+    from_env.add("GOFLAGS")
+    present = sorted(n for n in from_env if n in os.environ)
+    if not workflow:
+        g.ok(f"[local parity] the environment may set these makefile variables: {sorted(from_env)}"
+             + (f"; set now: {present}" if present else ""))
+        return
+    if present:
+        g.fail(
+            f"the environment sets {', '.join(f'{n}={os.environ[n]!r}' for n in present)}, and this is "
+            f"the WORKFLOW anchor.",
+            "The makefiles take these FROM the environment (`?=`, or referenced but never assigned),",
+            "so the environment decides what the recipe runs (vizra-core measured `GO=true make test-race`",
+            "exiting 0 over a failing test). In a required lane nothing may set them; the Makefile's own",
+            "values must win.",
+        )
+        return
+    g.ok(f"[--workflow] none of the {len(from_env)} variable(s) the makefiles take from the "
+         f"environment is set: {sorted(from_env)}")
+
+
+def check_text(g: Guard, root: Path, files: list[str], targets: list[str], seeds: list[str]) -> None:
+    """Read the files make said it read.
+
+    MAKEFILE_LIST comes from make itself, so an `include` cannot hide a file
+    from this scan — which matters, because an included makefile carrying
+    `MAKEFLAGS += -i` no-ops the whole repository just as well as the root one.
+    """
+    if not files:
+        g.fail("make reported an empty MAKEFILE_LIST; there is nothing to read")
+        return
+    g.ok(f"make read {len(files)} makefile(s): {', '.join(files)}")
+
+    assignment_re = re.compile(
+        r"^\s*(?:export\s+|override\s+)*(" + "|".join(
+            re.escape(n) for n in (*CONTROLLED_ASSIGNMENTS, *FORBIDDEN_ASSIGNMENTS)
+        ) + r")\s*([:+?!]?=)\s*(.*?)\s*$"
+    )
+
+    definitions: dict[str, list[str]] = {t: [] for t in targets}
+    seen_shell = seen_shellflags = False
+
+    for rel in files:
+        path = root / rel
+        try:
+            text = path.read_text()
+        except OSError as err:
+            g.fail(f"cannot read {rel}, which make says it read: {err}")
+            continue
+        lines = text.split("\n")
+        is_root = Path(rel).name == "Makefile" and Path(rel).parent in (Path("."), Path(""))
+
+        for n, line in enumerate(lines, 1):
+            if line.startswith("\t"):
+                continue  # a recipe line, handled below
+            m = assignment_re.match(line)
+            if m:
+                name, op, value = m.group(1), m.group(2), m.group(3)
+                if name in FORBIDDEN_ASSIGNMENTS:
+                    g.fail(
+                        f"{rel}:{n} assigns {name}: `{line.strip()}`",
+                        "No assignment to MAKEFLAGS/GNUMAKEFLAGS is legitimate here, whatever its value.",
+                        "`MAKEFLAGS += -i` is one line and makes EVERY recipe in this repository exit 0",
+                        "without its failures counting — measured on GNU Make 3.81 and 4.3.",
+                    )
+                    continue
+                want = APPROVED_SHELL if name == "SHELL" else APPROVED_SHELLFLAGS
+                if not is_root:
+                    g.fail(
+                        f"{rel}:{n} assigns {name}, but only the root Makefile may: `{line.strip()}`",
+                        "An included makefile is a second file a reviewer may not open.",
+                    )
+                elif op != ":=" or value != want:
+                    g.fail(
+                        f"{rel}:{n} sets {name} to something other than the approved value: `{line.strip()}`",
+                        f"Approved: `{name} := {want}`",
+                    )
+                else:
+                    if name == "SHELL":
+                        seen_shell = True
+                    else:
+                        seen_shellflags = True
+                continue
+
+            if line.strip().startswith(".ONESHELL"):
+                g.fail(f"{rel}:{n} declares `.ONESHELL`: `{line.strip()}`",
+                       "It changes what a `-` prefix means, and a gate recipe has no use for it.")
+
+            for t in targets:
+                if re.match(r"^%s\s*:(?!=)" % re.escape(t), line):
+                    definitions[t].append(f"{rel}:{n}")
+                    # Guard against a gate target hidden inside a conditional:
+                    # which recipe runs would then depend on a variable.
+                    depth = 0
+                    for prev in lines[: n - 1]:
+                        head = prev.strip().split(" ")[0]
+                        if head in MAKE_CONDITIONALS:
+                            depth += 1
+                        elif head == "endif":
+                            depth = max(0, depth - 1)
+                    if depth > 0:
+                        g.fail(
+                            f"{rel}:{n} defines the gate target `{t}` inside a make conditional.",
+                            "Which recipe runs would depend on a variable, so the recipe a reader sees is",
+                            "not necessarily the one that executes. Gate targets must be unconditional.",
+                        )
+                    check_recipe(g, rel, t, logical_recipe_lines(lines, n))
+
+    if not seen_shell or not seen_shellflags:
+        g.fail(
+            "the root Makefile does not carry BOTH approved assignments.",
+            f"Required, exactly: `SHELL := {APPROVED_SHELL}` and `.SHELLFLAGS := {APPROVED_SHELLFLAGS}`.",
+            "Without them make uses /bin/sh with no -e, and a failing command mid-recipe does not fail the lane.",
+        )
+    else:
+        g.ok("the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them")
+
+    undefined = []
+    for t in targets:
+        where = definitions[t]
+        if not where:
+            if t in seeds:
+                g.fail(
+                    f"gate target `{t}` is not defined in any makefile make read.",
+                    "A required CI lane invokes it by that name.",
+                )
+            else:
+                # A prerequisite with no rule of its own is an ordinary FILE
+                # dependency, not a missing lane. Named rather than silently
+                # dropped, so the transcript says what was and was not scanned.
+                undefined.append(t)
+        elif len(where) > 1:
+            g.fail(
+                f"gate target `{t}` is defined {len(where)} times: {', '.join(where)}",
+                "make runs the LAST definition and REPLACES the earlier recipe. The lane must have one recipe.",
+            )
+        else:
+            g.ok(f"gate target `{t}` is defined exactly once ({where[0]})")
+    if undefined:
+        print(f"  note  {len(undefined)} prerequisite(s) have no rule and are treated as file dependencies, "
+              f"not lanes: {', '.join(sorted(undefined))}")
+
+
+def check_recipe(g: Guard, rel: str, target: str, recipe) -> None:
+    """Refuse recipe lines whose failure would not fail the lane.
+
+    This reading is the only one that can see a `-` prefix: `make --dry-run`
+    prints the command WITHOUT it, so the resolved recipe looks identical to a
+    correct one.
+    """
+    if not recipe:
+        # Legitimate for an aggregate like `ci:` whose work is its prerequisites.
+        return
+    for lineno, body in recipe:
+        prefix = ""
+        while body and body[0] in RECIPE_PREFIX_CHARS:
+            prefix += body[0]
+            body = body[1:].lstrip()
+        if "-" in prefix:
+            g.fail(
+                f"{rel}:{lineno} — gate target `{target}` has a recipe line prefixed `-`: `{prefix}{body}`",
+                "make IGNORES that line's exit status, and `make --dry-run` prints the command WITHOUT the",
+                "`-`, so no scan of the resolved recipe can see it: the command can fail, print its failure,",
+                "and the lane still exits 0.",
+            )
+        if "+" in prefix:
+            g.fail(
+                f"{rel}:{lineno} — gate target `{target}` has a recipe line prefixed `+`: `{prefix}{body}`",
+                "`+` forces the line to run even under `-n`, which is how a guard's own dry-run probe can be",
+                "made to execute something. A gate recipe has no use for it.",
+            )
+        stripped = body.rstrip()
+        if (target, stripped) in SWALLOW_EXEMPT and not prefix:
+            continue
+        for suffix in SWALLOWING_SUFFIXES:
+            if stripped.endswith(suffix):
+                g.fail(
+                    f"{rel}:{lineno} — gate target `{target}` has a recipe line ending `{suffix}`: `{stripped}`",
+                    "The command's exit status is discarded. A check whose failure is swallowed is not a check.",
+                )
+                break
+
+
+# ------------------------------------------------------------ environment ---
+
+
+# Directories a system `make` legitimately lives in. A `make` resolved anywhere
+# else is a stub someone put on PATH — the $GITHUB_PATH evasion, which GitHub
+# applies to LATER steps, so it would be invisible to a non-adjacent anchor.
+APPROVED_MAKE_DIRS = ("/usr/bin", "/bin", "/usr/local/bin", "/opt/homebrew/bin", "/usr/sbin", "/sbin")
+
+# Shells that are not shells: a SHELL pointed at one of these makes every recipe
+# a no-op on the platforms that honour the environment's SHELL.
+NEUTERED_SHELLS = ("/usr/bin/true", "/bin/true", ":", "/bin/echo", "/usr/bin/echo", "/bin/false", "/usr/bin/false")
+
+
+# Variables make itself exports to a recipe. In the WORKFLOW invocation the
+# anchor is not a recipe, so any of these being present means something planted
+# it — typically an earlier step writing to $GITHUB_ENV.
+MAKE_INTERNAL_VARS = ("MAKELEVEL", "MAKE_RESTARTS", "MAKEOVERRIDES", "MAKECMDGOALS")
+FLAG_VARS = ("MAKEFLAGS", "GNUMAKEFLAGS", "MFLAGS")
+
+# LENIENT mode is an ALLOWLIST, not a list of bad letters. These are the words
+# GNU make itself puts in MAKEFLAGS/MFLAGS for a recipe such as `make test` (the meta-tests),
+# MEASURED on GNU Make 4.3 (ubuntu:24.04, CI's version) and 3.81 (the host):
+#   make            MAKEFLAGS=''                            (both)
+#   make -j2        ' -j2 --jobserver-auth=3,4'             (4.3)
+#                   ' --jobserver-fds=3,4 -j', MFLAGS '- --jobserver-fds=3,4 -j'  (3.81)
+#   make -s         's'          make -w  'w'          --no-print-directory
+# Anything else — `-ki`, `n`, `--ign`, `e` — is refused, whatever it means.
+_ALLOWED_FLAG_WORD = re.compile(
+    r"^(?:-|[ws]+|-[ws]|-j\d*|--jobserver-(?:fds|auth)=\S+"
+    r"|--print-directory|--no-print-directory|--silent|--quiet)$"
+)
+
+
+def check_environment(g: Guard, workflow: bool) -> None:
+    """The anchor's OWN process environment.
+
+    WHICH MODE is chosen by how the anchor is INVOKED, never by the environment.
+    Round 2 chose it from `MAKELEVEL is not None`, and an earlier step can put
+    `MAKELEVEL=1` (or even an empty `MAKELEVEL=`) in $GITHUB_ENV beside
+    `MAKEFLAGS=-ki`. The lenient path then passed `-ki`, `n` and `--ign`, and GNU
+    Make 4.3 made a failing recipe exit 0 under each (PR#9 re-verification,
+    FINDING R-2). Now:
+
+    --workflow  the invocation pinned byte-for-byte in .github/pinned-steps.yml,
+                the ONLY form ci-required-guard accepts as the anchor. STRICT:
+                MAKEFLAGS/GNUMAKEFLAGS/MFLAGS must be UNSET (not merely empty or
+                free of known flags), and MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/
+                MAKECMDGOALS must be ABSENT — the anchor is not a make recipe, so
+                if any is present, something planted it.
+
+    (no flag)   local parity: the scripts/scripts_test.go runs, under make or not.
+                Make legitimately exports MAKEFLAGS to a recipe, so every word of
+                it must be in a measured ALLOWLIST (_ALLOWED_FLAG_WORD). This mode
+                is not a control, and no floor lane can select it: a workflow
+                anchor without the pinned `--workflow` is not byte-equal to the
+                pin and is refused by ci-required-guard.
+
+    In BOTH modes MAKEFILES, BASH_ENV and ENV must be unset and SHELL must be a
+    real shell.
+    """
+    bad = False
+    mode = "--workflow (strict)" if workflow else "local parity (allowlist)"
+
+    if workflow:
+        for name in MAKE_INTERNAL_VARS:
+            if name in os.environ:
+                g.fail(
+                    f"the environment has {name}={os.environ[name]!r}, and this is the WORKFLOW anchor.",
+                    "The anchor is not a make recipe, so make did not put it there: something else did,",
+                    "most likely an earlier step writing to $GITHUB_ENV. MAKELEVEL in particular was how",
+                    "the round-2 anchor was talked into a lenient mode (PR#9 re-verification, R-2).",
+                )
+                bad = True
+        for name in FLAG_VARS:
+            if name in os.environ:
+                g.fail(
+                    f"the environment sets {name}={os.environ[name]!r}, and this is the WORKFLOW anchor.",
+                    "It must be UNSET: make reads it as if it were typed on the command line, so ANY",
+                    "value is a command line nobody reviewed — including ones a blacklist would pass.",
+                )
+                bad = True
+    else:
+        for name in FLAG_VARS:
+            value = os.environ.get(name, "")
+            refused = [w for w in value.split() if not _ALLOWED_FLAG_WORD.match(w)]
+            if refused:
+                g.fail(
+                    f"the environment sets {name}={value!r}; {refused} is not a flag make itself",
+                    "exports to a recipe (`make test`). This mode is an ALLOWLIST of the words GNU make",
+                    "3.81 and 4.3 were measured to export (-jN, --jobserver-*, s, w, --no-print-directory).",
+                )
+                bad = True
+        if os.environ.get("MAKEOVERRIDES", "").strip():
+            g.fail(f"the environment sets MAKEOVERRIDES={os.environ['MAKEOVERRIDES']!r}: a command-line "
+                   f"variable override reached the recipe.")
+            bad = True
+
+    # MAKEFILES makes make read extra makefiles BEFORE the root one, and make
+    # never sets it itself, so it is refused in both modes.
+    if os.environ.get("MAKEFILES", "").strip():
+        g.fail(
+            f"the environment sets MAKEFILES={os.environ['MAKEFILES']!r}.",
+            "make reads those files before the root Makefile, so they can assign SHELL or MAKEFLAGS",
+            "without appearing in anything this guard scans.",
+        )
+        bad = True
+
+    # A non-interactive bash SOURCES $BASH_ENV, so it can define a `make` shell
+    # function before any recipe or any command runs.
+    for name in ("BASH_ENV", "ENV"):
+        if os.environ.get(name, "").strip():
+            g.fail(
+                f"the environment sets {name}={os.environ[name]!r}.",
+                "A non-interactive shell sources it, so it can define a `make` function or alias that",
+                "shadows the real program before a single recipe runs.",
+            )
+            bad = True
+
+    shell = os.environ.get("SHELL", "").strip()
+    if shell and (shell in NEUTERED_SHELLS or not os.path.isfile(shell) or not os.access(shell, os.X_OK)):
+        g.fail(
+            f"the environment sets SHELL={shell!r}, which is not a usable shell program.",
+            "Some platforms let the environment's SHELL reach make. A SHELL pointed at `true` or `:`",
+            "makes every recipe a silent no-op.",
+        )
+        bad = True
+
+    if not bad:
+        if workflow:
+            g.ok(f"[{mode}] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/"
+                 f"MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell")
+        else:
+            g.ok(f"[{mode}] every MAKEFLAGS/GNUMAKEFLAGS/MFLAGS word is one make exports itself; "
+                 f"MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell")
+
+
+def check_make_resolves_to_a_real_program(g: Guard) -> None:
+    """`make` resolves to a FILE named make in a system directory — not what it DOES.
+
+    Two of the verifier's thirteen evasions never touch a Makefile at all:
+
+        make() { :; } ; make ci          a shell function shadowing make
+        PATH=/tmp/sh:$PATH make ci       a stub `make` earlier on PATH
+
+    Both are invisible to any amount of reading of the Makefile, and the second
+    can be set up by an EARLIER step through $GITHUB_PATH. This asks the shell
+    what `make` actually is, in this process, right before make runs.
+    """
+    try:
+        proc = subprocess.run(
+            ["bash", "--noprofile", "--norc", "-c", "type -t make; command -v make"],
+            capture_output=True, text=True, timeout=30, env=clean_env(),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        g.fail(f"could not ask the shell what `make` is: {exc}")
+        return
+    lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
+    if len(lines) < 2:
+        g.fail(
+            "the shell reports no `make` at all.",
+            f"`type -t make; command -v make` printed {proc.stdout!r} (exit {proc.returncode}).",
+        )
+        return
+    kind, path = lines[0], lines[1]
+
+    if kind != "file":
+        g.fail(
+            f"`make` is a {kind}, not a program on disk (`type -t make` says {kind!r}).",
+            "A shell function or alias named `make` shadows the real program entirely, so every",
+            "recipe in this repository can be replaced by `:` without touching a single file here.",
+        )
+        return
+    real = os.path.realpath(path)
+    if not (os.path.isfile(real) and os.access(real, os.X_OK)):
+        g.fail(f"`make` resolves to {path!r} -> {real!r}, which is not an executable file.")
+        return
+    if os.path.dirname(real) not in APPROVED_MAKE_DIRS:
+        g.fail(
+            f"`make` resolves to {real!r}, which is not in {list(APPROVED_MAKE_DIRS)}.",
+            "A `make` outside the system directories is a stub someone put earlier on PATH — the",
+            "shape an earlier workflow step creates by writing a directory to $GITHUB_PATH.",
+        )
+        return
+    if os.path.basename(real) not in ("make", "gmake"):
+        g.fail(
+            f"`make` resolves to {path!r}, whose real file is {real!r} — not a program named make.",
+            "A symlink named `make` pointing at `true` or `echo` sits in an approved directory",
+            "and still makes every recipe a no-op.",
+        )
+        return
+    # Say ONLY what was checked. A real FILE named make in an approved directory
+    # that forwards some invocations and exits 0 on others would pass this — it
+    # needs an earlier step to write to the machine, which is the stated
+    # review-only boundary, and this line must not claim to have ruled it out.
+    g.ok(f"`make` resolves to {path} (type -t: file; real file {real}, named make, in an approved "
+         f"system directory). This does not inspect the program's CONTENT: a forwarding stub planted "
+         f"there by an earlier step is outside what this guard can see.")
+
+
+# ------------------------------------------------------------------- main ---
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent,
+                    help="directory holding the Makefile (default: the repository root)")
+    ap.add_argument("--targets", default=",".join(GATE_TARGETS),
+                    help="comma-separated gate targets (default: every target a required CI lane invokes)")
+    ap.add_argument("--workflow", action="store_true",
+                    help="STRICT environment mode: the invocation pinned in .github/pinned-steps.yml as "
+                         "the workflow anchor. Chosen by the invocation, never by the environment.")
+    args = ap.parse_args()
+
+    root = args.root.resolve()
+    targets = [t.strip() for t in args.targets.split(",") if t.strip()]
+
+    g = Guard()
+    print(f"make-integrity-guard: {root}", flush=True)
+    print(f"  gate targets: {', '.join(targets)}", flush=True)
+
+    if not (root / "Makefile").exists():
+        g.fail(f"{root}/Makefile does not exist")
+        print("make-integrity-guard: FAILED", file=sys.stderr)
+        return 1
+
+    check_environment(g, args.workflow)
+    check_make_resolves_to_a_real_program(g)
+
+    # BEFORE make is invoked at all: reading a Makefile executes parts of it.
+    if not check_parse_time_side_effects(g, root):
+        print("make-integrity-guard: FAILED (make was NOT invoked: the Makefile would have executed "
+              "something while being read)", file=sys.stderr)
+        return 1
+
+    # One resolver pass names every file make reads, including everything an
+    # `include` pulls in. The text reading then covers all of them.
+    variables, files = resolve_database(g, root, targets[0])
+    if variables is None:
+        print("make-integrity-guard: FAILED", file=sys.stderr)
+        return 1
+
+    # The named targets are what CI invokes; the CLOSURE is what actually runs.
+    # `make ci` is one word in a workflow and ten lanes here, and it is
+    # `test`'s recipe — not `ci`'s, which has none — that runs the tests.
+    closure = prerequisite_closure(root, files, targets)
+    derived = [t for t in closure if t not in targets]
+    print(f"  closure: {len(closure)} target(s); {len(derived)} reached through prerequisites"
+          + (f" ({', '.join(derived)})" if derived else ""))
+
+    check_text(g, root, files, closure, targets)
+    check_environment_overrides(g, root, files, args.workflow)
+
+    # The resolver checks read make's own variable database, which is global to
+    # the invocation, and make reports a duplicate definition at PARSE time — so
+    # one pass per NAMED target covers the closure as well, and also proves each
+    # name CI invokes is a target make can resolve at all.
+    for t in targets:
+        v, _ = resolve_database(g, root, t)
+        if v is None:
+            continue
+        check_resolved(g, t, v)
+        check_warnings(g, root, t)
+
+    if g.failed:
+        print("make-integrity-guard: FAILED", file=sys.stderr)
+        print("A make-driven gate that can be turned into a no-op is not a gate. Fix the Makefile.", file=sys.stderr)
+        return 1
+    print(f"make-integrity-guard: passed ({len(targets)} gate target(s))")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

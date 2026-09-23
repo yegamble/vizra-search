@@ -91,11 +91,12 @@ without a fixture is a claim, not a control.
 
 | refused | how |
 |---|---|
-| a checkout whose remote is not the canonical repository | `git remote get-url` is **measured**, normalised across https / ssh / scp-like / userinfo forms, and must be `github.com/yegamble/vizra-core` |
+| a checkout whose remote is not the canonical repository | `git remote get-url` is **measured**, normalised across https / ssh / scp-like / userinfo forms, and must be `github.com/yegamble/vizra-core` — **exactly two path segments**: `github.com/attacker/x/yegamble/vizra-core` used to be read as its last two segments and accepted |
 | a ref that is not the canonical remote-tracking branch | the ref is resolved to a **full refname** and must equal `refs/remotes/<remote>/main` exactly — a tag named `main`, a tag named `origin/main` shadowing the remote-tracking ref, `refs/heads/main`, and any branch `x/main` all resolve elsewhere and are named in the refusal |
 | a commit that is not on that ref | `merge-base --is-ancestor <commit> refs/remotes/<remote>/main`, checked against the **resolved** ref, not against anything the caller passed. Reachable via `--commit` |
 | a shallow clone | ancestry cannot be decided against a truncated history |
 | laundering the ref into the manifest | the manifest records the full refname **resolved** and the tip it pointed at. It used to write `args.ref.split("/")[-1]`, which turned `fake/main` into `main` |
+| a forged `source_ref_tip` | the field used to be written and never read. `--check` now requires a 40-character lowercase SHA that is not the null id; `--check --core` requires it to be a commit in core, **on** the recorded ref, and to **contain** `source_commit`. A tip that has merely fallen behind core's main is staleness, not forgery, and is reported as a note |
 
 An earlier version of this section claimed the script "refuses a commit that is
 not an ancestor of that branch tip, and a `--ref` that is not a `main` branch".
@@ -116,15 +117,17 @@ against `github.com/yegamble/vizra-core` themselves — which is what recording 
 unambiguous, fetchable full refname is for.
 
 It only ever reads the core checkout (`remote get-url`, `rev-parse`,
-`for-each-ref`, `log`, `merge-base`, `show`), so it is safe to point at a
+`for-each-ref`, `log`, `merge-base`, `cat-file`, `show`), so it is safe to point at a
 checkout someone else is working in, and it reads committed objects rather than
 that working tree.
 
 `vendor-contract` and `vendor-contract-check` are deliberately **not** CI lanes:
 CI has no core checkout, and `contract-drift` already fails on any drift between
 the vendored bytes and the manifest. `vendor-contract-selftest` needs neither a
-core checkout nor a network and therefore could be one; that is proposed to the
-chair rather than done here.
+core checkout nor a network, so it **is** a required lane — in `ci:`, in
+`.github/required-checks.txt`, in `FLOOR_LANES`, and a job in `ci.yml` — and
+removing a refusal from `vendor-contract.py` is red in CI, not only on a laptop.
+Its 17 fixtures are a floor (`EXPECTED_CASES`).
 - `internal/httpapi.Routes()` is compared against the contract in both
   directions, and every response body is validated against the contract's
   schemas, all of which set `additionalProperties: false`. A renamed field is a
@@ -315,24 +318,53 @@ names and this service's own runtime vocabulary, which are constants in
 test's reach is itself a test:
 
 - `TestNoRefusalEchoesTheSuppliedValue` provokes **every `v.addf` site** in the
-  loader — 17 of them as of 2026-09-21, across 14 distinct messages, three of
-  which are emitted from more than one place — and fails if a value a probe
-  supplied comes back in the error. It also checks `Config.String()` and
-  `Config.LogValue()` for an **ignored** value. Six sites take a marker
-  assembled at run time; the rest fire
-  only for a constrained value (a parseable duration above the ceiling, a
-  placeholder-shaped key, the retired vocabulary), and each such row **says
-  which and why** next to the value it asserts absent.
-- `TestEveryRefusalSiteInTheLoaderHasANoEchoRow` parses
-  `internal/config/config.go`, counts every `v.addf` call, and fails unless the
-  table accounts for each one — so a refusal added to the loader without a row
-  is red, and "every refusal path" stays true as the loader grows. A format
+  loader — 17 of them as of 2026-09-21, across 14 distinct messages, two of
+  which are emitted from more than one place (one from two sites, one from
+  three) — and fails if a value a probe supplied comes back in the error. It
+  also checks `Config.String()` and `Config.LogValue()` for an **ignored**
+  value. Six rows drive their sites with a marker assembled at run time — eight
+  sites in all; the rest fire only for a constrained value (a parseable duration
+  above the ceiling, a placeholder-shaped key, the retired vocabulary), and each
+  such row **says which and why** next to the value it asserts absent.
+- `TestEveryRefusalSiteInTheLoaderHasANoEchoRow` parses **every non-test `.go`
+  file of package `config`** — not `config.go` alone — counts every `addf` call
+  in any of them, and fails unless the table accounts for each one. A refusal
+  added without a row is red, in `config.go` or in a second file. A format
   string the guard cannot read is a failure, not a silent skip.
+- `TestNoRefusalBypassesTheNoEchoTable` closes the other ways this package
+  could build a refusal, over the same files: an `fmt.Errorf`, `errors.New` or
+  `errors.Join` is red unless it is one of the three reviewed ones (the
+  `ErrInvalidConfig` sentinel, the nil-`Lookup` refusal, and the aggregator in
+  `(*validator).err`); the validator's `problems` list may be touched only
+  inside `addf` and `err`, so a helper that appends its own message is red;
+  `addf` may only be called, never taken as a value; and no `Error()` method —
+  a custom error type — may be declared in the package.
 - Every refusal row of the boot matrix greps the process output for the value it
   supplied, exempting the two vocabulary words exactly as spelled.
 
+**So the guard's reach is exactly this:** every error value *constructed in
+package `config`*, in any of its non-test files. **What it does not see**, and
+review is the only control for: an error produced by **another** package and
+returned as-is (for example `return nil, err` from `strconv` inside `LoadFrom`
+— `strconv`'s own message quotes its input), a `panic` carrying a value, and a
+log line.
+
+The Lookup seam is enforced the same way.
+`TestNothingOutsideTheSeamReadsTheProcessEnvironment` parses every non-test
+`.go` file in the module and fails on any reference to `os.Getenv`,
+`os.LookupEnv`, `os.Environ`, `os.ExpandEnv`, `syscall.Getenv` or
+`syscall.Environ` — called or taken as a value, under any import name, and a
+dot-import of either package — except the single `os.LookupEnv` inside
+`osLookupEnv` in `internal/config/env.go`. Every refusal above is tested through
+an injected `Lookup`, so a direct read anywhere else would reach around all of
+them unseen. Not seen: reflection, cgo, and reading `/proc/self/environ` as a
+file.
+
 `--mutate echo-the-value` turns the first and the matrix red;
-`--mutate add-an-unrowed-refusal` turns the second red.
+`--mutate add-an-unrowed-refusal` turns the second red. The mutations that
+prove the widened reach — a refusal echoed through `fmt.Errorf`, through a new
+helper, and from a second file of the package, and a stray `os.Getenv` in
+`Config.String()` — are in `docs/evidence/ci-hardening/`.
 
 The boot matrix behind this table runs against the **real binary**:
 `./scripts/boot-matrix.sh` (20 cases plus the focused suite), with five
@@ -411,16 +443,124 @@ including a check that never ran — as a failure.
 | `build` | the binary links and reports its identity |
 | `contract-drift` | the handlers, response bodies, HMAC scheme and both vendored digests match the canonical contract, and every normative vector — ACCEPT and REJECT — is consumed; the lane's own shape is checked before and after the tests run, so nothing can be deselected |
 | `test` | `go test -race -count=1 ./...` |
-| `test-noskip` | **0 skipped tests** and a non-trivial collected count (Q-001) |
+| `test-noskip` | the whole suite run **without make**: **0 skipped tests**, no package without test files, **every package at or above its executed-test floor**, no package without a floor, `go test`'s own exit code judged; counts printed in the log (Q-001) |
 | `tidy-check` | `go.mod`/`go.sum` are tidy |
 | `govulncheck` | no known vulnerability in the dependency graph |
+| `vendor-contract-selftest` | every refusal `scripts/vendor-contract.py` advertises fires, by name, against throwaway repositories |
 | `docker-build` | the image builds natively, refuses the dev key, and answers `not_indexed` over HTTP |
 
-`test-noskip` fails on **any** skip, including a package with no test files. If
-you add a package, add tests to it; do not loosen the guard.
+`test-noskip` fails on **any** skip, including a package with no test files,
+and there is no skip allowlist: `scripts/go-test-report.py` refuses a non-empty
+`allowed_skips`. If you add a package, add tests to it **and a floor** in
+`scripts/test-floors.json`; do not loosen the guard. Floors only rise, and a
+lowered one is a reviewed diff.
 
-`make ci` includes `tidy-check`, so a local `make ci` covers the same lanes CI
-runs.
+`make ci` runs exactly the make lanes CI runs plus `test-noskip` (local parity
+for the direct lane), and `scripts/ci-required-guard.py` fails when the two
+disagree.
+
+#### The make lanes cannot be silenced — what the guards ARE, and what they CANNOT do
+
+Every required lane but `test-noskip`, `govulncheck` and `docker-build` runs
+through `make`, where one word on the workflow line (`make -i test`) or one
+line in the `Makefile` (`MAKEFLAGS += -i`, `SHELL := /usr/bin/true`) makes a
+failing lane exit 0. The design is ported from `vizra-core` PR #9 (merged as
+`eeeea06`), which took three verifier rounds to get right. Its lesson: a
+**blacklist** over arbitrary shell cannot be complete — core's first version
+refused a list of flags, and a verifier found thirteen spellings it missed. So
+the control is **default-deny on the shape of the steps and their
+surroundings**:
+
+- **Pinned steps.** Every step in a required lane that mentions `make` must be
+  **byte-equal** to an entry in `.github/pinned-steps.yml`, and every step that
+  mentions `go test` must be byte-equal to its pinned direct body. Either may
+  carry no key but `name`, `run` and `id` — so no `if:`, `env:`, `shell:`,
+  `working-directory:`, `continue-on-error:` or `timeout-minutes:`. No flags,
+  no overrides, no chains, no indirection. `make -i test`, `make -j -i test`,
+  `MAKEFLAGS=-i make test`, `export MAKEFLAGS=-i` above it, `M=make; $M -i`,
+  a shell function named `make`, backticks, `bash -c`, a PATH prefix, `if:
+  always() && false`, `working-directory:` and `shell: bash -c '{0} || true'`
+  are each red by name.
+- **Present.** `required_invocations` records what each lane MUST run,
+  byte-equal. Deleting a gate step, or replacing it with something that reaches
+  make through an indirection no classifier sees (`${MAKE:-make} -i test`), is
+  red whatever replaced it.
+- **The pinned anchor.** The step IMMEDIATELY before every make step must be
+  exactly `./scripts/make-integrity-guard.sh --workflow`; a step that names the
+  guard without being byte-equal to it is refused anywhere in the lane, so a
+  compound anchor that writes `$GITHUB_ENV` after the guard exits, or a no-op
+  that only names it, is red. Adjacency is what makes its runtime checks mean
+  anything: a `$GITHUB_ENV` or `$GITHUB_PATH` write by an earlier step applies
+  to LATER steps, so it reaches the anchor exactly as it reaches make.
+- **Strictness is chosen by the invocation, never the environment.**
+  `--workflow` is part of the pinned bytes. In that mode the anchor refuses
+  `MAKEFLAGS`, `GNUMAKEFLAGS` and `MFLAGS` if set at all (even empty);
+  `MAKELEVEL`, `MAKE_RESTARTS`, `MAKEOVERRIDES` and `MAKECMDGOALS` if present;
+  `MAKEFILES`, `BASH_ENV` and `ENV`; a `SHELL` that is not a shell; a `make`
+  that does not resolve to a file named make in a system directory; and every
+  variable the `Makefile` takes from the environment — assigned with `?=`, or
+  referenced and never assigned, computed from the `Makefile` itself (today
+  `VERSION`, `COMMIT`, `BUILD_TIME`, `IMAGE`, `CORE`, `CORE_REMOTE`) — plus
+  `GOFLAGS`. The same names are refused statically as job- or workflow-level
+  `env:` of any lane that runs make or `go test`.
+- **The `Makefile`, read before make runs.** Reading a `Makefile` executes
+  parts of it, so the anchor's own dry-run could write the next step's
+  environment. *Found while porting, not in core's history:* with
+  `POISON := $(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")` the ported anchor
+  exited 0 and the runner's env file then held `MAKEFLAGS=-i`. Now, before
+  make is invoked at all, every `$(…)` must be a plain variable or one of four
+  pinned `$(shell …)` calls, and `$(file …)`, `$(eval …)`, `$(call …)`, `!=`,
+  a `+` or `$(MAKE)` recipe line, `include`/`load`, and a rule that remakes a
+  makefile or a pattern rule are refused by name. Then three readings — make's
+  resolved database (`make -pn`), the text of every file make read, and make's
+  duplicate-target warnings — refuse a `SHELL`, `.SHELLFLAGS`, `MAKEFLAGS` or
+  `GNUMAKEFLAGS` override, `.ONESHELL`, a `-` prefix, a `|| true`-family
+  suffix, and a gate target defined twice or inside a conditional. Exactly one
+  recipe line may end `|| true`: contract-drift's `go test` line, keyed to that
+  target and those bytes, because its next line `ran` is the lane's verdict.
+- **Strict YAML.** A duplicate key or a merge key (`<<:`) anywhere in a
+  workflow or the pins file is refused, so the guard never reads a different
+  value than a reviewer sees first. `defaults.run`, a job `container:`, a
+  job-level `if:`, a reusable-workflow job and an undigested service image are
+  refused on required lanes.
+- **The direct lane.** `test-noskip` runs `go test -count=1 -json ./...`
+  without make. Its pinned body refuses a set `GOFLAGS`, records `go test`'s
+  exit code, fails the step on the report's verdict (`|| exit 1`), and ends
+  `exit "$rc"`, so go test's own failure fails the step even if the report line
+  were removed. `scripts/go-test-report.py` fails on any skip, any package with
+  no test files, any package below its floor or without one, and an exit code
+  the event stream does not explain.
+
+**What they cannot do** — stated rather than implied, and not called complete:
+
+- **Another step's effects on the machine.** A required lane may contain other
+  `run:` steps and `uses:` actions, and through them anything at all before the
+  anchor runs: a replaced Go toolchain, a rewritten test file, a different
+  `python3`, a forwarding `make` stub planted in `/usr/local/bin`. The anchor
+  checks what `make` IS (a file named make in a system directory), not what it
+  DOES, and the pinned shell calls run whatever `go`, `git` and `date` resolve
+  to.
+- **Environment variables outside the named set.** Go's own `GOTOOLCHAIN`,
+  `GOENV`, `GODEBUG`, `CGO_ENABLED` and the rest are not refused, at runtime or
+  statically. The executed-test floors turn a suite made to run nothing red;
+  anything subtler is review-only.
+- **Reusable workflows and wrappers.** A `jobs.<id>.uses:` job has no steps to
+  read (it is refused on a required lane, not inspected). A wrapper script or
+  composite action that calls make carries no `make` token; `required_invocations`
+  bounds the damage, but a lane may run one in addition.
+- **Edits to the controls themselves.** `.github/pinned-steps.yml`,
+  `scripts/test-floors.json`, `FLOOR_LANES`, `APPROVED_SHELL_CALLS`, the
+  guards and the workflows are all checked out from the pull request under
+  test. Widening a pin, lowering a floor or editing a guard is **visible** in a
+  reviewed diff; it is not **prevented**.
+- **CODEOWNERS is advisory.** These paths are owner-assigned, but no ruleset
+  requires that review yet, so it is a label, not a backstop.
+
+The controls are themselves tested: `scripts/scripts_test.go` applies each
+evasion above as a controlled mutation of this repository's **real** workflow,
+manifest, pins and `Makefile` (digest before and after, refused unless it
+applied exactly once, restored byte-identically, green again), and runs the
+pinned direct body against a planted failing and skipped test.
 
 #### `contract-drift` selects by package, never by test name
 
@@ -510,21 +650,12 @@ in place, and each turns a required check red:
 
 **What they do not stop, stated rather than implied:**
 
-- A `Makefile`-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is
-  **one line**, and either makes every recipe in this repository a no-op —
-  `contract-drift`, `test` and `test-noskip` alike. Measured with a vendored
-  file edited in place: `make contract-drift`, `make test` and `make test-noskip`
-  **all exit 0**. No check written inside a `Makefile` can prevent that, and
-  **no CI lane catches it today**: the workflows invoke `make test` and
-  `make test-noskip`, not `go test`, so they are no-opped too, and the only
-  command that goes red is a direct `go test ./internal/httpapi/`, which nothing
-  in CI runs. The exposure is generic to any make-driven gate, is equally true
-  of `main`, and is not introduced by this lane — what is new is that it is
-  written down. Closing it is **queued as a cross-repo hardening item**: an
-  out-of-make check that refuses a `SHELL`, `.SHELLFLAGS` or `MAKEFLAGS`
-  override anywhere in the `Makefile`, plus one required lane that runs
-  `go test` without make. Until that lands, the only backstop is human review of
-  the `Makefile` diff.
+- A `Makefile`-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i` used to be
+  listed here: one line that no-ops every recipe, `contract-drift` included,
+  with no CI lane to catch it. It is now refused **by name, before
+  `make contract-drift` runs**, by the pinned make-integrity anchor (see "The
+  make lanes cannot be silenced" above), and `test-noskip` runs every package —
+  the drift guards included — without make.
 - Editing `.github/workflows/ci.yml` as well removes reading 2. That is a second
   file and a second diff, and `ci-required` is red while the step is missing —
   but `ci-required-guard.sh` is itself checked out from the PR under test.
@@ -537,13 +668,18 @@ in place, and each turns a required check red:
 `.github/required-checks.txt` is read from the checkout under test, so the PR
 being gated can edit it. Checking only that every name *present* maps to a real
 job is not enough — deleting a lane's line would leave `ci-required` green with
-that lane no longer required. `scripts/ci-required-guard.sh` therefore also
-enforces:
+that lane no longer required. `scripts/ci-required-guard.sh` (which ends by
+running `scripts/ci-required-guard.py`) therefore also enforces:
+
+- a manifest that lists **no** checks — every line a comment — fails **loudly,
+  by name** (`REQUIRED-CHECKS MANIFEST EMPTY`). It used to die in silence:
+  `required="$(grep -v …)"` under `set -e` exits 1 when grep selects nothing,
+  so the gate failed closed with an empty log and nobody could tell why;
 
 - a **floor** of lanes (`build`, `test`, `test-noskip`, `contract-drift`,
-  `govulncheck`) that may never be removed from the manifest. The floor lives in
-  `scripts/ci-required-guard.sh` — not in the workflow, and not in the manifest
-  it guards. Being one file away is a speed bump, not a control: that script is
+  `govulncheck`, `vendor-contract-selftest`) that may never be removed from the
+  manifest. The floor lives in `scripts/ci-required-guard.py` (`FLOOR_LANES`) —
+  not in the workflow, and not in the manifest it guards. Being one file away is a speed bump, not a control: that script is
   also checked out from the PR under test. **What actually closes this is the
   owner ruleset requiring CODEOWNERS review on `/.github/` and `/scripts/`,
   which is an owner action after this PR lands and is not part of it. Until then
