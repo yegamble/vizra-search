@@ -39,8 +39,9 @@ which mirrors a whole directory, the set of pinned files must also EQUAL what
 core holds there at the pinned commit (`git ls-tree`; any entry there that is
 not a regular-file blob is refused), and every file on disk under the directory
 must be pinned (`--check`; a directory named __pycache__ is not read, and a
-symlink is refused). Each of these refusals has a fixture in the selftest that
-fires it for the engine manifest; the non-regular-entry fixture uses a symlink.
+symlink, or the directory itself as a symlink, is refused). Each of these
+refusals has a fixture in the selftest that fires it for the engine manifest;
+the non-regular-entry fixture uses a symlink.
 
 WHAT IT ACTUALLY ENFORCES
 =========================
@@ -526,6 +527,8 @@ def whole_directory_problems_on_disk(m, known):
     module it imports. Anything else unpinned, including a symlink, is refused.
     """
     root = os.path.join(REPO, known.pathspec)
+    if os.path.islink(root.rstrip("/")):
+        return ["%s is a symlink; only a real directory is vendored" % known.pathspec.rstrip("/")]
     if not os.path.isdir(root):
         return []  # each pinned file then reports itself as missing
     pinned = set(entry["vendored_path"] for entry in m["files"])
@@ -601,8 +604,8 @@ def vendor(args):
     print("subject           : %s" % gits(core, "log", "-1", "--format=%s", commit))
     print("")
 
-    # Every file is read out of core BEFORE any is written, so a refusal part
-    # way through leaves the tree as it was.
+    # Every file is read out of core BEFORE any is written, so a refusal while
+    # reading core leaves the tree as it was.
     wanted = [(entry, read_from_core(core, commit, entry["source_path"])) for entry in m["files"]]
 
     changed = []

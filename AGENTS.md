@@ -125,7 +125,7 @@ directory, it also refuses, each with an `engine:` fixture:
 |---|---|
 | a file core holds under `scripts/makeanchor/` at the pinned commit that the manifest does not pin, or a pinned file core does not hold there | `git ls-tree` of the directory at the pinned commit must equal the pinned set, on vendor and on `--check --core`; vendoring refuses before it writes anything |
 | an entry there that is not a regular file | `ls-tree` must report a blob with mode 100644 or 100755; the fixture uses a symlink |
-| a file on disk under `scripts/makeanchor/` that the manifest does not pin, or a symlink there | `--check` walks the directory. A directory named `__pycache__` is not read, because Python writes one beside any module it imports |
+| a file on disk under `scripts/makeanchor/` that the manifest does not pin, a symlink there, or the directory itself a symlink | `--check` walks the directory. A directory named `__pycache__` is not read, because Python writes one beside any module it imports |
 
 An earlier version of this section claimed the script "refuses a commit that is
 not an ancestor of that branch tip, and a `--ref` that is not a `main` branch".
@@ -157,7 +157,7 @@ the vendored bytes and the manifest. `vendor-contract-selftest` needs neither a
 core checkout nor a network, so it **is** a required lane — in `ci:`, in
 `.github/required-checks.txt`, in `FLOOR_LANES`, and a job in `ci.yml` — and
 removing a refusal from `vendor-contract.py` is red in CI, not only on a laptop.
-Its 32 fixtures (18 on the contract manifest, 13 on the engine manifest, 1 on
+Its 33 fixtures (18 on the contract manifest, 14 on the engine manifest, 1 on
 the `--manifest` choice) are a floor (`EXPECTED_CASES`).
 - `internal/httpapi.Routes()` is compared against the contract in both
   directions, and every response body is validated against the contract's

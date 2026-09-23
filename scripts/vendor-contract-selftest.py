@@ -825,6 +825,22 @@ def case_engine_symlink_on_disk(tmp):
     )
 
 
+def case_engine_symlinked_directory(tmp):
+    core = make_core(tmp, "core-engine-disk-dirlink", engine=True)
+    search = vendored_engine(tmp, "engine symlinked directory", core)
+
+    def relink(s):
+        real = os.path.join(s, ENGINE_DIR.rstrip("/"))
+        moved = os.path.join(s, "elsewhere")
+        os.rename(real, moved)
+        os.symlink(moved, real)
+
+    return expect_check_red(
+        "engine: symlinked directory", search, ENGINE + ["--check"], relink,
+        ["%s is a symlink" % ENGINE_DIR.rstrip("/")],
+    )
+
+
 def case_contract_below_minimum(tmp):
     # The minimum is per manifest: the contract's is 2, so ONE pinned file is
     # refused here while the engine manifest refuses two.
@@ -903,13 +919,14 @@ CASES = [
     case_engine_symlink_in_core,
     case_engine_unpinned_on_disk,
     case_engine_symlink_on_disk,
+    case_engine_symlinked_directory,
     case_contract_below_minimum,
     case_unknown_manifest,
 ]
 
 # A floor, in the idiom scripts/ci-required-guard.sh already uses: deleting a
 # case from the list above must be a named failure, not a quietly shorter run.
-EXPECTED_CASES = 32
+EXPECTED_CASES = 33
 
 
 def main():
