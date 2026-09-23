@@ -319,7 +319,7 @@ demo_guard() {
 	echo "state 0 — the guard as shipped"
 	echo "  $GUARD_SCRIPT sha256=$before"
 	run_lane "selftest, guard intact" PASS ./scripts/vendor-contract-selftest.py
-	assert_names "all 11 fixtures behaved as documented"
+	assert_names "all 32 fixtures behaved as documented"
 
 	rule
 	echo "state 1 — the suffix test put back"

@@ -54,6 +54,63 @@ DIRECT = ["bash", "-c",
           "[\"direct_test_steps\"][0])' > .direct-step.sh && bash --noprofile --norc -eo pipefail .direct-step.sh"]
 
 CI = ".github/workflows/ci.yml"
+
+# scripts/vendor-contract.py: the shallow-clone refusal in vendor(), and the
+# engine-manifest mutations (queue 2o-5). Each `old` must occur exactly once.
+VENDOR_SHALLOW = ("    refuse_shallow(core)\n    full_ref, tip = resolve_ref(core, args.remote, args.ref)\n"
+                  "    commit = choose_commit(core, full_ref, args.commit, known.pathspec)\n"
+                  "    if known.whole_directory:\n")
+VENDOR_ROWS = [
+    ("engine: the commit pathspec ignored (always api/): the happy path pins the wrong commit",
+     '"--", pathspec)\n', '"--", "api/")\n', "engine: happy path: source_commit"),
+    ("engine: the commit pathspec ignored (always api/): a forged api/-only commit is accepted",
+     '"--", pathspec)\n', '"--", "api/")\n', "accepted the engine: wrong pathspec"),
+    ("engine: the inside-the-pathspec refusal removed",
+     "        if not vendored.startswith(known.pathspec):\n", "        if False:\n",
+     "engine: file outside the directory: the refusal does not say"),
+    ("engine: the digest comparison removed",
+     "        if got != want:\n", "        if False:\n", "accepted the engine: digest mismatch"),
+    ("engine: the engine minimum lowered to the contract's",
+     "        min_files=3,\n", "        min_files=2,\n", "engine: below the minimum: the refusal does not say"),
+    ("engine: the duplicate-entry refusal removed",
+     "        if vendored in seen:\n", "        if False:\n", "engine: duplicate entry: the refusal does not say"),
+    ("engine: the source_path == vendored_path refusal removed",
+     '        if entry["source_path"] != entry["vendored_path"]:\n', "        if False:\n",
+     "engine: source path differs: expected a refusal, got exit 0"),
+    ("engine: the shallow-clone refusal removed from vendor()",
+     VENDOR_SHALLOW, VENDOR_SHALLOW.replace("    refuse_shallow(core)\n", "", 1),
+     "engine: shallow clone: expected a refusal, got exit 0"),
+    ("engine: a core file the manifest does not pin is no longer reported",
+     "    for path in sorted(held - pinned):\n", "    for path in []:\n",
+     "engine: core file not pinned: expected a refusal, got exit 0"),
+    ("engine: a pinned file core does not hold is no longer reported",
+     "    for path in sorted(pinned - held):\n", "    for path in []:\n",
+     "engine: pinned file absent in core: the refusal does not say"),
+    ("engine: the regular-file rule on core's tree removed",
+     '        if kind != "blob" or mode not in ("100644", "100755"):\n', "        if False:\n",
+     "engine: symlink in core: expected a refusal, got exit 0"),
+    ("engine: an unpinned file on disk is no longer reported",
+     "            elif rel not in pinned:\n", "            elif False:\n",
+     "accepted the engine: unpinned file on disk"),
+    ("engine: the on-disk symlink refusal removed",
+     "            if os.path.islink(full):\n", "            if False:\n",
+     "engine: symlink on disk: the refusal does not say"),
+    ("engine: the __pycache__ exemption removed (the control run must go red)",
+     '                       if d != "__pycache__" and not', "                       if not",
+     "engine: unpinned file on disk: CONTROL"),
+    ("engine: vendor() no longer creates the engine directory",
+     "        os.makedirs(os.path.dirname(dest), exist_ok=True)\n", "",
+     "engine: happy path: exit 1"),
+    ("engine: a NEW file no longer counted as re-vendored",
+     '            state = "NEW"\n            changed.append(path)\n', '            state = "NEW"\n',
+     "engine: happy path: the vendor transcript does not say"),
+    ("contract: the contract minimum lowered to 1",
+     "        min_files=2,\n", "        min_files=1,\n",
+     "contract: below the minimum: expected a refusal, got exit 0"),
+    ("--manifest no longer restricted to the known manifests",
+     "        choices=sorted(KNOWN_MANIFESTS),\n", "",
+     "unknown --manifest: the refusal of --manifest"),
+]
 MAKE_TEST = "        run: make test\n"
 ANCHOR_BEFORE_TEST = ("      - name: refuse a neutered Makefile or make environment (anchor)\n"
                       "        run: ./scripts/make-integrity-guard.sh --workflow\n      - name: make test\n")
@@ -173,8 +230,7 @@ ROWS = [
          new="  vendor-contract-selftest-x:\n    name: vendor-contract-selftest-x\n", cmd=GUARD_SH,
          want="'vendor-contract-selftest' matches no job"),
     dict(id="4d", item=4, name="implementation: the shallow-clone refusal removed (what the lane catches)",
-         file="scripts/vendor-contract.py", old="    refuse_shallow(core)\n    full_ref, tip = resolve_ref(core, args.remote, args.ref)\n    commit = choose_commit(core, full_ref, args.commit)\n\n    print(\"core checkout",
-         new="    full_ref, tip = resolve_ref(core, args.remote, args.ref)\n    commit = choose_commit(core, full_ref, args.commit)\n\n    print(\"core checkout",
+         file="scripts/vendor-contract.py", old=VENDOR_SHALLOW, new=VENDOR_SHALLOW.replace("    refuse_shallow(core)\n", "", 1),
          cmd=["python3", "scripts/makegate.py", "--", "vendor-contract-selftest"], want="shallow clone"),
     # ---------------------------------------------------------------- item 5
     dict(id="5a", item=5, name="implementation: parse_remote_url back to parts[-2:]", file="scripts/vendor-contract.py",
@@ -189,6 +245,11 @@ ROWS = [
          old="        if isinstance(recorded_tip, str) and re.fullmatch(r\"[0-9a-f]{40}\", recorded_tip):\n",
          new="        if False:\n",
          cmd=SELFTEST, want="forged tip: a commit off the ref: the refusal does not say"),
+    # ---------------------------------------------------------------- item V
+    # queue 2o-5: the second (engine) manifest. Each row mutates the code a new
+    # selftest fixture exists for and names the fixture that must go red.
+    *[dict(id="V%d" % n, item="V", name=name, file="scripts/vendor-contract.py", old=old, new=new,
+           cmd=SELFTEST, want=want) for n, (name, old, new, want) in enumerate(VENDOR_ROWS, 1)],
     # ---------------------------------------------------------------- item 6
     dict(id="6a", item=6, name="a stray os.Getenv in Config.String()", file="internal/config/config.go",
          old="\t\tc.Mode, c.Addr, c.MaxClockSkew, c.MaxBodyBytes, c.RequestTimeout, c.ShutdownGrace,\n\t)\n}\n",

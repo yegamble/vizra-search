@@ -96,7 +96,36 @@ without a fixture is a claim, not a control.
 | a commit that is not on that ref | `merge-base --is-ancestor <commit> refs/remotes/<remote>/main`, checked against the **resolved** ref, not against anything the caller passed. Reachable via `--commit` |
 | a shallow clone | ancestry cannot be decided against a truncated history |
 | laundering the ref into the manifest | the manifest records the full refname **resolved** and the tip it pointed at. It used to write `args.ref.split("/")[-1]`, which turned `fake/main` into `main` |
+| a vendored path outside the manifest's pathspec | the pinned commit is the last commit touching the pathspec (`api/` for the contract), so a file outside it could change in core without moving that commit |
+| a path pinned twice | a repeated entry would count twice towards the minimum file count |
+| too few pinned files | at least 2 for the contract manifest, 3 for the engine manifest, so a truncated manifest cannot leave a file editable in place |
 | a forged `source_ref_tip` | the field used to be written and never read. `--check` now requires a 40-character lowercase SHA that is not the null id; `--check --core` requires it to be a commit in core, **on** the recorded ref, and to **contain** `source_commit`. A recorded tip behind core's current main is reported as a note, not a failure: any on-ref commit that contains `source_commit` passes, so the check cannot prove the tip was the one current at vendoring time |
+
+**A second manifest: the make-anchor engine (queue 2o).** The same tool will
+vendor core's `scripts/makeanchor/` directory with its own manifest,
+`scripts/ANCHOR-SOURCE.json`, which sits outside that directory so the
+directory's tree is identical in both repositories. Nothing is vendored under
+it yet (queue 2o-6), so neither file exists here and there is no make target
+for it; the tool refuses to name a manifest that does not exist. A run selects
+its manifest with `--manifest`, which accepts exactly
+`api/CONTRACT-SOURCE.json` (the default, so every command above is unchanged)
+or `scripts/ANCHOR-SOURCE.json`, and nothing else. There is no environment
+switch. Each manifest's commit pathspec, minimum file count and directory rule
+are code in `KNOWN_MANIFESTS`, never read from the manifest itself.
+
+```
+scripts/vendor-contract.py --manifest scripts/ANCHOR-SOURCE.json --core <path>
+scripts/vendor-contract.py --manifest scripts/ANCHOR-SOURCE.json --check [--core <path>]
+```
+
+Every refusal in the table above applies to it. Because it mirrors a whole
+directory, it also refuses, each with an `engine:` fixture:
+
+| refused | how |
+|---|---|
+| a file core holds under `scripts/makeanchor/` at the pinned commit that the manifest does not pin, or a pinned file core does not hold there | `git ls-tree` of the directory at the pinned commit must equal the pinned set, on vendor and on `--check --core`; vendoring refuses before it writes anything |
+| an entry there that is not a regular file | `ls-tree` must report a blob with mode 100644 or 100755; the fixture uses a symlink |
+| a file on disk under `scripts/makeanchor/` that the manifest does not pin, or a symlink there | `--check` walks the directory. A directory named `__pycache__` is not read, because Python writes one beside any module it imports |
 
 An earlier version of this section claimed the script "refuses a commit that is
 not an ancestor of that branch tip, and a `--ref` that is not a `main` branch".
@@ -117,7 +146,8 @@ against `github.com/yegamble/vizra-core` themselves — which is what recording 
 unambiguous, fetchable full refname is for.
 
 It only ever reads the core checkout (`remote get-url`, `rev-parse`,
-`for-each-ref`, `log`, `merge-base`, `cat-file`, `show`), so it is safe to point at a
+`for-each-ref`, `log`, `merge-base`, `cat-file`, `show`, and `ls-tree` for the
+engine manifest), so it is safe to point at a
 checkout someone else is working in, and it reads committed objects rather than
 that working tree.
 
@@ -127,7 +157,8 @@ the vendored bytes and the manifest. `vendor-contract-selftest` needs neither a
 core checkout nor a network, so it **is** a required lane — in `ci:`, in
 `.github/required-checks.txt`, in `FLOOR_LANES`, and a job in `ci.yml` — and
 removing a refusal from `vendor-contract.py` is red in CI, not only on a laptop.
-Its 17 fixtures are a floor (`EXPECTED_CASES`).
+Its 32 fixtures (18 on the contract manifest, 13 on the engine manifest, 1 on
+the `--manifest` choice) are a floor (`EXPECTED_CASES`).
 - `internal/httpapi.Routes()` is compared against the contract in both
   directions, and every response body is validated against the contract's
   schemas, all of which set `additionalProperties: false`. A renamed field is a

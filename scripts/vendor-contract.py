@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vendor the canonical core<->search contract from vizra-core, and its manifest.
+"""Vendor files vizra-core owns — the core<->search contract — and their manifest.
 
 WHY THIS SCRIPT EXISTS
 ======================
@@ -14,6 +14,33 @@ branch; core squash-merged, deleted the branch, and the recorded provenance
 pointed at an object no reviewer could fetch. This script exists so that cannot
 happen again, and so a hand-typed digest — a checksum of someone's attention
 rather than of the bytes — cannot happen either.
+
+TWO MANIFESTS, A CLOSED SET
+===========================
+
+`--manifest` selects which manifest a run vendors or checks. It accepts exactly
+one of these paths, and nothing else; there is no environment switch. What each
+one means is code in KNOWN_MANIFESTS, never read from the manifest itself:
+
+  api/CONTRACT-SOURCE.json   (the default)
+      The contract: two files out of core's api/. Commit pathspec `api/`, at
+      least 2 files.
+  scripts/ANCHOR-SOURCE.json
+      The make-anchor engine (queue 2o): the WHOLE of core's
+      scripts/makeanchor/ directory. Commit pathspec `scripts/makeanchor/`, at
+      least 3 files. Nothing is vendored under it yet, so the file does not
+      exist in this repository and naming it is refused until it does.
+
+For both: every vendored path must lie inside the pathspec, because the pinned
+commit is the last one touching the pathspec and a file outside it could change
+in core without moving that commit; and no path may be pinned twice, since a
+repeated entry would count twice towards the minimum. For the engine manifest,
+which mirrors a whole directory, the set of pinned files must also EQUAL what
+core holds there at the pinned commit (`git ls-tree`; any entry there that is
+not a regular-file blob is refused), and every file on disk under the directory
+must be pinned (`--check`; a directory named __pycache__ is not read, and a
+symlink is refused). Each of these refusals has a fixture in the selftest that
+fires it for the engine manifest; the non-regular-entry fixture uses a symlink.
 
 WHAT IT ACTUALLY ENFORCES
 =========================
@@ -36,7 +63,8 @@ Each of these is a refusal with a negative fixture in
     full refname and are refused, each named in the refusal. There is no
     suffix match and no escape hatch.
   * **The pinned commit is on that ref.** By default it is
-    `git log -1 <full refname> -- api/`, which is an ancestor by construction;
+    `git log -1 <full refname> -- <pathspec>` (`api/` for the contract), which
+    is an ancestor by construction;
     `--commit` lets a caller pin a different one, and that is checked with
     `merge-base --is-ancestor <commit> <full refname>` against the resolved ref
     rather than against anything the caller passed.
@@ -71,7 +99,8 @@ USAGE
 
   scripts/vendor-contract.py --core <path-to-a-vizra-core-checkout>
       Re-vendor from refs/remotes/origin/main. Writes both contract files and
-      rewrites the manifest.
+      rewrites the manifest. Every file is read out of core before any is
+      written.
 
   scripts/vendor-contract.py --check
       Self-check, needs no core checkout: every vendored file must match the
@@ -84,15 +113,21 @@ USAGE
   make vendor-contract CORE=<path>     make vendor-contract-check
   make vendor-contract-selftest        # the negative fixtures, no network
 
-Options: --remote (default origin), --ref (default <remote>/main; must resolve
-to refs/remotes/<remote>/main), --commit (pin a specific ancestor), --note
-(replace the manifest's $provenance_note).
+  Each form takes `--manifest scripts/ANCHOR-SOURCE.json` to work on the engine
+  manifest instead; there is no make target for it yet.
+
+Options: --manifest (default api/CONTRACT-SOURCE.json), --remote (default
+origin), --ref (default <remote>/main; must resolve to
+refs/remotes/<remote>/main), --commit (pin a specific ancestor), --note (replace
+the manifest's $provenance_note).
 
 It never runs a command that could modify the core checkout: only `remote
-get-url`, `rev-parse`, `for-each-ref`, `log`, `merge-base`, `cat-file` and `show`.
+get-url`, `rev-parse`, `for-each-ref`, `log`, `merge-base`, `cat-file`, `show`
+and, for the engine manifest, `ls-tree`.
 """
 
 import argparse
+import collections
 import datetime
 import hashlib
 import json
@@ -102,13 +137,70 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MANIFEST = os.path.join(REPO, "api", "CONTRACT-SOURCE.json")
 
-# The one repository this contract may come from. `source_repository` in the
-# manifest is asserted against this by internal/httpapi's manifest test too.
+# The one repository these files may come from. `source_repository` in the
+# contract manifest is asserted against this by internal/httpapi's manifest
+# test too.
 CANONICAL_HOST = "github.com"
 CANONICAL_OWNER_REPO = "yegamble/vizra-core"
-MIN_VENDORED_FILES = 2
+
+
+# The manifests this tool knows, and nothing else. `--manifest` must name one
+# of them exactly; there is no environment switch and no free path, so the
+# commit pathspec, the minimum file count and the directory rule below are
+# code, reviewed here, and never read from the manifest they police.
+#
+#   path            the manifest, relative to the repository root. It is also
+#                   what `--manifest` is given.
+#   what            the noun used in messages.
+#   authority       who owns the vendored files, cited when a manifest names
+#                   another source repository.
+#   pathspec        a directory, ending in "/". The pinned commit is the last
+#                   commit on the ref that touches it, and every vendored path
+#                   must lie inside it: a file outside it could change in core
+#                   without moving that commit.
+#   min_files       a manifest pinning fewer files is refused, so a truncated
+#                   manifest cannot leave an unpinned file editable in place.
+#   whole_directory True when the manifest mirrors the WHOLE pathspec
+#                   directory: every file core holds there at the pinned commit
+#                   must be pinned, and every file on disk under it must be
+#                   pinned. False for the contract, which vendors two files out
+#                   of core's api/.
+#   revendor        the command a failure message tells a person to run.
+KnownManifest = collections.namedtuple(
+    "KnownManifest", "path what authority pathspec min_files whole_directory revendor"
+)
+
+CONTRACT_MANIFEST = "api/CONTRACT-SOURCE.json"
+ANCHOR_MANIFEST = "scripts/ANCHOR-SOURCE.json"
+
+KNOWN_MANIFESTS = {
+    CONTRACT_MANIFEST: KnownManifest(
+        path=CONTRACT_MANIFEST,
+        what="contract",
+        authority="ADR-002, Q-001",
+        pathspec="api/",
+        min_files=2,
+        whole_directory=False,
+        revendor="`make vendor-contract CORE=<path>`",
+    ),
+    # The make-anchor engine (queue 2o, chair ruling 2026-09-23): owned by core
+    # in scripts/makeanchor/ and vendored here byte-identical, with its manifest
+    # OUTSIDE the directory so the directory's tree is the same in both
+    # repositories. Nothing is vendored under it yet. The minimum is a floor
+    # against a truncated manifest, not a statement of the engine's size; raise
+    # it to the vendored count when the engine is vendored.
+    ANCHOR_MANIFEST: KnownManifest(
+        path=ANCHOR_MANIFEST,
+        what="make-anchor engine",
+        authority="queue 2o architect ruling, 2026-09-23",
+        pathspec="scripts/makeanchor/",
+        min_files=3,
+        whole_directory=True,
+        revendor="`scripts/vendor-contract.py --manifest %s --core <path>`" % ANCHOR_MANIFEST,
+    ),
+}
+DEFAULT_MANIFEST = CONTRACT_MANIFEST
 
 
 def die(msg):
@@ -182,7 +274,7 @@ def parse_remote_url(url):
     return host, "/".join(parts)
 
 
-def check_remote_is_canonical(core, remote):
+def check_remote_is_canonical(core, remote, known):
     """Measure the checkout's remote URL and refuse a foreign repository."""
     out, err, rc = git_raw(core, "remote", "get-url", remote)
     if rc != 0:
@@ -198,7 +290,7 @@ def check_remote_is_canonical(core, remote):
         die(
             "remote %r of %s is %s\n"
             "  which is %s, not %s/%s.\n"
-            "  This contract may only be vendored from the canonical repository."
+            "  This %s may only be vendored from the canonical repository."
             % (
                 remote,
                 core,
@@ -206,6 +298,7 @@ def check_remote_is_canonical(core, remote):
                 ("%s/%s" % (host, owner_repo)) if owner_repo else "not a recognised repository URL",
                 CANONICAL_HOST,
                 CANONICAL_OWNER_REPO,
+                known.what,
             )
         )
     return shown, owner_repo
@@ -297,17 +390,21 @@ def refuse_shallow(core):
         )
 
 
-def choose_commit(core, full_ref, explicit):
-    """Return the commit to pin, having proved it is on `full_ref`."""
+def choose_commit(core, full_ref, explicit, pathspec):
+    """Return the commit to pin, having proved it is on `full_ref`.
+
+    Without --commit it is the last commit on `full_ref` that touches
+    `pathspec`, the selected manifest's directory.
+    """
     if explicit:
         out, err, rc = git_raw(core, "rev-parse", "--verify", "%s^{commit}" % explicit)
         if rc != 0:
             die("--commit %r is not a commit in %s" % (explicit, core))
         commit = out.decode().strip()
     else:
-        commit = gits(core, "log", "-1", "--format=%H", full_ref, "--", "api/")
+        commit = gits(core, "log", "-1", "--format=%H", full_ref, "--", pathspec)
         if len(commit) != 40:
-            die("could not find a commit on %s that touches api/ in %s" % (full_ref, core))
+            die("could not find a commit on %s that touches %s in %s" % (full_ref, pathspec, core))
 
     # Checked against the RESOLVED ref, not against anything the caller passed.
     _, _, rc = git_raw(core, "merge-base", "--is-ancestor", commit, full_ref)
@@ -324,24 +421,38 @@ def choose_commit(core, full_ref, explicit):
 # ---------------------------------------------------------------- manifest ---
 
 
-def load_manifest():
-    with open(MANIFEST, "rb") as fh:
+def manifest_file(known):
+    return os.path.join(REPO, known.path)
+
+
+def load_manifest(known):
+    """The one reader of the selected manifest. Every check reads what it returns."""
+    path = manifest_file(known)
+    if not os.path.isfile(path):
+        die("%s does not exist, so there is nothing to vendor or check under the %s manifest"
+            % (known.path, known.what))
+    with open(path, "rb") as fh:
         raw = fh.read()
     try:
         m = json.loads(raw.decode("utf-8"))
     except ValueError as exc:
-        die("%s is not valid JSON: %s" % (MANIFEST, exc))
+        die("%s is not valid JSON: %s" % (path, exc))
+    if not isinstance(m, dict):
+        die("%s is not a JSON object" % known.path)
     if m.get("source_repository") != CANONICAL_OWNER_REPO:
         die(
-            "the manifest names source_repository %r; %s owns this contract "
-            "(ADR-002, Q-001)" % (m.get("source_repository"), CANONICAL_OWNER_REPO)
+            "the manifest names source_repository %r; %s owns this %s "
+            "(%s)" % (m.get("source_repository"), CANONICAL_OWNER_REPO, known.what, known.authority)
         )
     files = m.get("files") or []
-    if len(files) < MIN_VENDORED_FILES:
+    if not isinstance(files, list) or not all(isinstance(e, dict) for e in files):
+        die("%s: `files` must be a list of objects" % known.path)
+    if len(files) < known.min_files:
         die(
             "the manifest pins %d file(s); it must pin at least %d, or an unpinned file "
-            "could be edited in place with CI green" % (len(files), MIN_VENDORED_FILES)
+            "could be edited in place with CI green" % (len(files), known.min_files)
         )
+    seen = set()
     for entry in files:
         for key in ("source_path", "vendored_path", "role"):
             if not str(entry.get(key) or "").strip():
@@ -355,7 +466,83 @@ def load_manifest():
         vendored = entry["vendored_path"]
         if os.path.isabs(vendored) or os.path.normpath(vendored) != vendored or vendored.startswith(".."):
             die("manifest entry %r is not a plain relative path inside the repository" % vendored)
+        # The pinned commit is the last one touching the pathspec, so a file
+        # outside it could change in core without moving that commit.
+        if not vendored.startswith(known.pathspec):
+            die(
+                "manifest entry %r is not inside %s; the %s manifest vendors only from that "
+                "directory, and its pinned commit tracks nothing else" % (vendored, known.pathspec, known.what)
+            )
+        # A repeated entry would count twice towards the minimum.
+        if vendored in seen:
+            die("the manifest pins %r twice" % vendored)
+        seen.add(vendored)
     return m
+
+
+def core_directory(core, commit, known):
+    """Every file core holds under the manifest's directory at `commit`, as a set.
+
+    Only regular blobs are vendorable: a symlink or a submodule in that
+    directory is refused rather than read as bytes.
+    """
+    out = git(core, "ls-tree", "-r", "-z", "--full-tree", commit, "--", known.pathspec)
+    paths = set()
+    for record in out.decode("utf-8", "replace").split("\0"):
+        if not record:
+            continue
+        meta, _, path = record.partition("\t")
+        fields = meta.split(" ")
+        if len(fields) != 3 or not path:
+            die("unreadable ls-tree record in %s at %s: %r" % (core, commit, record))
+        mode, kind = fields[0], fields[1]
+        if kind != "blob" or mode not in ("100644", "100755"):
+            die("%s at %s is a %s with mode %s, not a regular file; it cannot be vendored"
+                % (path, commit[:12], kind, mode))
+        paths.add(path)
+    return paths
+
+
+def whole_directory_problems_in_core(held, commit, m, known):
+    """A whole-directory manifest must pin exactly the files core holds there (`held`)."""
+    pinned = set(entry["source_path"] for entry in m["files"])
+    problems = []
+    for path in sorted(held - pinned):
+        problems.append(
+            "core's %s at %s holds %s, which the manifest does not pin; add it to the manifest's "
+            "files so the whole directory is vendored" % (known.pathspec, commit[:12], path)
+        )
+    for path in sorted(pinned - held):
+        problems.append(
+            "the manifest pins %s, which core does not hold at %s" % (path, commit[:12])
+        )
+    return problems
+
+
+def whole_directory_problems_on_disk(m, known):
+    """Every file on disk under a whole-directory manifest's directory must be pinned.
+
+    A directory named __pycache__ is not read: Python writes one beside any
+    module it imports. Anything else unpinned, including a symlink, is refused.
+    """
+    root = os.path.join(REPO, known.pathspec)
+    if not os.path.isdir(root):
+        return []  # each pinned file then reports itself as missing
+    pinned = set(entry["vendored_path"] for entry in m["files"])
+    problems = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames.sort()
+        entries = sorted(filenames) + [d for d in dirnames if os.path.islink(os.path.join(dirpath, d))]
+        dirnames[:] = [d for d in dirnames
+                       if d != "__pycache__" and not os.path.islink(os.path.join(dirpath, d))]
+        for name in entries:
+            full = os.path.join(dirpath, name)
+            rel = os.path.relpath(full, REPO).replace(os.sep, "/")
+            if os.path.islink(full):
+                problems.append("%s is a symlink inside %s; only regular files are vendored" % (rel, known.pathspec))
+            elif rel not in pinned:
+                problems.append("%s is inside %s but the manifest does not pin it" % (rel, known.pathspec))
+    return problems
 
 
 def insert_after(mapping, anchor, key, value):
@@ -374,8 +561,8 @@ def insert_after(mapping, anchor, key, value):
     return out
 
 
-def write_manifest(m):
-    with open(MANIFEST, "w", encoding="utf-8") as fh:
+def write_manifest(m, known):
+    with open(manifest_file(known), "w", encoding="utf-8") as fh:
         fh.write(json.dumps(m, indent=2, ensure_ascii=False) + "\n")
 
 
@@ -390,27 +577,36 @@ def read_from_core(core, commit, path):
 
 
 def vendor(args):
-    m = load_manifest()
+    known = KNOWN_MANIFESTS[args.manifest]
+    m = load_manifest(known)
     core = os.path.abspath(args.core)
     if not os.path.isdir(os.path.join(core, ".git")) and not os.path.isfile(os.path.join(core, ".git")):
         die("%s is not a git checkout" % core)
 
-    url_shown, owner_repo = check_remote_is_canonical(core, args.remote)
+    url_shown, owner_repo = check_remote_is_canonical(core, args.remote, known)
     refuse_shallow(core)
     full_ref, tip = resolve_ref(core, args.remote, args.ref)
-    commit = choose_commit(core, full_ref, args.commit)
+    commit = choose_commit(core, full_ref, args.commit, known.pathspec)
+    if known.whole_directory:
+        problems = whole_directory_problems_in_core(core_directory(core, commit, known), commit, m, known)
+        if problems:
+            die("refusing to vendor; nothing was written:\n  " + "\n  ".join(problems))
 
     print("core checkout     : %s" % core)
     print("remote %-11s: %s   [measured: git remote get-url]" % (args.remote, url_shown))
     print("  -> repository   : %s" % owner_repo)
     print("resolved ref      : %s   [--ref %s]" % (full_ref, args.ref))
     print("  -> tip          : %s" % tip)
-    print("pinned commit     : %s%s" % (commit, "" if args.commit else "   (last commit on that ref touching api/)"))
+    print("pinned commit     : %s%s" % (commit, "" if args.commit else "   (last commit on that ref touching %s)" % known.pathspec))
     print("subject           : %s" % gits(core, "log", "-1", "--format=%s", commit))
     print("")
 
+    # Every file is read out of core BEFORE any is written, so a refusal part
+    # way through leaves the tree as it was.
+    wanted = [(entry, read_from_core(core, commit, entry["source_path"])) for entry in m["files"]]
+
     changed = []
-    for entry in m["files"]:
+    for entry, raw in wanted:
         path = entry["vendored_path"]
         dest = os.path.join(REPO, path)
         before = None
@@ -418,7 +614,7 @@ def vendor(args):
             with open(dest, "rb") as fh:
                 before = fh.read()
 
-        raw = read_from_core(core, commit, entry["source_path"])
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
         with open(dest, "wb") as fh:
             fh.write(raw)
 
@@ -434,6 +630,7 @@ def vendor(args):
         state = "unchanged"
         if before is None:
             state = "NEW"
+            changed.append(path)
         elif before != written:
             state = "UPDATED  (was %s, %d bytes)" % (sha256(before), len(before))
             changed.append(path)
@@ -449,10 +646,10 @@ def vendor(args):
     # Keep the tip beside the ref it belongs to rather than appended at the end,
     # so the provenance block reads as one thing.
     m = insert_after(m, "source_ref", "source_ref_tip", tip)
-    write_manifest(m)
+    write_manifest(m, known)
 
     print("")
-    print("manifest          : %s" % os.path.relpath(MANIFEST, REPO))
+    print("manifest          : %s" % known.path)
     print("  source_repository : %s" % m["source_repository"])
     print("  source_ref        : %s" % m["source_ref"])
     print("  source_ref_tip    : %s" % m["source_ref_tip"])
@@ -470,7 +667,8 @@ def vendor(args):
 
 
 def check(args):
-    m = load_manifest()
+    known = KNOWN_MANIFESTS[args.manifest]
+    m = load_manifest(known)
     problems = []
 
     if len(m.get("source_commit") or "") != 40:
@@ -524,15 +722,17 @@ def check(args):
             problems.append(
                 "%s is %d bytes, the manifest says %s" % (path, len(raw), entry.get("bytes"))
             )
+    if known.whole_directory:
+        problems.extend(whole_directory_problems_on_disk(m, known))
 
     if args.core:
         core = os.path.abspath(args.core)
         if not os.path.isdir(os.path.join(core, ".git")) and not os.path.isfile(os.path.join(core, ".git")):
             die("%s is not a git checkout" % core)
-        url_shown, owner_repo = check_remote_is_canonical(core, args.remote)
+        url_shown, owner_repo = check_remote_is_canonical(core, args.remote, known)
         refuse_shallow(core)
         full_ref, tip = resolve_ref(core, args.remote, args.ref)
-        commit = choose_commit(core, full_ref, args.commit)
+        commit = choose_commit(core, full_ref, args.commit, known.pathspec)
         print("")
         print("core remote %-7s: %s   [measured]" % (args.remote, url_shown))
         print("resolved ref       : %s (tip %s)" % (full_ref, tip))
@@ -578,10 +778,17 @@ def check(args):
                       "from here: that it was the tip when the files were vendored." % (recorded_tip[:12], tip[:12], full_ref))
         if commit != m.get("source_commit"):
             problems.append(
-                "the manifest pins %s, but the current last api/ commit on %s is %s — re-vendor"
-                % (m.get("source_commit"), full_ref, commit)
+                "the manifest pins %s, but the current last %s commit on %s is %s — re-vendor"
+                % (m.get("source_commit"), known.pathspec, full_ref, commit)
             )
+        missing_in_core = set()
+        if known.whole_directory:
+            held = core_directory(core, m["source_commit"], known)
+            problems.extend(whole_directory_problems_in_core(held, m["source_commit"], m, known))
+            missing_in_core = set(entry["source_path"] for entry in m["files"]) - held
         for entry in m["files"]:
+            if entry["source_path"] in missing_in_core:
+                continue
             raw = read_from_core(core, m["source_commit"], entry["source_path"])
             if sha256(raw) != entry.get("sha256"):
                 problems.append(
@@ -595,8 +802,8 @@ def check(args):
             sys.stderr.write("vendor-contract: FAIL: %s\n" % p)
         sys.stderr.write(
             "vendor-contract: %d problem(s). This repository does not own these files; "
-            "re-vendor with `make vendor-contract CORE=<path>` instead of editing them.\n"
-            % len(problems)
+            "re-vendor with %s instead of editing them.\n"
+            % (len(problems), known.revendor)
         )
         return 1
     print("vendor-contract: OK — every vendored file matches the manifest%s."
@@ -606,8 +813,16 @@ def check(args):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Vendor the canonical core<->search contract from vizra-core.",
+        description="Vendor files vizra-core owns (the core<->search contract, or the make-anchor "
+                    "engine) and record their provenance in a manifest.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "--manifest",
+        choices=sorted(KNOWN_MANIFESTS),
+        default=DEFAULT_MANIFEST,
+        help="which manifest to vendor or check; one of the known manifests, exactly "
+             "(default %s)" % DEFAULT_MANIFEST,
     )
     ap.add_argument(
         "--core",
