@@ -1,0 +1,11 @@
+### anchor BEFORE the parse-time pre-flight (make-integrity-guard.py as ported), GNU Make GNU Make 3.81
+--- shell: Makefile sha256 4b758bc3dff8 -> 308ca74fd5cb; anchor exit 0; $GITHUB_ENV after the anchor: MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i 
+make-integrity-guard: passed (9 gate target(s))
+--- file: Makefile sha256 4b758bc3dff8 -> cf9da9badd3f; anchor exit 1; $GITHUB_ENV after the anchor: 
+  FAIL  the environment sets GITHUB_ENV='<scratch>/parse-side-effects/genv', and this is the WORKFLOW anchor.
+make-integrity-guard: FAILED
+--- remake: Makefile sha256 4b758bc3dff8 -> c6d20f233d76; anchor exit 0; $GITHUB_ENV after the anchor: 
+make-integrity-guard: passed (9 gate target(s))
+--- plus: Makefile sha256 4b758bc3dff8 -> 67e592a4f10f; anchor exit 1; $GITHUB_ENV after the anchor: MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i 
+  FAIL  Makefile:56 — gate target `vet` has a recipe line prefixed `+`: `+@echo MAKEFLAGS=-i >> "$$GITHUB_ENV"`
+make-integrity-guard: FAILED

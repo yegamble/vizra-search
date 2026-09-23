@@ -1,0 +1,142 @@
+# FINDING 16 follow-up tree: HEAD 854a337 + this commit's changes (after removing a vendored-file name from scripts_test.go); Darwin arm64; go version go1.27.1 darwin/arm64; GNU Make 3.81; python 3.9.6; 2026-09-23T15:57:07Z
+
+$ env -i HOME=$HOME PATH=$PATH ./scripts/ci-required-guard.sh
+required checks:
+  - fmt
+  - vet
+  - echo-containment
+  - build
+  - contract-drift
+  - test
+  - test-noskip
+  - tidy-check
+  - govulncheck
+  - vendor-contract-selftest
+  - docker-build
+workflows parsed: 2; no continue-on-error on any job or step
+workflow anchor: .github/workflows/ci.yml:jobs.contract-drift runs `./scripts/contract-drift-guard.py recipe` unconditionally at step 2, before `make contract-drift` at step 4
+manifest entries are bare job names
+every pullable Dockerfile base image is pinned by digest
+the workflow checker rejects every continue-on-error spelling in scripts/testdata/ (6 fixtures exercised, floor 6)
+ci-required-guard.py:
+  ok    pinned-steps.yml: anchor pinned; 8 make body(ies), 1 direct test body(ies), required invocations for ['build', 'contract-drift', 'echo-containment', 'fmt', 'test', 'test-noskip', 'tidy-check', 'vendor-contract-selftest', 'vet']
+  ok    variables refused as job/workflow env besides the make/shell family: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+  ok    all 6 floor lane(s) are present in the manifest: ['build', 'test', 'test-noskip', 'contract-drift', 'govulncheck', 'vendor-contract-selftest']
+  ok    checked lane 'build': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'build' runs all 1 required invocation(s)
+  ok    checked lane 'contract-drift': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'contract-drift' runs all 1 required invocation(s)
+  ok    checked lane 'echo-containment': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'echo-containment' runs all 1 required invocation(s)
+  ok    checked lane 'fmt': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'fmt' runs all 1 required invocation(s)
+  ok    checked lane 'test': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'test' runs all 1 required invocation(s)
+  ok    checked lane 'test-noskip': 0 make step(s) and 1 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'test-noskip' runs all 1 required invocation(s)
+  ok    checked lane 'tidy-check': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'tidy-check' runs all 1 required invocation(s)
+  ok    checked lane 'vendor-contract-selftest': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'vendor-contract-selftest' runs all 1 required invocation(s)
+  ok    checked lane 'vet': 1 make step(s) and 0 direct test step(s) are byte-equal to a pinned body and carry no key but name/run/id; each make step is immediately preceded by the pinned anchor
+  ok    checked lane 'vet' runs all 1 required invocation(s)
+  ok    the suite runs directly, with no make step, from a pinned body in lane(s) ['test-noskip']
+  ok    the `test` lane selects the whole module (PKG = ./...)
+  ok    the `test` target runs $(PKG) with no test-selecting flag
+  ok    `make ci` runs exactly the required make lanes plus test-noskip: ['fmt-check', 'vet', 'echo-containment', 'build', 'contract-drift', 'test', 'test-noskip', 'tidy-check', 'vendor-contract-selftest']
+  ok    pinned-makefiles.yml pins ['Makefile'] by sha256; each is a regular file matching its pin, the reviewed bytes include nothing unpinned, and no unpinned GNUmakefile/makefile sits beside them
+  ok    every job runs on GitHub-hosted ubuntu-24.04
+  ok    every third-party action is pinned to a commit SHA
+ci-required-guard.py: passed (11 required check(s), 11 checked lane(s))
+# exit: 0
+
+$ env -i HOME=$HOME PATH=$PATH ./scripts/make-integrity-guard.sh --workflow
+make-integrity-guard: /Users/yosefgamble/github/vizra/.claude/worktrees/search-pr5-close5
+  gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+  ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+  ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+  ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+  ok    make runs only on REVIEWED bytes: Makefile sha256 e9d7c58edc93… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+  ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+  closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+  ok    make read 1 makefile(s): Makefile
+  ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+  ok    gate target `ci` is defined exactly once (Makefile:51)
+  ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+  ok    gate target `vet` is defined exactly once (Makefile:62)
+  ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+  ok    gate target `build` is defined exactly once (Makefile:75)
+  ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+  ok    gate target `test` is defined exactly once (Makefile:137)
+  ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+  ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+  ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+  ok    `ci`: make resolves SHELL to the approved /bin/bash
+  ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `ci`: `.ONESHELL:` is not in effect
+  ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `ci`: make reports no duplicate-definition override
+  ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+  ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `fmt-check`: `.ONESHELL:` is not in effect
+  ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `fmt-check`: make reports no duplicate-definition override
+  ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `vet`: make resolves SHELL to the approved /bin/bash
+  ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `vet`: `.ONESHELL:` is not in effect
+  ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `vet`: make reports no duplicate-definition override
+  ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+  ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `echo-containment`: `.ONESHELL:` is not in effect
+  ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `echo-containment`: make reports no duplicate-definition override
+  ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `build`: make resolves SHELL to the approved /bin/bash
+  ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `build`: `.ONESHELL:` is not in effect
+  ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `build`: make reports no duplicate-definition override
+  ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+  ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `contract-drift`: `.ONESHELL:` is not in effect
+  ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `contract-drift`: make reports no duplicate-definition override
+  ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `test`: make resolves SHELL to the approved /bin/bash
+  ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `test`: `.ONESHELL:` is not in effect
+  ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `test`: make reports no duplicate-definition override
+  ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+  ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `tidy-check`: `.ONESHELL:` is not in effect
+  ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `tidy-check`: make reports no duplicate-definition override
+  ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+  ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+  ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+  ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+  ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+  ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+  ok    `make -q Makefile` again at the end: still nothing would be remade
+make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+# exit: 0
+
+$ env -i HOME=$HOME PATH=$PATH python3 scripts/vendor-contract.py --check
+manifest source_repository : yegamble/vizra-core
+manifest source_ref        : refs/remotes/origin/main
+manifest source_ref_tip    : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+manifest source_commit     : 4a80a1e3f36b8001c2954d0568bea29268e739fe
+
+api/search-internal.openapi.yaml   sha256=a78d8aa7320dbd49530b10bf1c9dcb22ff5f586f06bd7c821aa7cb8b4a735448 bytes=25297  OK
+api/search-hmac-testvectors.json   sha256=f95623b0ad6783818bc73c5b4d516d84ce7b2b6afde01397a6c8b15a422c2862 bytes=22321  OK
+
+vendor-contract: OK — every vendored file matches the manifest.
+# exit: 0

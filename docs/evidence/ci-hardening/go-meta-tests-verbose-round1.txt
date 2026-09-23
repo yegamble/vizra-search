@@ -1,0 +1,398 @@
+    scripts_test.go:242: refused, as required: mutation "absent" did not apply: "run: make no-such-target\n" occurs 0 time(s) in .github/workflows/ci.yml, want exactly 1
+    scripts_test.go:242: refused, as required: mutation "ambiguous" did not apply: "runs-on: ubuntu-24.04\n" occurs 11 time(s) in .github/workflows/ci.yml, want exactly 1
+    scripts_test.go:242: refused, as required: mutation "no-op" changed nothing in .github/workflows/ci.yml
+--- PASS: TestTheHarnessRefusesAMutationThatDidNotApply (0.21s)
+    scripts_test.go:371: pins: duplicate key | .github/pinned-steps.yml sha256 6708acb13b1c -> d9264954ab18 -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_duplicate_key412492291/001/.github/pinned-steps.yml is refused by the strict YAML reader: duplicate key 'anchor_step' (first at line 48); the guard refuses to guess which value a runner would use | restored: GREEN exit 0
+    scripts_test.go:371: job env BASH_ENV | .github/workflows/ci.yml sha256 249f0fd16173 -> c86e0e9aa8f4 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets BASH_ENV: '/tmp/fn.sh', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env PATH | .github/workflows/ci.yml sha256 249f0fd16173 -> 5f1738d4e62a -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets PATH: '/tmp/stub:/usr/bin', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: not on pull_request | .github/workflows/ci.yml sha256 249f0fd16173 -> 1431ebdca692 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'build' (ci.yml) is not triggered on pull_request. | restored: GREEN exit 0
+    scripts_test.go:371: job env GOFLAGS on the direct lane | .github/workflows/ci.yml sha256 249f0fd16173 -> 9f2e1020809f -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) job-level env sets GOFLAGS: '-run=^$', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env VERSION (Makefile ?=) | .github/workflows/ci.yml sha256 249f0fd16173 -> d6363ca63fc8 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets VERSION: 'x', which the Makefile takes from the environment (`?=` or referenced-unassigned) — so the environment decides what the recipe runs, and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: make -i | .github/workflows/ci.yml sha256 249f0fd16173 -> 23e27b4c3ba0 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: job defaults.run.working-directory | .github/workflows/ci.yml sha256 249f0fd16173 -> 0324b2758e41 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) sets a job-level defaults.run: {'working-directory': 'internal'}. | restored: GREEN exit 0
+    scripts_test.go:371: merge key | .github/workflows/ci.yml sha256 249f0fd16173 -> 2ece38b70a7e -> restored 249f0fd16173 | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmerge_key3416029972/001/.github/workflows/ci.yml is refused by the strict YAML reader: YAML merge key `<<` — it splices keys into this mapping from elsewhere in the file, so what a reviewer sees beside the step is not all the step carries; refused | restored: GREEN exit 0
+    scripts_test.go:371: duplicate run key | .github/workflows/ci.yml sha256 249f0fd16173 -> 9df76007b073 -> restored 249f0fd16173 | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionduplicate_run_key544034102/001/.github/workflows/ci.yml is refused by the strict YAML reader: duplicate key 'run' (first at line 158); the guard refuses to guess which value a runner would use | restored: GREEN exit 0
+    scripts_test.go:371: job reusable workflow | .github/workflows/ci.yml sha256 249f0fd16173 -> ea5f8b6906c3 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) is a reusable-workflow call (`uses: ./.github/workflows/other.yml`). | restored: GREEN exit 0
+    scripts_test.go:371: runner changed | .github/workflows/ci.yml sha256 249f0fd16173 -> 530de8439b40 -> restored 249f0fd16173 | RED exit 1: FAIL  job(s) on a runner other than ubuntu-24.04: | restored: GREEN exit 0
+    scripts_test.go:371: action unpinned | .github/workflows/ci.yml sha256 249f0fd16173 -> 7b932cf86a79 -> restored 249f0fd16173 | RED exit 1: FAIL  action(s) not pinned to a 40-character commit SHA: | restored: GREEN exit 0
+    scripts_test.go:371: job continue-on-error | .github/workflows/ci.yml sha256 249f0fd16173 -> 4bf02a791365 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries continue-on-error: | restored: GREEN exit 0
+    scripts_test.go:371: job if: false | .github/workflows/ci.yml sha256 249f0fd16173 -> d6d6c0d0b22a -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries a job-level `if:` ('${{ false }}'). | restored: GREEN exit 0
+    scripts_test.go:371: undigested service image | .github/workflows/ci.yml sha256 249f0fd16173 -> 0fd622fdc738 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) service 'pg' image 'postgres:18' is not digest-pinned. | restored: GREEN exit 0
+    scripts_test.go:371: job env ENV | .github/workflows/ci.yml sha256 249f0fd16173 -> e713156e1415 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets ENV: '/tmp/fn.sh', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job container | .github/workflows/ci.yml sha256 249f0fd16173 -> d1ce1e07cc5e -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) runs in a job-level `container:` ('ubuntu:24.04'). | restored: GREEN exit 0
+    scripts_test.go:371: workflow env MFLAGS | .github/workflows/ci.yml sha256 249f0fd16173 -> b39e89be467d -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets MFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: workflow defaults.run.shell | .github/workflows/ci.yml sha256 249f0fd16173 -> 37fac041f68d -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'build' (ci.yml) sets a workflow-level defaults.run: {'shell': "bash -c 'exit 0' {0}"}. | restored: GREEN exit 0
+    scripts_test.go:371: job env CORE (Makefile ?=) | .github/workflows/ci.yml sha256 249f0fd16173 -> 0021a80eabba -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets CORE: '/tmp/evil', which the Makefile takes from the environment (`?=` or referenced-unassigned) — so the environment decides what the recipe runs, and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: step env MAKEFLAGS | .github/workflows/ci.yml sha256 249f0fd16173 -> 50454f2aa6e4 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['env']. | restored: GREEN exit 0
+    scripts_test.go:371: job env MAKECMDGOALS | .github/workflows/ci.yml sha256 249f0fd16173 -> 9bdfa463300f -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKECMDGOALS: 'ci', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env MAKEFILES | .github/workflows/ci.yml sha256 249f0fd16173 -> 356ddf8eb956 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKEFILES: '/tmp/x.mk', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env MAKEFLAGS | .github/workflows/ci.yml sha256 249f0fd16173 -> d063b4bc3060 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKEFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env MAKELEVEL | .github/workflows/ci.yml sha256 249f0fd16173 -> 5ad2ca85d477 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKELEVEL: '1', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: job env MAKE_RESTARTS | .github/workflows/ci.yml sha256 249f0fd16173 -> eb4109fe2a45 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKE_RESTARTS: '1', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: an extra unpinned make step | .github/workflows/ci.yml sha256 249f0fd16173 -> 35b16b8fdb87 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'extra' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: make test replaced by true | .github/workflows/ci.yml sha256 249f0fd16173 -> 8420a874a7a5 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) does not run required invocation(s) ['make test']. | restored: GREEN exit 0
+    scripts_test.go:371: anchor if: | .github/workflows/ci.yml sha256 249f0fd16173 -> 2fbb92619fab -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) anchor step 'refuse a neutered Makefile or make environment (anchor)' carries ['if']. | restored: GREEN exit 0
+    scripts_test.go:371: real anchor then look-alike | .github/workflows/ci.yml sha256 249f0fd16173 -> 3a807a12ad9c -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'look-alike' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: anchor env MAKELEVEL | .github/workflows/ci.yml sha256 249f0fd16173 -> d135f64313c3 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) anchor step 'refuse a neutered Makefile or make environment (anchor)' carries ['env']. | restored: GREEN exit 0
+    scripts_test.go:371: fake no-op anchor | .github/workflows/ci.yml sha256 249f0fd16173 -> db488398082e -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: compound anchor writes GITHUB_PATH | .github/workflows/ci.yml sha256 249f0fd16173 -> 83cd8a9479e1 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: compound anchor writes MAKELEVEL | .github/workflows/ci.yml sha256 249f0fd16173 -> 079c35a5ed90 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: compound anchor writes GITHUB_ENV | .github/workflows/ci.yml sha256 249f0fd16173 -> 5bf2d8c08eb2 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: anchor without --workflow | .github/workflows/ci.yml sha256 249f0fd16173 -> a18adb013bd0 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+    scripts_test.go:371: anchor not adjacent | .github/workflows/ci.yml sha256 249f0fd16173 -> eb3e0b9548e6 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' is not IMMEDIATELY preceded by the pinned make-integrity-guard anchor; the step before it is 'between'. | restored: GREEN exit 0
+    scripts_test.go:371: anchor deleted | .github/workflows/ci.yml sha256 249f0fd16173 -> 3dade535e014 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' is not IMMEDIATELY preceded by the pinned make-integrity-guard anchor; the step before it is 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'. | restored: GREEN exit 0
+    scripts_test.go:371: step timeout-minutes | .github/workflows/ci.yml sha256 249f0fd16173 -> 78cfdf801ab0 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['timeout-minutes']. | restored: GREEN exit 0
+    scripts_test.go:371: step continue-on-error | .github/workflows/ci.yml sha256 249f0fd16173 -> d14cd63c6899 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries continue-on-error: | restored: GREEN exit 0
+    scripts_test.go:371: step shell {0} || true | .github/workflows/ci.yml sha256 249f0fd16173 -> 1ebb071eb6d5 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['shell']. | restored: GREEN exit 0
+    scripts_test.go:371: PATH shadow | .github/workflows/ci.yml sha256 249f0fd16173 -> 289c24235a71 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: step working-directory | .github/workflows/ci.yml sha256 249f0fd16173 -> 93c69855a2d7 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['working-directory']. | restored: GREEN exit 0
+    scripts_test.go:371: make token only in a comment | .github/workflows/ci.yml sha256 249f0fd16173 -> 3ea20ac76fa2 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'innocent' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: step if: always() && false | .github/workflows/ci.yml sha256 249f0fd16173 -> 79c5e4c4dc06 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['if']. | restored: GREEN exit 0
+    scripts_test.go:371: untokenisable | .github/workflows/ci.yml sha256 249f0fd16173 -> bed15c045c05 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: chained | .github/workflows/ci.yml sha256 249f0fd16173 -> 42ea19358ccb -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: long-option abbreviation | .github/workflows/ci.yml sha256 249f0fd16173 -> 34d9f94f449f -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: make -C | .github/workflows/ci.yml sha256 249f0fd16173 -> 15ecb7a23aea -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: override after target | .github/workflows/ci.yml sha256 249f0fd16173 -> 4814ffbf7a3b -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: manifest names no job | .github/required-checks.txt sha256 e4e780654704 -> fc71342cd740 -> restored e4e780654704 | RED exit 1: FAIL  required check 'no-such-lane' matches no job in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmanifest_names_no_job3983373528/001/.github/workflows. | restored: GREEN exit 0
+    scripts_test.go:371: makefile pin: not a sha256 | .github/pinned-makefiles.yml sha256 8d83c2bceb6e -> dd0ca86ccf92 -> restored 8d83c2bceb6e | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmakefile_pin_not_a_sha253086733510/001/.github/pinned-makefiles.yml has entries that are not `relative/path: <64 lowercase hex>`: | restored: GREEN exit 0
+    scripts_test.go:371: makefile pin emptied | .github/pinned-makefiles.yml sha256 8d83c2bceb6e -> b5a613f32d43 -> restored 8d83c2bceb6e | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmakefile_pin_emptied2357866107/001/.github/pinned-makefiles.yml pins nothing (it must be a non-empty `path: sha256` mapping). | restored: GREEN exit 0
+    scripts_test.go:371: makefile pin: Makefile not covered | .github/pinned-makefiles.yml sha256 8d83c2bceb6e -> 69a903dc0654 -> restored 8d83c2bceb6e | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmakefile_pin_Makefile_no976704283/001/.github/pinned-makefiles.yml does not pin `Makefile`. | restored: GREEN exit 0
+    scripts_test.go:371: pins: a body nothing requires | .github/pinned-steps.yml sha256 6708acb13b1c -> 91f84d280b56 -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_a_body_nothing_requ1361264762/001/.github/pinned-steps.yml pins body(ies) ['make ci'] that no job is required to run. A pin nothing must run is surface with no gate behind it; require it or remove it. | restored: GREEN exit 0
+    scripts_test.go:371: Makefile edited, pin not updated | Makefile sha256 128b0f87a432 -> 0aa25844a48a -> restored 128b0f87a432 | RED exit 1: FAIL  Makefile sha256 0aa25844a48ad7c33596ad03b18ecf151e28165693499e0f8b047006a1408a09 does not match its pin 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726 in pinned-makefiles.yml. | restored: GREEN exit 0
+    scripts_test.go:371: pins: unknown key | .github/pinned-steps.yml sha256 6708acb13b1c -> fb225a77faae -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_unknown_key3851246974/001/.github/pinned-steps.yml carries unknown key(s) ['extra_allowance']; the pins file is default-deny too — only ['anchor_step', 'direct_test_steps', 'make_steps', 'required_invocations'] mean anything. | restored: GREEN exit 0
+    scripts_test.go:371: lane dropped from make ci | Makefile sha256 128b0f87a432 -> 6279c841a752 -> restored 128b0f87a432 | RED exit 1: FAIL  the Makefile's `ci:` and the required lanes disagree. | restored: GREEN exit 0
+    scripts_test.go:371: required job removed from the workflow | .github/workflows/ci.yml sha256 249f0fd16173 -> 003b7ccc3e0c -> restored 249f0fd16173 | RED exit 1: FAIL  required check 'vendor-contract-selftest' matches no job in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionrequired_job_removed_from1210646302/001/.github/workflows. | restored: GREEN exit 0
+    scripts_test.go:371: direct: -run added | .github/workflows/ci.yml sha256 249f0fd16173 -> 3e81fe998eb7 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: workflow env GNUMAKEFLAGS | .github/workflows/ci.yml sha256 249f0fd16173 -> 40342ec67688 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets GNUMAKEFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: floor lane commented out | .github/required-checks.txt sha256 e4e780654704 -> ec70770fcab3 -> restored e4e780654704 | RED exit 1: FAIL  required lane 'test-noskip' is COMMENTED OUT in required-checks.txt. | restored: GREEN exit 0
+    scripts_test.go:371: direct: step if: | .github/workflows/ci.yml sha256 249f0fd16173 -> 59897fb17496 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) direct test step 'nothing is skipped and every package meets its floor (Q-001), without make' carries ['if']. | restored: GREEN exit 0
+    scripts_test.go:371: floor lane removed from manifest | .github/required-checks.txt sha256 e4e780654704 -> ffcf17e96b40 -> restored e4e780654704 | RED exit 1: FAIL  required lane 'vendor-contract-selftest' is MISSING from required-checks.txt. | restored: GREEN exit 0
+    scripts_test.go:371: direct: GOFLAGS guard removed | .github/workflows/ci.yml sha256 249f0fd16173 -> c353759aceeb -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: M=make; $M -i | .github/workflows/ci.yml sha256 249f0fd16173 -> 5afec0480d42 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: bash -c | .github/workflows/ci.yml sha256 249f0fd16173 -> a1e75591a0f4 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: backticks | .github/workflows/ci.yml sha256 249f0fd16173 -> ba18be0ba49a -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: shell function named make | .github/workflows/ci.yml sha256 249f0fd16173 -> eac990edc98c -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: direct: exit $rc removed | .github/workflows/ci.yml sha256 249f0fd16173 -> 605e4de019b0 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: ${MAKE:-make} -i | .github/workflows/ci.yml sha256 249f0fd16173 -> f2028638257f -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) does not run required invocation(s) ['make test']. | restored: GREEN exit 0
+    scripts_test.go:371: direct: go test exit swallowed | .github/workflows/ci.yml sha256 249f0fd16173 -> d1bc3a3aaadc -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: direct: || exit 1 removed | .github/workflows/ci.yml sha256 249f0fd16173 -> 29f3ee011e6a -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: direct: report line removed | .github/workflows/ci.yml sha256 249f0fd16173 -> bc0cc1c402bd -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without make' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+    scripts_test.go:371: workflow env MAKEOVERRIDES | .github/workflows/ci.yml sha256 249f0fd16173 -> 0634efdd578a -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets MAKEOVERRIDES: 'SHELL=/usr/bin/true', and this job runs make or `go test`. | restored: GREEN exit 0
+    scripts_test.go:371: MAKEFLAGS=-i prefix | .github/workflows/ci.yml sha256 249f0fd16173 -> 8b0381ae3eb0 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: export GNUMAKEFLAGS above | .github/workflows/ci.yml sha256 249f0fd16173 -> d834ad55a819 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: export MAKEFLAGS above | .github/workflows/ci.yml sha256 249f0fd16173 -> e6260617b2aa -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: make -j -i (optarg swallow) | .github/workflows/ci.yml sha256 249f0fd16173 -> 62ccb928c6cb -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+    scripts_test.go:371: make -l -i (optarg swallow) | .github/workflows/ci.yml sha256 249f0fd16173 -> 0d0e6a8546d2 -> restored 249f0fd16173 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+--- PASS: TestCIRequiredGuardRefusesEveryEvasion (0.29s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key (1.76s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV (2.03s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH (2.03s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request (2.12s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=) (2.12s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane (2.12s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-i (2.49s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory (2.60s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/merge_key (1.96s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key (1.90s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow (1.94s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/runner_changed (2.10s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/action_unpinned (2.52s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error (2.22s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_if:_false (2.20s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image (2.27s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV (1.51s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_container (1.57s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS (1.46s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell (1.72s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=) (2.00s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS (1.87s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS (1.52s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES (1.74s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS (1.79s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL (1.98s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS (2.06s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step (1.82s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true (2.01s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_if: (1.72s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike (1.81s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL (2.16s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor (1.91s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL (2.12s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH (2.07s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV (2.07s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow (2.23s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent (2.22s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted (2.14s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes (2.04s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error (2.30s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true (2.19s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow (2.24s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_working-directory (2.54s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment (2.46s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false (2.52s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/untokenisable (2.51s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/chained (2.66s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation (1.76s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-C (2.17s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/override_after_target (1.97s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job (1.89s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256 (1.61s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied (1.61s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered (1.72s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires (1.18s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated (1.75s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key (1.34s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci (1.70s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow (1.92s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added (1.93s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS (2.13s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out (2.02s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if: (2.03s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest (2.13s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed (2.31s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i (2.54s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/bash_-c (2.13s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/backticks (2.12s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make (2.20s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed (2.00s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i (2.32s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed (1.95s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed (1.84s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed (1.46s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES (1.57s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix (1.73s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above (1.64s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above (1.53s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow) (1.75s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow) (1.77s)
+--- PASS: TestCIRequiredGuardPassesOnTheRealWorkflows (0.42s)
+    scripts_test.go:420: comment-only manifest: exit 1, REQUIRED-CHECKS MANIFEST EMPTY: .github/required-checks.txt lists no checks — every line is a comment or blank.
+    scripts_test.go:442: pre-fix line, same manifest: exit 1, output "" (silent)
+--- PASS: TestTheShellGuardFailsLoudlyOnAnEmptiedManifest (0.30s)
+--- PASS: TestTheShellGuardPassesOnTheRealTree (2.99s)
+    scripts_test.go:569: an unpinned GNUmakefile | RED exit 1, make NOT invoked: FAIL  GNUmakefile exists in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestTheAnchorRunsMakeOnlyOnPinnedBytesan_unpinned_GNUmakefile3505554258/001 and is not pinned in .github/pinned-makefiles.yml. | removed: GREEN
+    scripts_test.go:546: the line that wrote the env file during the anchor | Makefile sha256 128b0f87a432 -> 82e392f07910 -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 82e392f079106d0195791833afe10fd5710c823db434557fd149af0677639049, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+    scripts_test.go:546: an include line | Makefile sha256 128b0f87a432 -> 0d237a096076 -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 0d237a09607613681fa09c1a715a41d9904ee2d7bd3100bda3022f9431cb4138, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+    scripts_test.go:546: the pin no longer covers Makefile | .github/pinned-makefiles.yml sha256 8d83c2bceb6e -> 69a903dc0654 -> restored 8d83c2bceb6e | RED exit 1, make NOT invoked, env file empty: FAIL  .github/pinned-makefiles.yml does not pin `Makefile`; the file every make lane reads would run unreviewed. | restored: GREEN
+    scripts_test.go:546: .SECONDEXPANSION line (desk review FINDING 1) | Makefile sha256 128b0f87a432 -> 1704c38136d3 -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 1704c38136d3c7115db8fb426b55ba028319f68d9ecf0bb755ea4a0dd5b823db, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+    scripts_test.go:546: one byte changed | Makefile sha256 128b0f87a432 -> 0aa25844a48a -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 0aa25844a48ad7c33596ad03b18ecf151e28165693499e0f8b047006a1408a09, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+    scripts_test.go:546: .RECIPEPREFIX line (desk review FINDING 2) | Makefile sha256 128b0f87a432 -> c18ad37ea205 -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 c18ad37ea205cff85aae00d50661caa1d301003bb426a280c1e1ea7765c7e608, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+    scripts_test.go:596: extra included file, Makefile re-pinned | Makefile sha256 128b0f87a432 -> 0d237a096076 | RED exit 1: FAIL  make read ['Makefile', 'inc.mk'], but .github/pinned-makefiles.yml pins exactly ['Makefile']. | restored: GREEN
+    scripts_test.go:546: the pin itself edited | .github/pinned-makefiles.yml sha256 8d83c2bceb6e -> 2413ed9a18b7 -> restored 8d83c2bceb6e | RED exit 1, make NOT invoked, env file empty: FAIL  .github/pinned-makefiles.yml:20 is not a `path: <sha256>` pin: 'Makefile: 0128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726' | restored: GREEN
+    scripts_test.go:546: a comment added | Makefile sha256 128b0f87a432 -> f8a9468cb25c -> restored 128b0f87a432 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile does not match its pinned digest: sha256 f8a9468cb25c0c932d16a7f47d0d8a5f19b07a0d08aa366fe9f12f4524823e49, pinned 128b0f87a4322590b54077e0c952fb01d33ca61d4c9281cf1e9aab61db74a726. | restored: GREEN
+--- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes (0.17s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile (5.45s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line (5.51s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor (5.51s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile (5.59s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1) (5.60s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed (5.74s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/.RECIPEPREFIX_line_(desk_review_FINDING_2) (5.75s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned (6.00s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited (3.50s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added (3.49s)
+    scripts_test.go:659: SHELL := /usr/bin/true | Makefile sha256 128b0f87a432 -> 4d58b061c79d (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:22 sets SHELL to something other than the approved value: `SHELL := /usr/bin/true` | restored: GREEN
+    scripts_test.go:659: the exempt line in another target | Makefile sha256 128b0f87a432 -> 87e5031eb460 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:61 — gate target `vet` has a recipe line ending `|| true`: `go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true` | restored: GREEN
+    scripts_test.go:659: .RECIPEPREFIX | Makefile sha256 128b0f87a432 -> c18ad37ea205 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:226 assigns `.RECIPEPREFIX`: `.RECIPEPREFIX := >` | restored: GREEN
+    scripts_test.go:659: a NEW ?= variable, set in the environment | Makefile sha256 128b0f87a432 -> d37404388591 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  the environment sets GOCMD='true', and this is the WORKFLOW anchor. | restored: GREEN
+    scripts_test.go:659: .SHELLFLAGS without -e | Makefile sha256 128b0f87a432 -> fab0526a9208 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:23 sets .SHELLFLAGS to something other than the approved value: `.SHELLFLAGS := -c` | restored: GREEN
+    scripts_test.go:659: duplicate test target | Makefile sha256 128b0f87a432 -> d41fb331bb6a (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  gate target `test` is defined 2 times: Makefile:133, Makefile:227 | restored: GREEN
+    scripts_test.go:659: - prefix on the test recipe | Makefile sha256 128b0f87a432 -> 1eda0a020aee (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:134 — gate target `test` has a recipe line prefixed `-`: `-go test -race -count=1 $(PKG)` | restored: GREEN
+    scripts_test.go:659: test target inside a conditional | Makefile sha256 128b0f87a432 -> 94f688a98b91 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:134 defines the gate target `test` inside a make conditional. | restored: GREEN
+    scripts_test.go:659: .SECONDEXPANSION | Makefile sha256 128b0f87a432 -> 1704c38136d3 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:24 declares `.SECONDEXPANSION`: `.SECONDEXPANSION:` | restored: GREEN
+    scripts_test.go:659: .ONESHELL | Makefile sha256 128b0f87a432 -> 9f5c3df685c8 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:24 declares `.ONESHELL`: `.ONESHELL:` | restored: GREEN
+    scripts_test.go:659: ; true on the test recipe | Makefile sha256 128b0f87a432 -> 7303222a48f6 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:134 — gate target `test` has a recipe line ending `; true`: `go test -race -count=1 $(PKG); true` | restored: GREEN
+    scripts_test.go:659: || true on the test recipe | Makefile sha256 128b0f87a432 -> d9b15196eb72 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:134 — gate target `test` has a recipe line ending `|| true`: `go test -race -count=1 $(PKG) || true` | restored: GREEN
+    scripts_test.go:659: GNUMAKEFLAGS += -i | Makefile sha256 128b0f87a432 -> dbe7a0d48987 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:24 assigns GNUMAKEFLAGS: `GNUMAKEFLAGS += -i` | restored: GREEN
+    scripts_test.go:659: MAKEFLAGS += -i | Makefile sha256 128b0f87a432 -> 92d5c2772019 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:24 assigns MAKEFLAGS: `MAKEFLAGS += -i` | restored: GREEN
+--- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes (0.12s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/SHELL_:=_/usr/bin/true (7.09s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/.RECIPEPREFIX (8.79s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target (8.79s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment (8.94s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/.SHELLFLAGS_without_-e (9.01s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target (9.02s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe (9.04s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional (9.13s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/.SECONDEXPANSION (9.56s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/.ONESHELL (8.82s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe (9.06s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe (8.95s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/GNUMAKEFLAGS_+=_-i (9.04s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/MAKEFLAGS_+=_-i (9.10s)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets SHELL='/usr/bin/true', which is not a usable shell program.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='-ki'; ['-ki'] is not a flag make itself
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='n'; ['n'] is not a flag make itself
+    scripts_test.go:739: RED exit 1: FAIL  `make` resolves to '/private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestMakeIntegrityGuardEnvironment3990822586/001/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin'].
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets CORE_REMOTE='evil', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets IMAGE='x', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets COMMIT='x', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets GOFLAGS='-run=^$', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets CORE='/tmp/x', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets BUILD_TIME='x', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets BASH_ENV='/tmp/fn.sh'.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets ENV='/tmp/fn.sh'.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFILES='/tmp/x.mk'.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKECMDGOALS='ci', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKEOVERRIDES='SHELL=/usr/bin/true', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKE_RESTARTS='1', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MFLAGS='-i', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets GNUMAKEFLAGS='-ki', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='-i', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='', and this is the WORKFLOW anchor.
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+--- PASS: TestMakeIntegrityGuardEnvironment (0.13s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true (0.98s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/control (0.99s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/control (0.99s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/make_-j2_(3.81) (1.02s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki (1.04s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/make_-j2_(4.3) (1.10s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n (1.15s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH (1.34s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=) (0.77s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=) (0.75s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=) (0.68s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS (0.81s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=) (0.80s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=) (0.87s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=) (0.86s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone (0.87s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV (0.82s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/ENV (0.84s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES (0.84s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS (0.84s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES (0.85s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS (0.76s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i (0.87s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign (0.74s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki (0.88s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i (0.88s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty (0.90s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki (0.95s)
+--- PASS: TestMakeIntegrityGuardPassesOnTheRealMakefile (4.45s)
+--- PASS: TestGoTestReport (0.14s)
+    --- PASS: TestGoTestReport/a_truncated_stream (0.20s)
+    --- PASS: TestGoTestReport/good (0.20s)
+    --- PASS: TestGoTestReport/a_vacuous_package_floor (0.21s)
+    --- PASS: TestGoTestReport/go_test_failed_with_nothing_in_the_stream (0.22s)
+    --- PASS: TestGoTestReport/a_failed_test (0.22s)
+    --- PASS: TestGoTestReport/below_the_suite_floor (0.22s)
+    --- PASS: TestGoTestReport/a_floor_for_a_package_that_vanished (0.22s)
+    --- PASS: TestGoTestReport/a_package_with_no_floor (0.23s)
+    --- PASS: TestGoTestReport/an_empty_stream (0.14s)
+    --- PASS: TestGoTestReport/a_skipped_test (0.15s)
+    --- PASS: TestGoTestReport/a_skip_allowlist (0.16s)
+    --- PASS: TestGoTestReport/one_package_below_its_floor (0.16s)
+    --- PASS: TestGoTestReport/no_exit_file (0.19s)
+    --- PASS: TestGoTestReport/a_package_with_no_test_files (0.18s)
+    --- PASS: TestGoTestReport/no_per-package_floors (0.19s)
+--- PASS: TestTheRepositoryFloorsCoverEveryPackage (0.54s)
+    scripts_test.go:1018: step exit 1
+    scripts_test.go:1018: step exit 0
+    scripts_test.go:1018: step exit 1
+    scripts_test.go:1018: step exit 0
+    scripts_test.go:1018: step exit 1
+    scripts_test.go:1018: step exit 1
+    scripts_test.go:1018: step exit 1
+--- PASS: TestTheDirectStepCannotSwallowGoTestsExit (0.12s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$ (0.05s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents) (1.76s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip (2.32s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite (2.76s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal (3.19s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal (3.47s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal (3.71s)
+PASS
+ok  	github.com/yegamble/vizra-search/scripts	66.541s
+--- PASS: TestLoadFromDefaultsToProductionWhenModeIsOmitted (0.00s)
+--- PASS: TestProductionRefusesUnsafeHMACKeys (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/the_documented_dev_key (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/empty (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/whitespace_only (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/short (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/changeme (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/dev_prefix (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/test_prefix (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/insecure_substring (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/repeated_byte (0.00s)
+    --- PASS: TestProductionRefusesUnsafeHMACKeys/one_byte_below_the_floor (0.00s)
+--- PASS: TestProductionAcceptsAStrongKey (0.00s)
+--- PASS: TestDevelopmentModeStillRefusesAnEmptyKey (0.00s)
+--- PASS: TestDevelopmentModeAcceptsTheDevKey (0.00s)
+--- PASS: TestUnknownModeIsRefused (0.00s)
+--- PASS: TestTheRuntimeModeIsReadFromVizraMode (0.00s)
+--- PASS: TestTheOldRuntimeModeNameIsRefusedByName (0.00s)
+    --- PASS: TestTheOldRuntimeModeNameIsRefusedByName/development (0.00s)
+    --- PASS: TestTheOldRuntimeModeNameIsRefusedByName/production (0.00s)
+    --- PASS: TestTheOldRuntimeModeNameIsRefusedByName/Development (0.00s)
+    --- PASS: TestTheOldRuntimeModeNameIsRefusedByName/PRODUCTION (0.00s)
+    --- PASS: TestTheOldRuntimeModeNameIsRefusedByName/__development__ (0.00s)
+--- PASS: TestTheOldNameAloneNeverSilentlySelectsAMode (0.00s)
+--- PASS: TestTheOldRuntimeModeNameIsRefusedInDevelopmentToo (0.00s)
+--- PASS: TestEveryValueButTheOldVocabularyIsIgnored (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/off (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/managed (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/external (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/staging (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/dev (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/prod (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/developmnt (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/1 (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/blank3 (0.00s)
+    --- PASS: TestEveryValueButTheOldVocabularyIsIgnored/blank0 (0.00s)
+--- PASS: TestNoValueInTheOldNameCanEverProduceDevelopment (0.00s)
+--- PASS: TestTheOldNameIsConsultedOnlyByTheRefusal (0.00s)
+--- PASS: TestNoRefusalEchoesTheSuppliedValue (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_be_"production"_or_"development" (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/OLD_runtime-mode_vocabulary (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/is_not_a_host:port_listen_address (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/is_not_a_duration (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_be_greater_than_zero (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/is_not_an_integer_number_of_bytes (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_not_exceed (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_not_exceed#01 (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_be_set (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/is_the_documented_development_placeholder (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/is_a_key_published_in_this_repository (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/looks_like_a_development_placeholder (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_be_at_least (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/must_contain_at_least_8_distinct_byte_values (0.00s)
+    --- PASS: TestNoRefusalEchoesTheSuppliedValue/an_ignored_value_never_reaches_a_log (0.00s)
+    config_test.go:679: no-echo coverage: 17 refusal sites across 14 distinct messages
+--- PASS: TestEveryRefusalSiteInTheLoaderHasANoEchoRow (0.00s)
+--- PASS: TestNoRefusalBypassesTheNoEchoTable (0.00s)
+--- PASS: TestValidateCollectsEveryError (0.00s)
+--- PASS: TestCheckEnvValidatesACandidateEnvFileWithTheBootCode (0.00s)
+--- PASS: TestConfigNeverRendersTheKey (0.00s)
+--- PASS: TestErrorsNeverEchoTheKeyValue (0.00s)
+--- PASS: TestDurationsAndSizesParse (0.00s)
+--- PASS: TestDefaultsMatchTheCanonicalContract (0.00s)
+--- PASS: TestProductionRefusesAnOverwideSkewWindow (0.00s)
+    --- PASS: TestProductionRefusesAnOverwideSkewWindow/301s (0.00s)
+    --- PASS: TestProductionRefusesAnOverwideSkewWindow/10m (0.00s)
+    --- PASS: TestProductionRefusesAnOverwideSkewWindow/1h (0.00s)
+    --- PASS: TestProductionRefusesAnOverwideSkewWindow/8760h (0.00s)
+--- PASS: TestProductionAcceptsAWindowAtOrBelowTheCeiling (0.01s)
+--- PASS: TestProductionRefusesAnOverlargeBodyCap (0.00s)
+    --- PASS: TestProductionRefusesAnOverlargeBodyCap/8388609 (0.00s)
+    --- PASS: TestProductionRefusesAnOverlargeBodyCap/10737418240 (0.00s)
+    --- PASS: TestProductionRefusesAnOverlargeBodyCap/1099511627776 (0.00s)
+--- PASS: TestProductionAcceptsABodyCapAtOrBelowTheCeiling (0.00s)
+--- PASS: TestDevelopmentMayExceedTheProductionCeilings (0.00s)
+--- PASS: TestAConfigurationInsideTheCeilingsDoesNotClaimToExceedThem (0.00s)
+--- PASS: TestCheckEnvReportsTheCeilingRefusals (0.00s)
+--- PASS: TestCeilingRefusalsEchoNoOtherConfiguration (0.00s)
+    envseam_test.go:140: scanned 9 non-test Go files; the only process-environment read is os.LookupEnv in internal/config/env.go
+--- PASS: TestNothingOutsideTheSeamReadsTheProcessEnvironment (0.11s)
+--- PASS: TestTheVectorsPublishedKeyIsStillTheOneWeRefuse (0.00s)
+--- PASS: TestProductionRefusesThePublishedVectorsKey (0.00s)
+--- PASS: TestDevelopmentStillAcceptsThePublishedKeys (0.00s)
+--- PASS: TestProductionRefusesEveryPublishedKey (0.00s)
+--- PASS: TestCheckEnvRefusesThePublishedVectorsKey (0.01s)
+--- PASS: TestEveryKeyLiteralInThisRepositoryIsRefused (0.12s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/config	1.373s

@@ -7,6 +7,26 @@
 #
 # Third-party actions are pinned by commit SHA, never by tag, so a moved tag
 # cannot change what runs in CI.
+#
+# EVERY `make` STEP below is byte-equal to an entry in .github/pinned-steps.yml,
+# carries no key but name/run/id, and is IMMEDIATELY preceded by the pinned
+# anchor `./scripts/make-integrity-guard.sh --workflow`. The anchor runs outside
+# make. Like every script or test here that starts make, it does so only through
+# scripts/makegate.py: only on the reviewed bytes pinned in
+# .github/pinned-makefiles.yml, and only after `make -q` says make would not
+# remake them (reading a Makefile executes parts of it). The make STEPS below
+# are not started by makegate; the anchor adjacent to each is what guards them. It then
+# refuses, by name, reviewed bytes that no-op their recipes (a SHELL or
+# MAKEFLAGS override, a `-` prefix, a swallowed exit, a duplicate target) and an
+# environment that would (MAKEFLAGS and its family, MAKELEVEL and make's other
+# recipe variables, MAKEFILES, BASH_ENV, ENV, a `make` that is not a system
+# program, or any variable the Makefile takes from the environment). Adjacency
+# matters: a `$GITHUB_ENV` or `$GITHUB_PATH` write by an earlier step applies to
+# LATER steps, so it reaches the anchor exactly as it reaches make.
+# scripts/ci-required-guard.py (in the ci-required job) refuses any other shape.
+# A step-level `env:`, `if:`, `shell:` or `working-directory:` on a make step is
+# refused too, so the environment a lane needs lives at job level, where the
+# guard checks it.
 
 name: ci
 
@@ -38,7 +58,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make fmt-check
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make fmt-check
+        run: make fmt-check
 
   vet:
     name: vet
@@ -49,7 +74,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make vet
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make vet
+        run: make vet
 
   echo-containment:
     name: echo-containment
@@ -60,7 +90,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make echo-containment
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make echo-containment
+        run: make echo-containment
 
   build:
     name: build
@@ -71,7 +106,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make build
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make build
+        run: make build
       - name: the built binary reports its identity
         run: ./bin/vizra-search version
 
@@ -97,6 +137,10 @@ jobs:
       - name: the lane's own shape, checked outside make
         run: ./scripts/contract-drift-guard.py recipe
 
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
       - name: the handlers match the canonical contract owned by vizra-core
         run: make contract-drift
 
@@ -109,7 +153,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make test
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make test
+        run: make test
 
   test-noskip:
     name: test-noskip
@@ -120,8 +169,30 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - name: nothing is skipped (Q-001)
-        run: make test-noskip
+      # THE DIRECT LANE: the whole suite, with no make STEP, byte-equal to
+      # .github/pinned-steps.yml `direct_test_steps`. Whatever the Makefile
+      # says, a failing test fails this required lane. `go test -json` feeds
+      # scripts/go-test-report.py, which judges go test's own exit code, fails
+      # on ANY skipped test (there is no allowlist) and on any package with no
+      # test files, holds EVERY package to its executed-test floor in
+      # scripts/test-floors.json, refuses a package with no floor, and prints
+      # the counts into this log. Two tests inside the suite read the Makefile
+      # with `make --dry-run`, only through scripts/makegate.py (digest-gated).
+      - name: nothing is skipped and every package meets its floor (Q-001), without a make step
+        run: |
+          set -uo pipefail
+          if [ -n "${GOFLAGS+set}" ]; then
+            echo "::error::GOFLAGS is set in this step's environment; the go command reads it as extra flags. Refused, not passed."
+            exit 1
+          fi
+          rc=0
+          go test -count=1 -json ./... > unit-events.json || rc=$?
+          echo "$rc" > unit-exit.txt
+          echo "go test (unit) exited $rc"
+          python3 scripts/go-test-report.py \
+            --events unit-events.json --suite unit \
+            --floors scripts/test-floors.json --go-exit-file unit-exit.txt || exit 1
+          exit "$rc"
 
   tidy-check:
     name: tidy-check
@@ -132,7 +203,31 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
-      - run: make tidy-check
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: make tidy-check
+        run: make tidy-check
+
+  # Every refusal scripts/vendor-contract.py advertises, fired against
+  # throwaway repositories built with `git init` — no core checkout, no
+  # network. Required (floor lane), so removing a refusal is red in CI.
+  vendor-contract-selftest:
+    name: vendor-contract-selftest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      # The anchor: byte-equal to .github/pinned-steps.yml `anchor_step`, and
+      # IMMEDIATELY before the make step (scripts/ci-required-guard.py).
+      - name: refuse a neutered Makefile or make environment (anchor)
+        run: ./scripts/make-integrity-guard.sh --workflow
+      - name: every vendoring refusal fires, by name
+        run: make vendor-contract-selftest
 
   govulncheck:
     name: govulncheck

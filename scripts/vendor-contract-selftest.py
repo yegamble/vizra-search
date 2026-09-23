@@ -276,6 +276,114 @@ def case_foreign_origin_ssh(tmp):
     )
 
 
+def case_foreign_origin_deep_path(tmp):
+    # PR#3 VERIFY, FINDING 6: parse_remote_url took the LAST two path segments,
+    # so this URL was read as yegamble/vizra-core and accepted.
+    def maker(t):
+        return make_core(
+            t, "core-foreign-deep", remote_url="https://github.com/attacker/x/yegamble/vizra-core"
+        )
+
+    return expect_refusal(
+        "foreign origin, 4-segment path", tmp, maker, [],
+        ["attacker/x/yegamble/vizra-core", "not a recognised repository URL",
+         "not github.com/yegamble/vizra-core"],
+    )
+
+
+# ------------------------------------------------ source_ref_tip is checked ---
+#
+# PR#3 VERIFY, FINDING 4: source_ref_tip was written by `vendor` and read by
+# nothing — hand-edited to `refs/remotes/origin/evil`, to `main` or to 40 zeros,
+# `--check`, `--check --core` and `make contract-drift` all stayed at exit 0.
+# Each case vendors a clean tree, forges the field, and requires the named
+# check to go red naming the field. The manifest's other fields are untouched,
+# so nothing else can be what turned it red.
+
+
+def forge_tip(search, value):
+    path = os.path.join(search, "api", "CONTRACT-SOURCE.json")
+    m = manifest_of(search)
+    m["source_ref_tip"] = value
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(m, indent=2) + "\n")
+
+
+def expect_forged_tip_red(label, tmp, core, forged, with_core, needles):
+    search = make_search(tmp, "search-" + label.replace(" ", "-"))
+    rc0, out0 = vendor(search, "--core", core)
+    problems = []
+    if rc0 != 0:
+        problems.append("the clean vendor step itself failed (exit %d)" % rc0)
+    # Control: the untouched manifest passes the same check that must go red.
+    args = ["--check"] + (["--core", core] if with_core else [])
+    rc1, out1 = vendor(search, *args)
+    if rc1 != 0:
+        problems.append("CONTROL: %s on the clean manifest exited %d" % (" ".join(args), rc1))
+    forge_tip(search, forged)
+    if manifest_of(search).get("source_ref_tip") != forged:
+        problems.append("the forgery did not apply")
+    rc2, out2 = vendor(search, *args)
+    if rc2 == 0:
+        problems.append("%s ACCEPTED a forged source_ref_tip %r" % (" ".join(args), forged))
+    for n in needles:
+        if n not in out2:
+            problems.append("the refusal does not say %r" % n)
+    ok = not problems
+    FAILURES.extend("%s: %s" % (label, p) for p in problems)
+    report(label, ok, rc2, "--- control ---\n" + out1 + "\n--- forged ---\n" + out2)
+    return ok
+
+
+def case_tip_not_a_sha(tmp):
+    core = make_core(tmp, "core-tip-ref")
+    return expect_forged_tip_red(
+        "forged tip: a refname", tmp, core, "refs/remotes/origin/evil", False,
+        ["source_ref_tip is 'refs/remotes/origin/evil'"],
+    )
+
+
+def case_tip_null_oid(tmp):
+    core = make_core(tmp, "core-tip-null")
+    return expect_forged_tip_red(
+        "forged tip: 40 zeros", tmp, core, "0" * 40, False,
+        ["source_ref_tip is '%s'" % ("0" * 40), "null object id"],
+    )
+
+
+def case_tip_not_a_commit(tmp):
+    core = make_core(tmp, "core-tip-absent")
+    forged = "deadbeef" * 5
+    return expect_forged_tip_red(
+        "forged tip: no such commit", tmp, core, forged, True,
+        ["source_ref_tip %s is not a commit" % forged],
+    )
+
+
+def case_tip_off_the_ref(tmp):
+    # poison=True leaves a second commit at HEAD that is NOT on origin/main.
+    core = make_core(tmp, "core-tip-off-ref", poison=True)
+    off = git(core, "rev-parse", "HEAD")
+    return expect_forged_tip_red(
+        "forged tip: a commit off the ref", tmp, core, off, True,
+        ["source_ref_tip %s is NOT on refs/remotes/origin/main" % off],
+    )
+
+
+def case_tip_before_commit(tmp):
+    core = make_core(tmp, "core-tip-before")
+    first = git(core, "rev-parse", "HEAD")
+    write(os.path.join(core, YAML_NAME), "# canonical contract\nopenapi: 3.0.3\n# second\n")
+    git(core, "add", "-A")
+    git(core, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "api: second")
+    git(core, "update-ref", "refs/remotes/origin/main", git(core, "rev-parse", "HEAD"))
+    # source_commit will be the SECOND commit; a tip at the first cannot contain it.
+    return expect_forged_tip_red(
+        "forged tip: older than the commit", tmp, core, first, True,
+        ["is not contained in source_ref_tip %s" % first],
+    )
+
+
 def case_credential_in_url_is_redacted(tmp):
     """A remote URL can carry a token. It must never be echoed."""
     secret = "TOKENVALUE" + "1234567890"
@@ -356,10 +464,15 @@ def case_happy_path(tmp):
             raw = fh.read()
         if hashlib.sha256(raw).hexdigest() != entry["sha256"] or len(raw) != entry["bytes"]:
             problems.append("%s: manifest does not describe the bytes written" % entry["vendored_path"])
-    # And --check must agree afterwards.
+    # And --check must agree afterwards, with and without the core checkout —
+    # so the source_ref_tip checks are shown NOT to fire on an honest manifest.
     rc2, out2 = vendor(search, "--check")
     if rc2 != 0:
         problems.append("--check on the freshly vendored tree exited %d" % rc2)
+    rc3, out3 = vendor(search, "--check", "--core", core)
+    if rc3 != 0:
+        problems.append("--check --core on the freshly vendored tree exited %d" % rc3)
+    out2 = out2 + "\n--- --check --core ---\n" + out3
     ok = not problems
     if not ok:
         FAILURES.extend("happy path: " + p for p in problems)
@@ -375,15 +488,21 @@ CASES = [
     case_non_ancestor_commit,
     case_foreign_origin,
     case_foreign_origin_ssh,
+    case_foreign_origin_deep_path,
     case_credential_in_url_is_redacted,
     case_no_remote_tracking_ref,
     case_shallow_clone,
+    case_tip_not_a_sha,
+    case_tip_null_oid,
+    case_tip_not_a_commit,
+    case_tip_off_the_ref,
+    case_tip_before_commit,
     case_happy_path,
 ]
 
 # A floor, in the idiom scripts/ci-required-guard.sh already uses: deleting a
 # case from the list above must be a named failure, not a quietly shorter run.
-EXPECTED_CASES = 11
+EXPECTED_CASES = 17
 
 
 def main():

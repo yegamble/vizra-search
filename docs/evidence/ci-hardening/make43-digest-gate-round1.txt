@@ -1,0 +1,38 @@
+### environment
+GNU Make 4.3
+Python 3.12.3
+go version go1.22.2 linux/arm64
+
+### the digest gate (Makefile sha256 before: 4b758bc3dff82109)
+c0   clean Makefile                                             Makefile 4b758bc3dff82109  exit 0 GREEN ok  make invoked | env file:[] | make-integrity-guard: passed (9 gate target(s))
+d1   one byte changed                                           Makefile 0b6ffc0b5319dc39  exit 1 RED   ok  make NOT invoked | env file:[] |   FAIL  Makefile does not match its pinned digest: sha256 0b6ffc0b5319dc39fe740770df197fe1c8f4c354f108815f2a9f202b9d530a27, pinned 4b758bc3dff82109e6093453615ca11962cd1bb
+     restored byte-identical (4b758bc3dff82109)
+d2   an include line + included file (not re-pinned)            Makefile 5d0428ebbf06144f  exit 1 RED   ok  make NOT invoked | env file:[] |   FAIL  Makefile does not match its pinned digest: sha256 5d0428ebbf06144f64e302d50dc76b97d1aa0d51b7ff26c6b94735e33d466a4f, pinned 4b758bc3dff82109e6093453615ca11962cd1bb
+     restored byte-identical (4b758bc3dff82109)
+d3   an included file, Makefile re-pinned (MAKEFILE_LIST)       Makefile 5d0428ebbf06144f  exit 1 RED   ok  make invoked | env file:[] |   FAIL  make read ['Makefile', 'inc.mk'], but .github/pinned-makefiles.yml pins exactly ['Makefile'].
+     restored byte-identical (4b758bc3dff82109)
+d4   .SECONDEXPANSION line (desk review 1)                      Makefile 562084d85bdc9e7d  exit 1 RED   ok  make NOT invoked | env file:[] |   FAIL  Makefile does not match its pinned digest: sha256 562084d85bdc9e7d5c76d60941b95194a72dfbb90572c2efc7b6ac7f3ea3fd2e, pinned 4b758bc3dff82109e6093453615ca11962cd1bb
+     restored byte-identical (4b758bc3dff82109)
+d5   .RECIPEPREFIX line (desk review 2)                         Makefile 286e3e2ea1ba9b4d  exit 1 RED   ok  make NOT invoked | env file:[] |   FAIL  Makefile does not match its pinned digest: sha256 286e3e2ea1ba9b4d26da310720ae4bc388670a781c3f7370ad3c34db410e53ae, pinned 4b758bc3dff82109e6093453615ca11962cd1bb
+     restored byte-identical (4b758bc3dff82109)
+d6   an unpinned GNUmakefile beside it                          Makefile 4b758bc3dff82109  exit 1 RED   ok  make NOT invoked | env file:[] |   FAIL  GNUmakefile exists in /tmp/tmp.td0emV5Qys and is not pinned in .github/pinned-makefiles.yml.
+     restored byte-identical (4b758bc3dff82109)
+c1   clean Makefile again                                       Makefile 4b758bc3dff82109  exit 0 GREEN ok  make invoked | env file:[] | make-integrity-guard: passed (9 gate target(s))
+
+### reviewed bytes (Makefile edited AND re-pinned, as a reviewer would): the readings after make still refuse known shapes
+r1   MAKEFLAGS += -i, re-pinned                                 Makefile 145b7f3b536fa06c  exit 1 RED   ok  make invoked | env file:[] |   FAIL  Makefile:19 assigns MAKEFLAGS: `MAKEFLAGS += -i`
+     restored byte-identical (4b758bc3dff82109)
+r2   .SECONDEXPANSION, re-pinned                                Makefile 562084d85bdc9e7d  exit 1 RED   ok  make invoked | env file:[] |   FAIL  Makefile:19 declares `.SECONDEXPANSION`: `.SECONDEXPANSION:`
+     restored byte-identical (4b758bc3dff82109)
+r3   .RECIPEPREFIX, re-pinned                                   Makefile 286e3e2ea1ba9b4d  exit 1 RED   ok  make invoked | env file:[] |   FAIL  Makefile:221 assigns `.RECIPEPREFIX`: `.RECIPEPREFIX := >`
+     restored byte-identical (4b758bc3dff82109)
+r4   - prefix on the test recipe, re-pinned                     Makefile 9095de28daecb648  exit 1 RED   ok  make invoked | env file:[] |   FAIL  Makefile:129 — gate target `test` has a recipe line prefixed `-`: `-go test -race -count=1 $(PKG)`
+     restored byte-identical (4b758bc3dff82109)
+
+### environment rows (strict --workflow)
+  env MAKEFLAGS=-i                 exit 1    FAIL  the environment sets MAKEFLAGS='-i', and this is the WORKFLOW anchor.
+  env MAKELEVEL=1 MAKEFLAGS=-ki    exit 1    FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+  env MAKEFILES=/tmp/x.mk          exit 1    FAIL  the environment sets MAKEFILES='/tmp/x.mk'.
+  env BASH_ENV=/tmp/fn.sh          exit 1    FAIL  the environment sets BASH_ENV='/tmp/fn.sh'.
+  env VERSION=x                    exit 1    FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+  env GOFLAGS=-run=^$              exit 1    FAIL  the environment sets GOFLAGS='-run=^$', and this is the WORKFLOW anchor.

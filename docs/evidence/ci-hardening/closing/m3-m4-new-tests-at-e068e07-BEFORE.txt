@@ -1,0 +1,422 @@
+# M-3 and M-4, BEFORE: the closing slice's committed tests (scripts/scripts_test.go from the closing tree) run against
+# e068e07's UNMODIFIED scripts/makegate.py, make-integrity-guard.py and contract-drift-guard.py (detached worktree, nothing committed there).
+# Expected: the three new M-3 rows and both M-4 callers FAIL; the pre-existing rows still pass.
+# host: Darwin arm64; go version go1.26.2 darwin/arm64; GNU Make 3.81; 2026-09-23T12:12:37Z
+$ go test -count=1 -v -run 'TestNamedMakefileConstructsAreRefusedBeforeMake|TestEnvironmentTakenVariablesNeverReachMake' ./scripts/
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+    scripts_test.go:1700: MAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`MAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+    scripts_test.go:1700: $(eval …) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 calls $(eval …) or $(guile …), which can manufacture an include the static reading cannot see: `$(eval INERT := 1)` | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+    scripts_test.go:1700: .RECIPEPREFIX := > with a > -true recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`.RECIPEPREFIX := >`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+    scripts_test.go:1700: .IGNORE: test (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.IGNORE`: every recipe failure of the named targets (or of ALL targets) is ignored — a `-` prefix no reading can see. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+    scripts_test.go:1700: .DEFAULT: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.DEFAULT`: its recipe is run for any target or prerequisite with no rule of its own. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+    scripts_test.go:1700: define MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`define MAKEFLAGS`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+    scripts_test.go:1700: GNUMAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `GNUMAKEFLAGS` (`GNUMAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+    scripts_test.go:1700: .ONESHELL: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.ONESHELL`: the whole recipe goes to one shell, so a prefix applies to its first line only. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+    scripts_test.go:1700: target-specific private SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`test: private SHELL = /bin/sh`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+    scripts_test.go:1700: override .SHELLFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.SHELLFLAGS` (`override .SHELLFLAGS := -c`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+    scripts_test.go:1700: pattern-specific SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`%: SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+    scripts_test.go:1700: target-specific MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`test: MAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+    scripts_test.go:1700: MFLAGS = -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MFLAGS` (`MFLAGS = -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+    scripts_test.go:1700: target-specific .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.EXTRA_PREREQS` (`test: .EXTRA_PREREQS := nothing`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+    scripts_test.go:1700: .SHELLFLAGS := -c (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.SHELLFLAGS` (`.SHELLFLAGS := -c`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+    scripts_test.go:1700: SHELL := /usr/bin/true (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+    scripts_test.go:1700: define .RECIPEPREFIX (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`define .RECIPEPREFIX`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+    scripts_test.go:1700: .IGNORE: (all targets) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.IGNORE`: every recipe failure of the named targets (or of ALL targets) is ignored — a `-` prefix no reading can see. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+    scripts_test.go:1700: .SECONDEXPANSION: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.SECONDEXPANSION`: prerequisites would be expanded again while make considers targets, which happens under -n and -q too. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+    scripts_test.go:1700: .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.EXTRA_PREREQS` (`.EXTRA_PREREQS := nothing`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+    scripts_test.go:1700: .POSIX: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.POSIX`: it changes how make invokes the shell and what -e means. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+    scripts_test.go:1700: $(MAKE) in a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 names $(MAKE) in a recipe; make runs such a line even under -n and -q. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+    scripts_test.go:1700: recipe that begins with an expansion (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is a recipe line that BEGINS with an expansion (`$(Q)true`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+    scripts_test.go:1700: + recipe line (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is a recipe line prefixed `+`, which make runs even under -n and -q: `+@true` | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+    scripts_test.go:1700: override .RECIPEPREFIX = > (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`override .RECIPEPREFIX = >`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+    scripts_test.go:1694: exit 0; want "begins with an expansion" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakerecipe_that_begi1696402343/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 41201eaa2440… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+    scripts_test.go:1694: exit 0; want "begins with an expansion" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakerecipe_that_begi547862545/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 f25668ae5b3b… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+        make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+        make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+    scripts_test.go:1694: exit 0; want "begins with an expansion" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakerecipe_that_begi2033313030/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 69f24e8eb3f8… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+        make-integrity-guard: passed (9 gate target(s); make ran 20 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+--- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake (0.07s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…) (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT: (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL: (0.41s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets) (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION: (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX: (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe (0.27s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion (0.27s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_> (0.24s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@ (1.21s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable) (1.21s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$< (1.21s)
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== PAUSE TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+=== PAUSE TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+=== CONT  TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== CONT  TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+    scripts_test.go:1781: makegate.py -- --dry-run contract-drift: a make process received a variable the Makefile takes from the environment: MAKE-ENV -q Makefile | planted: VERSION,COMMIT,CORE,GOFLAGS
+    scripts_test.go:1781: makegate.py -- --dry-run contract-drift: a make process received a variable the Makefile takes from the environment: MAKE-ENV --dry-run --no-print-directory | planted: VERSION,COMMIT,CORE,GOFLAGS
+    scripts_test.go:1784: makegate.py -- --dry-run contract-drift | 2 make process(es), none received [VERSION COMMIT CORE GOFLAGS]: [MAKE-ENV -q Makefile | planted: VERSION,COMMIT,CORE,GOFLAGS MAKE-ENV --dry-run --no-print-directory | planted: VERSION,COMMIT,CORE,GOFLAGS]
+=== NAME  TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+    scripts_test.go:1781: contract-drift-guard.py recipe: a make process received a variable the Makefile takes from the environment: MAKE-ENV -q Makefile | planted: VERSION,COMMIT,CORE,GOFLAGS
+    scripts_test.go:1781: contract-drift-guard.py recipe: a make process received a variable the Makefile takes from the environment: MAKE-ENV --dry-run --no-print-directory | planted: VERSION,COMMIT,CORE,GOFLAGS
+    scripts_test.go:1784: contract-drift-guard.py recipe | 2 make process(es), none received [VERSION COMMIT CORE GOFLAGS]: [MAKE-ENV -q Makefile | planted: VERSION,COMMIT,CORE,GOFLAGS MAKE-ENV --dry-run --no-print-directory | planted: VERSION,COMMIT,CORE,GOFLAGS]
+--- FAIL: TestEnvironmentTakenVariablesNeverReachMake (0.04s)
+    --- FAIL: TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift (0.09s)
+    --- FAIL: TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe (0.09s)
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	2.266s
+FAIL
+exit=1

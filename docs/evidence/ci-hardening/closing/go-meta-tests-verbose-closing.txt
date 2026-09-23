@@ -1,0 +1,1701 @@
+# go test -v on the closing tree (HEAD e068e07 + the closing changes)
+# host: Darwin arm64; go version go1.27.1 darwin/arm64; GNU Make 3.81; 2026-09-23T12:18:32Z
+$ env -u MAKEFLAGS -u VERSION -u COMMIT -u GOFLAGS go test -count=1 -v ./scripts/ ./internal/httpapi/
+=== RUN   TestTheHarnessRefusesAMutationThatDidNotApply
+    scripts_test.go:248: refused, as required: mutation "absent" did not apply: "run: make no-such-target\n" occurs 0 time(s) in .github/workflows/ci.yml, want exactly 1
+    scripts_test.go:248: refused, as required: mutation "ambiguous" did not apply: "runs-on: ubuntu-24.04\n" occurs 11 time(s) in .github/workflows/ci.yml, want exactly 1
+    scripts_test.go:248: refused, as required: mutation "no-op" changed nothing in .github/workflows/ci.yml
+--- PASS: TestTheHarnessRefusesAMutationThatDidNotApply (0.02s)
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_-i
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_-i
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow)
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow)
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow)
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow)
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/backticks
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/backticks
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/bash_-c
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/bash_-c
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/override_after_target
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/override_after_target
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_-C
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_-C
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/chained
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/chained
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/untokenisable
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/untokenisable
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_working-directory
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_working-directory
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/anchor_if:
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/anchor_if:
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=)
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=)
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=)
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=)
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_container
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_container
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_if:_false
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_if:_false
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/merge_key
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/merge_key
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/runner_changed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/runner_changed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/action_unpinned
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/action_unpinned
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if:
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if:
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256
+=== RUN   TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key
+=== PAUSE TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_-i
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_-i
+    scripts_test.go:377: make -i | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 89584b2db780 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV
+    scripts_test.go:377: job env BASH_ENV | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 538f506befd8 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets BASH_ENV: '/tmp/fn.sh', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job
+    scripts_test.go:377: manifest names no job | .github/required-checks.txt sha256 e4e780654704 -> fc71342cd740 -> restored e4e780654704 | RED exit 1: FAIL  required check 'no-such-lane' matches no job in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmanifest_names_no_job2906470934/001/.github/workflows. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added
+    scripts_test.go:377: direct: -run added | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 730b1211276e -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed
+    scripts_test.go:377: direct: || exit 1 removed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> fd8f2d098767 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest
+    scripts_test.go:377: floor lane removed from manifest | .github/required-checks.txt sha256 e4e780654704 -> ffcf17e96b40 -> restored e4e780654704 | RED exit 1: FAIL  required lane 'vendor-contract-selftest' is MISSING from required-checks.txt. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES
+    scripts_test.go:377: job env MAKEFILES | .github/workflows/ci.yml sha256 f3bf8236bd82 -> cffdf0b52324 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKEFILES: '/tmp/x.mk', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request
+    scripts_test.go:377: not on pull_request | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 9205ec526064 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'build' (ci.yml) is not triggered on pull_request. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key
+    scripts_test.go:377: pins: duplicate key | .github/pinned-steps.yml sha256 6708acb13b1c -> d9264954ab18 -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_duplicate_key2848812092/001/.github/pinned-steps.yml is refused by the strict YAML reader: duplicate key 'anchor_step' (first at line 48); the guard refuses to guess which value a runner would use | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed
+    scripts_test.go:377: direct: go test exit swallowed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 6ff9bf813992 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed
+    scripts_test.go:377: direct: exit $rc removed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> ed91f19bb97e -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated
+    scripts_test.go:377: Makefile edited, pin not updated | Makefile sha256 e9d7c58edc93 -> 0d4c7f33ade0 -> restored e9d7c58edc93 | RED exit 1: FAIL  pinned-makefiles.yml: the Makefile pin does not hold: | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied
+    scripts_test.go:377: makefile pin emptied | .github/pinned-makefiles.yml sha256 ee209e4361be -> 88038bd58abc -> restored ee209e4361be | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmakefile_pin_emptied571071764/001/.github/pinned-makefiles.yml must be a single `makefiles:` mapping of `path: sha256` (the shape core PR #10 uses). | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256
+    scripts_test.go:377: makefile pin: not a sha256 | .github/pinned-makefiles.yml sha256 ee209e4361be -> 1a3b72b325d9 -> restored ee209e4361be | RED exit 1: FAIL  pinned-makefiles.yml: the Makefile pin does not hold: | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true
+    scripts_test.go:377: step shell {0} || true | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 0bb04dac2d0c -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['shell']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered
+    scripts_test.go:377: makefile pin: Makefile not covered | .github/pinned-makefiles.yml sha256 ee209e4361be -> b7f811c0953b -> restored ee209e4361be | RED exit 1: FAIL  pinned-makefiles.yml: the Makefile pin does not hold: | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/anchor_if:
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS
+    scripts_test.go:377: job env MAKECMDGOALS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 5e8d1b76368d -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKECMDGOALS: 'ci', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL
+    scripts_test.go:377: job env MAKELEVEL | .github/workflows/ci.yml sha256 f3bf8236bd82 -> d9fb8cc52377 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKELEVEL: '1', and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS
+    scripts_test.go:377: job env MAKE_RESTARTS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 1b4d7adb5240 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKE_RESTARTS: '1', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS
+    scripts_test.go:377: job env MAKEFLAGS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 83bc02b24bf8 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets MAKEFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step
+    scripts_test.go:377: an extra unpinned make step | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 04dd25b05554 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'extra' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true
+    scripts_test.go:377: make test replaced by true | .github/workflows/ci.yml sha256 f3bf8236bd82 -> c1ab78ccc671 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) does not run required invocation(s) ['make test']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL
+    scripts_test.go:377: anchor env MAKELEVEL | .github/workflows/ci.yml sha256 f3bf8236bd82 -> db949ddf6bc7 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) anchor step 'refuse a neutered Makefile or make environment (anchor)' carries ['env']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/anchor_if:
+    scripts_test.go:377: anchor if: | .github/workflows/ci.yml sha256 f3bf8236bd82 -> ad0426880664 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) anchor step 'refuse a neutered Makefile or make environment (anchor)' carries ['if']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike
+    scripts_test.go:377: real anchor then look-alike | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 83cc012856f6 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'look-alike' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL
+    scripts_test.go:377: compound anchor writes MAKELEVEL | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 90e843b7c7d5 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH
+    scripts_test.go:377: compound anchor writes GITHUB_PATH | .github/workflows/ci.yml sha256 f3bf8236bd82 -> bd031057df0b -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow
+    scripts_test.go:377: anchor without --workflow | .github/workflows/ci.yml sha256 f3bf8236bd82 -> e3436a6e4f80 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor
+    scripts_test.go:377: fake no-op anchor | .github/workflows/ci.yml sha256 f3bf8236bd82 -> d9547a494167 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV
+    scripts_test.go:377: compound anchor writes GITHUB_ENV | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 52e826fad7da -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --workflow'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if:
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent
+    scripts_test.go:377: anchor not adjacent | .github/workflows/ci.yml sha256 f3bf8236bd82 -> a6154d7ba4b6 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' is not IMMEDIATELY preceded by the pinned make-integrity-guard anchor; the step before it is 'between'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted
+    scripts_test.go:377: anchor deleted | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 8563052401d3 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' is not IMMEDIATELY preceded by the pinned make-integrity-guard anchor; the step before it is 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/bash_-c
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes
+    scripts_test.go:377: step timeout-minutes | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 0312456aa700 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['timeout-minutes']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_working-directory
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error
+    scripts_test.go:377: step continue-on-error | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 57a017d46b0c -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries continue-on-error: | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS
+    scripts_test.go:377: step env MAKEFLAGS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> ae8280a35a96 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['env']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out
+    scripts_test.go:377: floor lane commented out | .github/required-checks.txt sha256 e4e780654704 -> ec70770fcab3 -> restored e4e780654704 | RED exit 1: FAIL  required lane 'test-noskip' is COMMENTED OUT in required-checks.txt. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/untokenisable
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed
+    scripts_test.go:377: direct: report line removed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> e14cb90a4c8e -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/chained
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if:
+    scripts_test.go:377: direct: step if: | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 47927b637082 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) direct test step 'nothing is skipped and every package meets its floor (Q-001), without a make step' carries ['if']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_-C
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed
+    scripts_test.go:377: direct: GOFLAGS guard removed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> bd014a5772cb -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) step 'nothing is skipped and every package meets its floor (Q-001), without a make step' runs `go test` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml direct_test_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/bash_-c
+    scripts_test.go:377: bash -c | .github/workflows/ci.yml sha256 f3bf8236bd82 -> bde88ac3e55f -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/override_after_target
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_working-directory
+    scripts_test.go:377: step working-directory | .github/workflows/ci.yml sha256 f3bf8236bd82 -> a42203927907 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['working-directory']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false
+    scripts_test.go:377: step if: always() && false | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 3eae184a04cf -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['if']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment
+    scripts_test.go:377: make token only in a comment | .github/workflows/ci.yml sha256 f3bf8236bd82 -> af36decb5a09 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'innocent' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/untokenisable
+    scripts_test.go:377: untokenisable | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 2a0d8e6849dc -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_-C
+    scripts_test.go:377: make -C | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 42b7ce93c7e6 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/chained
+    scripts_test.go:377: chained | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 081b63dbc4eb -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/backticks
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation
+    scripts_test.go:377: long-option abbreviation | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 3c9cadd5fde9 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key
+    scripts_test.go:377: pins: unknown key | .github/pinned-steps.yml sha256 6708acb13b1c -> fb225a77faae -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_unknown_key2512857565/001/.github/pinned-steps.yml carries unknown key(s) ['extra_allowance']; the pins file is default-deny too — only ['anchor_step', 'direct_test_steps', 'make_steps', 'required_invocations'] mean anything. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/override_after_target
+    scripts_test.go:377: override after target | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 9c9a9bfe0a6e -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires
+    scripts_test.go:377: pins: a body nothing requires | .github/pinned-steps.yml sha256 6708acb13b1c -> 91f84d280b56 -> restored 6708acb13b1c | RED exit 1: ci-required-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionpins_a_body_nothing_requ1291782188/001/.github/pinned-steps.yml pins body(ies) ['make ci'] that no job is required to run. A pin nothing must run is surface with no gate behind it; require it or remove it. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow
+    scripts_test.go:377: PATH shadow | .github/workflows/ci.yml sha256 f3bf8236bd82 -> b5e753dcee71 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci
+    scripts_test.go:377: lane dropped from make ci | Makefile sha256 e9d7c58edc93 -> 0e63a06284d1 -> restored e9d7c58edc93 | RED exit 1: FAIL  the Makefile's `ci:` and the required lanes disagree. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/backticks
+    scripts_test.go:377: backticks | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 468e89f58b16 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow)
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above
+    scripts_test.go:377: export GNUMAKEFLAGS above | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 905fd212c62a -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow)
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make
+    scripts_test.go:377: shell function named make | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 803809455d73 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i
+    scripts_test.go:377: ${MAKE:-make} -i | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 40b3f395854b -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) does not run required invocation(s) ['make test']. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/action_unpinned
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix
+    scripts_test.go:377: MAKEFLAGS=-i prefix | .github/workflows/ci.yml sha256 f3bf8236bd82 -> df1f31a4195e -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/runner_changed
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i
+    scripts_test.go:377: M=make; $M -i | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 33e467d9dc4b -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/merge_key
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow
+    scripts_test.go:377: required job removed from the workflow | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 638bfe7ef80a -> restored f3bf8236bd82 | RED exit 1: FAIL  required check 'vendor-contract-selftest' matches no job in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionrequired_job_removed_from32633552/001/.github/workflows. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above
+    scripts_test.go:377: export MAKEFLAGS above | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 71a9380f4edc -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow)
+    scripts_test.go:377: make -l -i (optarg swallow) | .github/workflows/ci.yml sha256 f3bf8236bd82 -> aa1688d69d4a -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow)
+    scripts_test.go:377: make -j -i (optarg swallow) | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 9b91a1af939f -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_if:_false
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/action_unpinned
+    scripts_test.go:377: action unpinned | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 5b5da3d39347 -> restored f3bf8236bd82 | RED exit 1: FAIL  action(s) not pinned to a 40-character commit SHA: | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory
+    scripts_test.go:377: job defaults.run.working-directory | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 7d4e2409e90a -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) sets a job-level defaults.run: {'working-directory': 'internal'}. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_container
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/runner_changed
+    scripts_test.go:377: runner changed | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 354766855a2f -> restored f3bf8236bd82 | RED exit 1: FAIL  job(s) on a runner other than ubuntu-24.04: | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/merge_key
+    scripts_test.go:377: merge key | .github/workflows/ci.yml sha256 f3bf8236bd82 -> bc756f04ea3c -> restored f3bf8236bd82 | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionmerge_key3686789704/001/.github/workflows/ci.yml is refused by the strict YAML reader: YAML merge key `<<` — it splices keys into this mapping from elsewhere in the file, so what a reviewer sees beside the step is not all the step carries; refused | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key
+    scripts_test.go:377: duplicate run key | .github/workflows/ci.yml sha256 f3bf8236bd82 -> a9f6c42e035f -> restored f3bf8236bd82 | RED exit 1: FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestCIRequiredGuardRefusesEveryEvasionduplicate_run_key2948254649/001/.github/workflows/ci.yml is refused by the strict YAML reader: duplicate key 'run' (first at line 161); the guard refuses to guess which value a runner would use | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow
+    scripts_test.go:377: job reusable workflow | .github/workflows/ci.yml sha256 f3bf8236bd82 -> b2ee72f6a5bd -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) is a reusable-workflow call (`uses: ./.github/workflows/other.yml`). | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error
+    scripts_test.go:377: job continue-on-error | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 920dde03ddd3 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries continue-on-error: | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_if:_false
+    scripts_test.go:377: job if: false | .github/workflows/ci.yml sha256 f3bf8236bd82 -> d243b4a75979 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) carries a job-level `if:` ('${{ false }}'). | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=)
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_container
+    scripts_test.go:377: job container | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 549f9eedbe12 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) runs in a job-level `container:` ('ubuntu:24.04'). | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=)
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image
+    scripts_test.go:377: undigested service image | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 6bb0c405b933 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) service 'pg' image 'postgres:18' is not digest-pinned. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane
+    scripts_test.go:377: job env GOFLAGS on the direct lane | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 7e08874754e2 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test-noskip' (ci.yml) job-level env sets GOFLAGS: '-run=^$', and this job runs make or `go test`. | restored: GREEN exit 0
+=== CONT  TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell
+    scripts_test.go:377: workflow defaults.run.shell | .github/workflows/ci.yml sha256 f3bf8236bd82 -> ecd8662585b0 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'build' (ci.yml) sets a workflow-level defaults.run: {'shell': "bash -c 'exit 0' {0}"}. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS
+    scripts_test.go:377: workflow env MFLAGS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> baf47dd202c1 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets MFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES
+    scripts_test.go:377: workflow env MAKEOVERRIDES | .github/workflows/ci.yml sha256 f3bf8236bd82 -> f3a97b2c54e7 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets MAKEOVERRIDES: 'SHELL=/usr/bin/true', and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS
+    scripts_test.go:377: workflow env GNUMAKEFLAGS | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 3dcf7874f185 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'build' (ci.yml) workflow-level env sets GNUMAKEFLAGS: '-i', and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=)
+    scripts_test.go:377: job env VERSION (Makefile ?=) | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 06bdd428cbdd -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets VERSION: 'x', which the Makefile takes from the environment (`?=` or referenced-unassigned) — so the environment decides what the recipe runs, and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=)
+    scripts_test.go:377: job env CORE (Makefile ?=) | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 4169aedf844b -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets CORE: '/tmp/evil', which the Makefile takes from the environment (`?=` or referenced-unassigned) — so the environment decides what the recipe runs, and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH
+    scripts_test.go:377: job env PATH | .github/workflows/ci.yml sha256 f3bf8236bd82 -> b2998001d0a2 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets PATH: '/tmp/stub:/usr/bin', and this job runs make or `go test`. | restored: GREEN exit 0
+=== NAME  TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV
+    scripts_test.go:377: job env ENV | .github/workflows/ci.yml sha256 f3bf8236bd82 -> 0f5af9c6f979 -> restored f3bf8236bd82 | RED exit 1: FAIL  checked lane 'test' (ci.yml) job-level env sets ENV: '/tmp/fn.sh', and this job runs make or `go test`. | restored: GREEN exit 0
+--- PASS: TestCIRequiredGuardRefusesEveryEvasion (0.11s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-i (0.97s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_BASH_ENV (1.04s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/manifest_names_no_job (1.05s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_-run_added (1.10s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_||_exit_1_removed (1.25s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/floor_lane_removed_from_manifest (1.30s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFILES (1.31s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/not_on_pull_request (1.38s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_duplicate_key (1.07s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_go_test_exit_swallowed (1.28s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_exit_$rc_removed (1.38s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/Makefile_edited,_pin_not_updated (1.38s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin_emptied (1.47s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_not_a_sha256 (1.55s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_shell_{0}_||_true (1.42s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/makefile_pin:_Makefile_not_covered (1.56s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKECMDGOALS (1.28s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKE_RESTARTS (1.19s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKELEVEL (1.16s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_MAKEFLAGS (1.31s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/an_extra_unpinned_make_step (1.25s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_test_replaced_by_true (1.24s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_env_MAKELEVEL (1.33s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_if: (1.33s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/real_anchor_then_look-alike (1.29s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_MAKELEVEL (1.40s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_without_--workflow (0.90s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_PATH (1.21s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/compound_anchor_writes_GITHUB_ENV (0.97s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/fake_no-op_anchor (1.53s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_not_adjacent (1.86s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/anchor_deleted (1.86s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_timeout-minutes (1.79s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_continue-on-error (1.84s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_env_MAKEFLAGS (1.89s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/floor_lane_commented_out (1.85s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_report_line_removed (1.95s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_step_if: (1.93s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/direct:_GOFLAGS_guard_removed (1.72s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/bash_-c (1.73s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_working-directory (1.73s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/step_if:_always()_&&_false (1.57s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_token_only_in_a_comment (1.71s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-C (1.59s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/untokenisable (1.69s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/chained (1.69s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/long-option_abbreviation (1.33s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_unknown_key (0.76s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/override_after_target (1.51s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/pins:_a_body_nothing_requires (0.83s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/PATH_shadow (1.25s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/lane_dropped_from_make_ci (0.97s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/backticks (1.06s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/export_GNUMAKEFLAGS_above (1.29s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/shell_function_named_make (1.13s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/${MAKE:-make}_-i (1.08s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/MAKEFLAGS=-i_prefix (1.25s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/M=make;_$M_-i (1.35s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/required_job_removed_from_the_workflow (1.30s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/export_MAKEFLAGS_above (1.43s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-l_-i_(optarg_swallow) (1.50s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/make_-j_-i_(optarg_swallow) (1.36s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/action_unpinned (1.41s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_defaults.run.working-directory (1.45s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/runner_changed (1.30s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/merge_key (1.29s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/duplicate_run_key (1.22s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_reusable_workflow (1.29s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_continue-on-error (1.09s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_if:_false (1.10s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_container (1.20s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/undigested_service_image (1.25s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_GOFLAGS_on_the_direct_lane (0.98s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_defaults.run.shell (1.02s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MFLAGS (1.17s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_MAKEOVERRIDES (0.99s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/workflow_env_GNUMAKEFLAGS (1.03s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_VERSION_(Makefile_?=) (1.03s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_CORE_(Makefile_?=) (0.76s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_PATH (0.77s)
+    --- PASS: TestCIRequiredGuardRefusesEveryEvasion/job_env_ENV (0.81s)
+=== RUN   TestCIRequiredGuardPassesOnTheRealWorkflows
+--- PASS: TestCIRequiredGuardPassesOnTheRealWorkflows (0.59s)
+=== RUN   TestTheShellGuardFailsLoudlyOnAnEmptiedManifest
+    scripts_test.go:426: comment-only manifest: exit 1, REQUIRED-CHECKS MANIFEST EMPTY: .github/required-checks.txt lists no checks — every line is a comment or blank.
+    scripts_test.go:448: pre-fix line, same manifest: exit 1, output "" (silent)
+--- PASS: TestTheShellGuardFailsLoudlyOnAnEmptiedManifest (0.20s)
+=== RUN   TestTheShellGuardPassesOnTheRealTree
+--- PASS: TestTheShellGuardPassesOnTheRealTree (1.62s)
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1)
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1)
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/.RECIPEPREFIX_line_(desk_review_FINDING_2)
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/.RECIPEPREFIX_line_(desk_review_FINDING_2)
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile
+=== RUN   TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned
+=== PAUSE TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1)
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/.RECIPEPREFIX_line_(desk_review_FINDING_2)
+    scripts_test.go:552: .RECIPEPREFIX line (desk review FINDING 2) | Makefile sha256 e9d7c58edc93 -> 8227e0cb5ad1 -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 8227e0cb5ad1a68e2017d9ff546c22290349cc93085b9a8b06cf40e7dbb2839c does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile
+    scripts_test.go:552: the pin no longer covers Makefile | .github/pinned-makefiles.yml sha256 ee209e4361be -> b7f811c0953b -> restored ee209e4361be | RED exit 1, make NOT invoked, env file empty: FAIL  .github/pinned-makefiles.yml does not pin `Makefile`, the file make reads. | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line
+    scripts_test.go:552: an include line | Makefile sha256 e9d7c58edc93 -> 591ae6f049b5 -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 591ae6f049b59b84edd985e6c1562b8bb7bf0a7e09efa47e1dc66a1a91724044 does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== CONT  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed
+    scripts_test.go:552: one byte changed | Makefile sha256 e9d7c58edc93 -> 0d4c7f33ade0 -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 0d4c7f33ade0f8718275d0e6d2d5a82b3f3b05c0cc24c980fea714ee2d1f178e does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor
+    scripts_test.go:552: the line that wrote the env file during the anchor | Makefile sha256 e9d7c58edc93 -> 8bf6b7d46fde -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 8bf6b7d46fde343301b09f0a292a6fb2ee2158cdee4a7ed31fe82a7c1d6b0ee7 does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile
+    scripts_test.go:575: an unpinned GNUmakefile | RED exit 1, make NOT invoked: FAIL  GNUmakefile exists beside the Makefile. With no -f, GNU make reads GNUmakefile and makefile BEFORE Makefile, so the pinned Makefile would not be what runs. | removed: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1)
+    scripts_test.go:552: .SECONDEXPANSION line (desk review FINDING 1) | Makefile sha256 e9d7c58edc93 -> 25b16251f072 -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 25b16251f072bd04f4b62a8668f000963415805b41498daf2b23a6d115d27111 does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added
+    scripts_test.go:552: a comment added | Makefile sha256 e9d7c58edc93 -> 6a2b0d35c7a7 -> restored e9d7c58edc93 | RED exit 1, make NOT invoked, env file empty: FAIL  Makefile: sha256 6a2b0d35c7a70514c53eeee68938cb0cf7d1ac92a81912ca8d1ef8de64e616c1 does not match its pin in .github/pinned-makefiles.yml (e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c). A Makefile edit is mergeable only together with a reviewed pin update (`shasum -a 256 Makefile`). | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned
+    scripts_test.go:602: extra included file, Makefile re-pinned | Makefile sha256 e9d7c58edc93 -> 591ae6f049b5 | RED exit 1: FAIL  make would read inc.mk, which has no entry in .github/pinned-makefiles.yml. | restored: GREEN
+=== NAME  TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited
+    scripts_test.go:552: the pin itself edited | .github/pinned-makefiles.yml sha256 ee209e4361be -> 59b9e32e7416 -> restored ee209e4361be | RED exit 1, make NOT invoked, env file empty: FAIL  .github/pinned-makefiles.yml:27: not a `  <path>: <64 lowercase hex sha256>` entry: '  Makefile: 0e9d7c58edc93ed4e95daa9ebb3553736864b5346cd10ca4004ad7f79c9f5d02c' | restored: GREEN
+--- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes (0.08s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/.RECIPEPREFIX_line_(desk_review_FINDING_2) (4.40s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_include_line (4.46s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_no_longer_covers_Makefile (4.47s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/one_byte_changed (4.48s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_line_that_wrote_the_env_file_during_the_anchor (4.49s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_unpinned_GNUmakefile (4.50s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/.SECONDEXPANSION_line_(desk_review_FINDING_1) (4.51s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/a_comment_added (4.63s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/an_extra_included_file,_Makefile_re-pinned (2.36s)
+    --- PASS: TestTheAnchorRunsMakeOnlyOnPinnedBytes/the_pin_itself_edited (2.33s)
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_produced_by_an_expansion
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_produced_by_an_expansion
+=== RUN   TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment
+=== PAUSE TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_produced_by_an_expansion
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target
+=== CONT  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment
+    scripts_test.go:659: a NEW ?= variable, set in the environment | Makefile sha256 e9d7c58edc93 -> f663b1133eb0 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  the environment sets GOCMD='true', and this is the WORKFLOW anchor. | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe
+    scripts_test.go:659: || true on the test recipe | Makefile sha256 e9d7c58edc93 -> 75833c438453 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:138 — gate target `test` has a recipe line ending `|| true`: `go test -race -count=1 $(PKG) || true` | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_produced_by_an_expansion
+    scripts_test.go:659: || true produced by an expansion | Makefile sha256 e9d7c58edc93 -> a24953d099c2 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  `ci` EXPANDS to a command whose exit status is discarded: `go test -race -count=1 ./... || true` | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target
+    scripts_test.go:659: duplicate test target | Makefile sha256 e9d7c58edc93 -> ae6f5a64f3ed (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  gate target `test` is defined 2 times: Makefile:137, Makefile:231 | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe
+    scripts_test.go:659: ; true on the test recipe | Makefile sha256 e9d7c58edc93 -> ac972d3ceb6f (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:138 — gate target `test` has a recipe line ending `; true`: `go test -race -count=1 $(PKG); true` | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe
+    scripts_test.go:659: - prefix on the test recipe | Makefile sha256 e9d7c58edc93 -> 18109e835a5d (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:138 — gate target `test` has a recipe line prefixed `-`: `-go test -race -count=1 $(PKG)` | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target
+    scripts_test.go:659: the exempt line in another target | Makefile sha256 e9d7c58edc93 -> 755b8d775709 (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:64 — gate target `vet` has a recipe line ending `|| true`: `go test -count=1 -json $(DRIFT_PKGS) > $(DRIFT_REPORT) || true` | restored: GREEN
+=== NAME  TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional
+    scripts_test.go:659: test target inside a conditional | Makefile sha256 e9d7c58edc93 -> bbd1bb62a86d (re-pinned, as a reviewer would) | digest ok, RED exit 1: FAIL  Makefile:138 defines the gate target `test` inside a make conditional. | restored: GREEN
+--- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes (0.09s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/a_NEW_?=_variable,_set_in_the_environment (4.29s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_on_the_test_recipe (7.63s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/||_true_produced_by_an_expansion (7.64s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/duplicate_test_target (7.68s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/;_true_on_the_test_recipe (7.70s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/-_prefix_on_the_test_recipe (7.73s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/test_target_inside_a_conditional (7.73s)
+    --- PASS: TestMakeIntegrityGuardStillRefusesKnownShapesInReviewedBytes/the_exempt_line_in_another_target (7.73s)
+=== RUN   TestMakeIntegrityGuardEnvironment
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/control
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/control
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/ENV
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/ENV
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=)
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=)
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS
+=== RUN   TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH
+=== PAUSE TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH
+=== RUN   TestMakeIntegrityGuardEnvironment/local/control
+=== PAUSE TestMakeIntegrityGuardEnvironment/local/control
+=== RUN   TestMakeIntegrityGuardEnvironment/local/make_-j2_(4.3)
+=== PAUSE TestMakeIntegrityGuardEnvironment/local/make_-j2_(4.3)
+=== RUN   TestMakeIntegrityGuardEnvironment/local/make_-j2_(3.81)
+=== PAUSE TestMakeIntegrityGuardEnvironment/local/make_-j2_(3.81)
+=== RUN   TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki
+=== PAUSE TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki
+=== RUN   TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n
+=== PAUSE TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/control
+=== CONT  TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/ENV
+=== CONT  TestMakeIntegrityGuardEnvironment/local/make_-j2_(3.81)
+=== CONT  TestMakeIntegrityGuardEnvironment/local/make_-j2_(4.3)
+=== CONT  TestMakeIntegrityGuardEnvironment/local/control
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH
+    scripts_test.go:739: RED exit 1: FAIL  `make` resolves to '/private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestMakeIntegrityGuardEnvironment2454504913/001/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin']: a stub someone put earlier on PATH.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/ENV
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets ENV='/tmp/fn.sh'.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='-ki'; ['-ki'] is not a flag make itself
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets GOFLAGS='-run=^$', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets IMAGE='x', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets CORE='/tmp/x', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=)
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets CORE_REMOTE='evil', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets BUILD_TIME='x', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets COMMIT='x', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=)
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKECMDGOALS='ci', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets SHELL='/usr/bin/true', which is not a usable shell program.
+=== CONT  TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFILES='/tmp/x.mk'.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES
+=== NAME  TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='n'; ['n'] is not a flag make itself
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets BASH_ENV='/tmp/fn.sh'.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki
+=== CONT  TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MFLAGS='-i', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKEOVERRIDES='SHELL=/usr/bin/true', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKE_RESTARTS='1', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki
+    scripts_test.go:739: RED exit 1: FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets GNUMAKEFLAGS='-ki', and this is the WORKFLOW anchor.
+=== NAME  TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i
+    scripts_test.go:739: RED exit 1: FAIL  the environment sets MAKEFLAGS='-i', and this is the WORKFLOW anchor.
+--- PASS: TestMakeIntegrityGuardEnvironment (0.14s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/non-system_make_first_on_PATH (0.23s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/ENV (0.25s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=-ki (0.26s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/GOFLAGS (0.27s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/IMAGE_(?=) (0.20s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/CORE_(?=) (0.23s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/CORE_REMOTE_(?=) (0.26s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/BUILD_TIME_(?=) (0.24s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/COMMIT_(?=) (0.48s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/VERSION_(?=) (0.50s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKECMDGOALS (0.48s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/SHELL=/usr/bin/true (0.53s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFILES (0.37s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/MAKEFLAGS=n (0.33s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/BASH_ENV (0.41s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_alone (0.36s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/make_-j2_(4.3) (1.49s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/control (1.49s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/control (1.50s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/local/make_-j2_(3.81) (1.54s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MFLAGS=-i (0.28s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEOVERRIDES (0.29s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKE_RESTARTS (0.28s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=_(empty)_MAKEFLAGS=--ign (0.30s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS_present_but_empty (0.19s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKELEVEL=1_MAKEFLAGS=-ki (0.19s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/GNUMAKEFLAGS=-ki (0.21s)
+    --- PASS: TestMakeIntegrityGuardEnvironment/workflow/MAKEFLAGS=-i (0.18s)
+=== RUN   TestMakeIntegrityGuardPassesOnTheRealMakefile
+--- PASS: TestMakeIntegrityGuardPassesOnTheRealMakefile (1.94s)
+=== RUN   TestGoTestReport
+=== RUN   TestGoTestReport/good
+=== PAUSE TestGoTestReport/good
+=== RUN   TestGoTestReport/a_skipped_test
+=== PAUSE TestGoTestReport/a_skipped_test
+=== RUN   TestGoTestReport/a_package_with_no_test_files
+=== PAUSE TestGoTestReport/a_package_with_no_test_files
+=== RUN   TestGoTestReport/one_package_below_its_floor
+=== PAUSE TestGoTestReport/one_package_below_its_floor
+=== RUN   TestGoTestReport/a_package_with_no_floor
+=== PAUSE TestGoTestReport/a_package_with_no_floor
+=== RUN   TestGoTestReport/a_floor_for_a_package_that_vanished
+=== PAUSE TestGoTestReport/a_floor_for_a_package_that_vanished
+=== RUN   TestGoTestReport/a_failed_test
+=== PAUSE TestGoTestReport/a_failed_test
+=== RUN   TestGoTestReport/go_test_failed_with_nothing_in_the_stream
+=== PAUSE TestGoTestReport/go_test_failed_with_nothing_in_the_stream
+=== RUN   TestGoTestReport/a_truncated_stream
+=== PAUSE TestGoTestReport/a_truncated_stream
+=== RUN   TestGoTestReport/an_empty_stream
+=== PAUSE TestGoTestReport/an_empty_stream
+=== RUN   TestGoTestReport/no_exit_file
+=== PAUSE TestGoTestReport/no_exit_file
+=== RUN   TestGoTestReport/a_skip_allowlist
+=== PAUSE TestGoTestReport/a_skip_allowlist
+=== RUN   TestGoTestReport/a_vacuous_package_floor
+=== PAUSE TestGoTestReport/a_vacuous_package_floor
+=== RUN   TestGoTestReport/no_per-package_floors
+=== PAUSE TestGoTestReport/no_per-package_floors
+=== RUN   TestGoTestReport/below_the_suite_floor
+=== PAUSE TestGoTestReport/below_the_suite_floor
+=== CONT  TestGoTestReport/good
+=== CONT  TestGoTestReport/a_truncated_stream
+=== CONT  TestGoTestReport/a_package_with_no_floor
+=== CONT  TestGoTestReport/a_failed_test
+=== CONT  TestGoTestReport/a_floor_for_a_package_that_vanished
+=== CONT  TestGoTestReport/go_test_failed_with_nothing_in_the_stream
+=== CONT  TestGoTestReport/a_package_with_no_test_files
+=== CONT  TestGoTestReport/a_skipped_test
+=== CONT  TestGoTestReport/one_package_below_its_floor
+=== CONT  TestGoTestReport/a_vacuous_package_floor
+=== CONT  TestGoTestReport/below_the_suite_floor
+=== CONT  TestGoTestReport/no_per-package_floors
+=== CONT  TestGoTestReport/no_exit_file
+=== CONT  TestGoTestReport/a_skip_allowlist
+=== CONT  TestGoTestReport/an_empty_stream
+--- PASS: TestGoTestReport (0.08s)
+    --- PASS: TestGoTestReport/a_truncated_stream (0.12s)
+    --- PASS: TestGoTestReport/good (0.12s)
+    --- PASS: TestGoTestReport/a_failed_test (0.13s)
+    --- PASS: TestGoTestReport/go_test_failed_with_nothing_in_the_stream (0.14s)
+    --- PASS: TestGoTestReport/a_package_with_no_test_files (0.14s)
+    --- PASS: TestGoTestReport/a_floor_for_a_package_that_vanished (0.15s)
+    --- PASS: TestGoTestReport/a_skipped_test (0.15s)
+    --- PASS: TestGoTestReport/a_package_with_no_floor (0.15s)
+    --- PASS: TestGoTestReport/one_package_below_its_floor (0.11s)
+    --- PASS: TestGoTestReport/a_vacuous_package_floor (0.11s)
+    --- PASS: TestGoTestReport/a_skip_allowlist (0.09s)
+    --- PASS: TestGoTestReport/below_the_suite_floor (0.12s)
+    --- PASS: TestGoTestReport/no_per-package_floors (0.11s)
+    --- PASS: TestGoTestReport/no_exit_file (0.10s)
+    --- PASS: TestGoTestReport/an_empty_stream (0.11s)
+=== RUN   TestTheRepositoryFloorsCoverEveryPackage
+--- PASS: TestTheRepositoryFloorsCoverEveryPackage (0.27s)
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal
+=== RUN   TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents)
+=== PAUSE TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents)
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents)
+=== CONT  TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$
+    scripts_test.go:1019: step exit 1
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite
+    scripts_test.go:1019: step exit 0
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal
+    scripts_test.go:1019: step exit 1
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal
+    scripts_test.go:1019: step exit 1
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip
+    scripts_test.go:1019: step exit 1
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal
+    scripts_test.go:1019: step exit 1
+=== NAME  TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents)
+    scripts_test.go:1019: step exit 0
+--- PASS: TestTheDirectStepCannotSwallowGoTestsExit (0.08s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_GOFLAGS=-run=^$ (0.01s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_passing_suite (1.50s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Fatal (1.77s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/exit_$rc_removed,_planted_t.Fatal (2.06s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/pinned_body,_planted_t.Skip (2.35s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/report_line_removed,_planted_t.Fatal (2.56s)
+    --- PASS: TestTheDirectStepCannotSwallowGoTestsExit/both_removed,_planted_t.Fatal_(the_swallow_the_pin_prevents) (2.84s)
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.sh
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.sh
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.c
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.c
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.o
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.o
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.y
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.y
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.l
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.l
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/SCCS/s.Makefile
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/SCCS/s.Makefile
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/s.Makefile
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/s.Makefile
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile,v
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile,v
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile,v
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile,v
+=== RUN   TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile
+=== PAUSE TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.sh
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile,v
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/s.Makefile
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.l
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.o
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.c
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile,v
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/s.Makefile
+    scripts_test.go:1097: newer s.Makefile | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.l
+    scripts_test.go:1097: newer Makefile.l | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/SCCS/s.Makefile
+=== CONT  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.y
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.c
+    scripts_test.go:1097: newer Makefile.c | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.sh
+    scripts_test.go:1097: newer Makefile.sh | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.o
+    scripts_test.go:1097: newer Makefile.o | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile,v
+    scripts_test.go:1097: newer RCS/Makefile,v | anchor exit 0: (no FAIL line) | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile,v
+    scripts_test.go:1097: newer Makefile,v | anchor exit 0: (no FAIL line) | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile
+    scripts_test.go:1097: newer RCS/Makefile | anchor exit 0: (no FAIL line) | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/SCCS/s.Makefile
+    scripts_test.go:1097: newer SCCS/s.Makefile | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+=== NAME  TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.y
+    scripts_test.go:1097: newer Makefile.y | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | Makefile sha256 e9d7c58edc93 before and after | removed: GREEN
+--- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake (0.08s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/s.Makefile (4.42s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.l (4.42s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.c (4.44s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.sh (4.45s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.o (4.57s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile,v (7.59s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile,v (7.66s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/RCS/Makefile (7.71s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/SCCS/s.Makefile (3.70s)
+    --- PASS: TestTheAnchorRefusesAPinnedMakefileMakeWouldRemake/Makefile.y (3.72s)
+=== RUN   TestEveryOtherMakeCallIsGated
+=== RUN   TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/one_byte_changed
+=== PAUSE TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/one_byte_changed
+=== RUN   TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/newer_Makefile.sh
+=== PAUSE TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/newer_Makefile.sh
+=== RUN   TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/unpinned_GNUmakefile
+=== PAUSE TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/unpinned_GNUmakefile
+=== RUN   TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/MAKEFILES_set
+=== PAUSE TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/MAKEFILES_set
+=== RUN   TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/one_byte_changed
+=== PAUSE TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/one_byte_changed
+=== RUN   TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/newer_Makefile.sh
+=== PAUSE TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/newer_Makefile.sh
+=== RUN   TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/unpinned_GNUmakefile
+=== PAUSE TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/unpinned_GNUmakefile
+=== RUN   TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/MAKEFILES_set
+=== PAUSE TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/MAKEFILES_set
+=== CONT  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/one_byte_changed
+=== CONT  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/one_byte_changed
+=== CONT  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/unpinned_GNUmakefile
+=== CONT  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/newer_Makefile.sh
+=== CONT  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/unpinned_GNUmakefile
+=== CONT  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/MAKEFILES_set
+=== CONT  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/MAKEFILES_set
+=== CONT  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/newer_Makefile.sh
+=== NAME  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/unpinned_GNUmakefile
+    scripts_test.go:1149: makegate.py -- --dry-run / unpinned GNUmakefile | exit 3, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/MAKEFILES_set
+    scripts_test.go:1149: makegate.py -- --dry-run / MAKEFILES set | exit 3, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/one_byte_changed
+    scripts_test.go:1149: makegate.py -- --dry-run / one byte changed | exit 3, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/MAKEFILES_set
+    scripts_test.go:1149: contract-drift-guard.py recipe / MAKEFILES set | exit 1, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/one_byte_changed
+    scripts_test.go:1149: contract-drift-guard.py recipe / one byte changed | exit 1, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/unpinned_GNUmakefile
+    scripts_test.go:1149: contract-drift-guard.py recipe / unpinned GNUmakefile | exit 1, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/newer_Makefile.sh
+    scripts_test.go:1149: makegate.py -- --dry-run / newer Makefile.sh | exit 3, make not run past the gate
+=== NAME  TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/newer_Makefile.sh
+    scripts_test.go:1149: contract-drift-guard.py recipe / newer Makefile.sh | exit 1, make not run past the gate
+--- PASS: TestEveryOtherMakeCallIsGated (0.14s)
+    --- PASS: TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/unpinned_GNUmakefile (0.30s)
+    --- PASS: TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/MAKEFILES_set (0.31s)
+    --- PASS: TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/one_byte_changed (0.31s)
+    --- PASS: TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/MAKEFILES_set (0.32s)
+    --- PASS: TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/one_byte_changed (0.34s)
+    --- PASS: TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/unpinned_GNUmakefile (0.34s)
+    --- PASS: TestEveryOtherMakeCallIsGated/makegate.py_--_--dry-run/newer_Makefile.sh (0.39s)
+    --- PASS: TestEveryOtherMakeCallIsGated/contract-drift-guard.py_recipe/newer_Makefile.sh (0.47s)
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_local
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_local
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_local
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_local
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFLAGS=-i,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFLAGS=-i,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_local
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_local
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/ENV=/dev/null,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/ENV=/dev/null,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/GNUMAKEFLAGS=-i,_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/GNUMAKEFLAGS=-i,_--workflow
+=== RUN   TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/VERSION=x_(a_Makefile_?=_variable),_--workflow
+=== PAUSE TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/VERSION=x_(a_Makefile_?=_variable),_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_local
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/GNUMAKEFLAGS=-i,_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFLAGS=-i,_--workflow
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_local
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/ENV=/dev/null,_--workflow
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_--workflow
+    scripts_test.go:1190: MAKEFILES, --workflow | exit 1: FAIL  the environment sets MAKEFILES='/dev/null'.
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_local
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFLAGS=-i,_--workflow
+    scripts_test.go:1190: MAKEFLAGS=-i, --workflow | exit 1: FAIL  the environment sets MAKEFLAGS='-i', and this is the WORKFLOW anchor.
+=== CONT  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/VERSION=x_(a_Makefile_?=_variable),_--workflow
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/GNUMAKEFLAGS=-i,_--workflow
+    scripts_test.go:1190: GNUMAKEFLAGS=-i, --workflow | exit 1: FAIL  the environment sets GNUMAKEFLAGS='-i', and this is the WORKFLOW anchor.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_--workflow
+    scripts_test.go:1190: BASH_ENV=/dev/null, --workflow | exit 1: FAIL  the environment sets BASH_ENV='/dev/null'.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/ENV=/dev/null,_--workflow
+    scripts_test.go:1190: ENV=/dev/null, --workflow | exit 1: FAIL  the environment sets ENV='/dev/null'.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_--workflow
+    scripts_test.go:1190: a non-system make first on PATH, --workflow | exit 1: FAIL  `make` resolves to '/private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck929182231/001/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin']: a stub someone put earlier on PATH.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_local
+    scripts_test.go:1190: a non-system make first on PATH, local | exit 1: FAIL  `make` resolves to '/private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck929182231/001/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin']: a stub someone put earlier on PATH.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_local
+    scripts_test.go:1190: MAKEFILES, local | exit 1: FAIL  the environment sets MAKEFILES='/dev/null'.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/VERSION=x_(a_Makefile_?=_variable),_--workflow
+    scripts_test.go:1190: VERSION=x (a Makefile ?= variable), --workflow | exit 1: FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+=== NAME  TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_local
+    scripts_test.go:1190: BASH_ENV=/dev/null, local | exit 1: FAIL  the environment sets BASH_ENV='/dev/null'.
+--- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck (0.15s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_--workflow (0.25s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFLAGS=-i,_--workflow (0.23s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/GNUMAKEFLAGS=-i,_--workflow (0.24s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_--workflow (0.26s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/ENV=/dev/null,_--workflow (0.25s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_--workflow (0.27s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/a_non-system_make_first_on_PATH,_local (0.26s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/MAKEFILES,_local (0.32s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/VERSION=x_(a_Makefile_?=_variable),_--workflow (0.19s)
+    --- PASS: TestTheAnchorStartsNoMakeAfterAFailedPreMakeCheck/BASH_ENV=/dev/null,_local (0.20s)
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders/Makefile_is_a_symlink_to_identical_bytes
+=== PAUSE TestPinnedFilesMustBeRegularAndAloneInBothReaders/Makefile_is_a_symlink_to_identical_bytes
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders/an_unpinned_GNUmakefile
+=== PAUSE TestPinnedFilesMustBeRegularAndAloneInBothReaders/an_unpinned_GNUmakefile
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_pinned_file_that_is_missing
+=== PAUSE TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_pinned_file_that_is_missing
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_stale_pin_entry_(a_pinned_file_make_would_not_read)
+=== PAUSE TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_stale_pin_entry_(a_pinned_file_make_would_not_read)
+=== RUN   TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_case-variant_GNUMakefile
+=== PAUSE TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_case-variant_GNUMakefile
+=== CONT  TestPinnedFilesMustBeRegularAndAloneInBothReaders/Makefile_is_a_symlink_to_identical_bytes
+=== CONT  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_stale_pin_entry_(a_pinned_file_make_would_not_read)
+=== CONT  TestPinnedFilesMustBeRegularAndAloneInBothReaders/an_unpinned_GNUmakefile
+=== CONT  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_case-variant_GNUMakefile
+=== CONT  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_pinned_file_that_is_missing
+=== NAME  TestPinnedFilesMustBeRegularAndAloneInBothReaders/Makefile_is_a_symlink_to_identical_bytes
+    scripts_test.go:1256: Makefile is a symlink to identical bytes | anchor exit 1 before make; ci-required-guard exit 1: FAIL  Makefile is not a regular file (a symlink, FIFO or device is refused): make would read whatever it points at, which is not what was digested.
+=== NAME  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_case-variant_GNUMakefile
+    scripts_test.go:1256: a case-variant GNUMakefile | anchor exit 1 before make; ci-required-guard exit 1: FAIL  GNUMakefile exists beside the Makefile. With no -f, GNU make reads GNUmakefile and makefile BEFORE Makefile, so the pinned Makefile would not be what runs.
+=== NAME  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_pinned_file_that_is_missing
+    scripts_test.go:1256: a pinned file that is missing | anchor exit 1 before make; ci-required-guard exit 1: FAIL  gone.mk is pinned in .github/pinned-makefiles.yml but does not exist.
+=== NAME  TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_stale_pin_entry_(a_pinned_file_make_would_not_read)
+    scripts_test.go:1256: a stale pin entry (a pinned file make would not read) | anchor exit 1 before make; ci-required-guard exit 1: FAIL  .github/pinned-makefiles.yml pins unused.mk, which make would NOT read; the pin and the Makefile drifted.
+=== NAME  TestPinnedFilesMustBeRegularAndAloneInBothReaders/an_unpinned_GNUmakefile
+    scripts_test.go:1256: an unpinned GNUmakefile | anchor exit 1 before make; ci-required-guard exit 1: FAIL  GNUmakefile exists beside the Makefile. With no -f, GNU make reads GNUmakefile and makefile BEFORE Makefile, so the pinned Makefile would not be what runs.
+--- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders (0.12s)
+    --- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders/Makefile_is_a_symlink_to_identical_bytes (0.51s)
+    --- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_case-variant_GNUMakefile (0.51s)
+    --- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_pinned_file_that_is_missing (0.52s)
+    --- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders/a_stale_pin_entry_(a_pinned_file_make_would_not_read) (0.53s)
+    --- PASS: TestPinnedFilesMustBeRegularAndAloneInBothReaders/an_unpinned_GNUmakefile (0.54s)
+=== RUN   TestEveryPlaceThatStartsMakeIsGated
+    scripts_test.go:1486: every place the inventory matches that starts make: [scripts/makegate.py:448] (allowed: scripts/makegate.py)
+--- PASS: TestEveryPlaceThatStartsMakeIsGated (0.43s)
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_exec.Command
+    scripts_test.go:1555: go exec.Command | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_exec.CommandContext_after_ctx
+    scripts_test.go:1555: go exec.CommandContext after ctx | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_an_absolute_path
+    scripts_test.go:1555: go an absolute path | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_gmake
+    scripts_test.go:1555: go gmake | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_through_a_shell
+    scripts_test.go:1555: go through a shell | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_the_call_split_across_lines
+    scripts_test.go:1555: go the call split across lines | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_an_aliased_os/exec_import
+    scripts_test.go:1555: go an aliased os/exec import | planted and reported at a.go:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_subprocess_list
+    scripts_test.go:1555: py a subprocess list | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_shell=True
+    scripts_test.go:1555: py shell=True | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_os.system
+    scripts_test.go:1555: py os.system | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_env_make
+    scripts_test.go:1555: py env make | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_os.execvp
+    scripts_test.go:1555: py os.execvp | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_from-import_alias
+    scripts_test.go:1555: py a from-import alias | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_module_alias
+    scripts_test.go:1555: py a module alias | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_the_name_make_in_argv
+    scripts_test.go:1555: py the name make in argv | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_the_list_split_across_lines
+    scripts_test.go:1555: py the list split across lines | planted and reported at a.py:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_at_the_start
+    scripts_test.go:1555: sh at the start | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_an_assignment
+    scripts_test.go:1555: sh behind an assignment | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_&&
+    scripts_test.go:1555: sh after && | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_||
+    scripts_test.go:1555: sh after || | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_;
+    scripts_test.go:1555: sh after ; | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_|
+    scripts_test.go:1555: sh after | | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_in_a_subshell
+    scripts_test.go:1555: sh in a subshell | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_in_$(_)
+    scripts_test.go:1555: sh in $( ) | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_if
+    scripts_test.go:1555: sh after if | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_if_!
+    scripts_test.go:1555: sh after if ! | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_then
+    scripts_test.go:1555: sh after then | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_do
+    scripts_test.go:1555: sh after do | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_an_absolute_path
+    scripts_test.go:1555: sh an absolute path | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_env_with_flags
+    scripts_test.go:1555: sh behind env with flags | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_exec
+    scripts_test.go:1555: sh behind exec | planted and reported at a.sh:9
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_a_commented-out_call
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_make_in_a_non-exec_call
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_a_non-make_program
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_make_in_a_message
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_a_subprocess_call_without_make
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_a_commented-out_call
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_a_comment
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_make_as_an_argument
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_a_make-prefixed_script
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_command_-v_make
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/fails_closed/go_that_does_not_parse
+=== RUN   TestTheMakeLaunchInventorySeesEveryListedForm/fails_closed/py_that_does_not_parse
+--- PASS: TestTheMakeLaunchInventorySeesEveryListedForm (1.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_exec.Command (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_exec.CommandContext_after_ctx (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_an_absolute_path (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_gmake (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_through_a_shell (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_the_call_split_across_lines (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/go_an_aliased_os/exec_import (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_subprocess_list (0.06s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_shell=True (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_os.system (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_env_make (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_os.execvp (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_from-import_alias (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_a_module_alias (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_the_name_make_in_argv (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/py_the_list_split_across_lines (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_at_the_start (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_an_assignment (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_&& (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_|| (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_; (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_| (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_in_a_subshell (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_in_$(_) (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_if (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_if_! (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_then (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_after_do (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_an_absolute_path (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_env_with_flags (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/matched/sh_behind_exec (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_a_commented-out_call (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_make_in_a_non-exec_call (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/go_a_non-make_program (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_make_in_a_message (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_a_subprocess_call_without_make (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/py_a_commented-out_call (0.07s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_a_comment (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_make_as_an_argument (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_a_make-prefixed_script (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/not_matched/sh_command_-v_make (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/fails_closed/go_that_does_not_parse (0.00s)
+    --- PASS: TestTheMakeLaunchInventorySeesEveryListedForm/fails_closed/py_that_does_not_parse (0.07s)
+=== RUN   TestTheRemakeProbeCoversEveryPinnedInclude
+    scripts_test.go:1635: pinned include + newer inc.mk.sh | anchor exit 1: FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile inc.mk` exit 1). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it. | inc.mk sha256 43f959298eb6 unchanged
+--- PASS: TestTheRemakeProbeCoversEveryPinnedInclude (2.27s)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+    scripts_test.go:1700: $(eval …) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 calls $(eval …) or $(guile …), which can manufacture an include the static reading cannot see: `$(eval INERT := 1)` | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+    scripts_test.go:1700: SHELL := /usr/bin/true (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+    scripts_test.go:1700: define MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`define MAKEFLAGS`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+    scripts_test.go:1700: GNUMAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `GNUMAKEFLAGS` (`GNUMAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+    scripts_test.go:1700: MAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`MAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+    scripts_test.go:1700: .ONESHELL: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.ONESHELL`: the whole recipe goes to one shell, so a prefix applies to its first line only. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+    scripts_test.go:1700: .RECIPEPREFIX := > with a > -true recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`.RECIPEPREFIX := >`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+    scripts_test.go:1700: .DEFAULT: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.DEFAULT`: its recipe is run for any target or prerequisite with no rule of its own. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+    scripts_test.go:1700: override .SHELLFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.SHELLFLAGS` (`override .SHELLFLAGS := -c`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+    scripts_test.go:1700: .SECONDEXPANSION: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.SECONDEXPANSION`: prerequisites would be expanded again while make considers targets, which happens under -n and -q too. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+    scripts_test.go:1700: pattern-specific SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`%: SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+    scripts_test.go:1700: target-specific private SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`test: private SHELL = /bin/sh`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+    scripts_test.go:1700: define .RECIPEPREFIX (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`define .RECIPEPREFIX`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+    scripts_test.go:1700: .SHELLFLAGS := -c (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.SHELLFLAGS` (`.SHELLFLAGS := -c`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+    scripts_test.go:1700: override .RECIPEPREFIX = > (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.RECIPEPREFIX` (`override .RECIPEPREFIX = >`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+    scripts_test.go:1700: target-specific MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MAKEFLAGS` (`test: MAKEFLAGS += -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+    scripts_test.go:1700: recipe that begins with $< (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is a recipe line that BEGINS with an expansion (`$<true`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+    scripts_test.go:1700: recipe that begins with $@ (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is a recipe line that BEGINS with an expansion (`$@-is-not-run`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+    scripts_test.go:1700: MFLAGS = -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MFLAGS` (`MFLAGS = -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+    scripts_test.go:1700: recipe that begins with $X (a one-letter variable) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is a recipe line that BEGINS with an expansion (`$Xtrue`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+    scripts_test.go:1700: $(MAKE) in a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 names $(MAKE) in a recipe; make runs such a line even under -n and -q. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+    scripts_test.go:1700: .POSIX: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.POSIX`: it changes how make invokes the shell and what -e means. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+    scripts_test.go:1700: .IGNORE: (all targets) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.IGNORE`: every recipe failure of the named targets (or of ALL targets) is ignored — a `-` prefix no reading can see. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+    scripts_test.go:1700: recipe that begins with an expansion (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is a recipe line that BEGINS with an expansion (`$(Q)true`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+    scripts_test.go:1700: target-specific .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.EXTRA_PREREQS` (`test: .EXTRA_PREREQS := nothing`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+    scripts_test.go:1700: .IGNORE: test (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 declares `.IGNORE`: every recipe failure of the named targets (or of ALL targets) is ignored — a `-` prefix no reading can see. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+    scripts_test.go:1700: .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.EXTRA_PREREQS` (`.EXTRA_PREREQS := nothing`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+    scripts_test.go:1700: + recipe line (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is a recipe line prefixed `+`, which make runs even under -n and -q: `+@true` | ci-required-guard exit 1
+--- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake (0.08s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…) (0.60s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true (0.94s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS (0.99s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i (1.04s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL: (1.08s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i (1.08s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe (1.14s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT: (1.18s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS (1.08s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION: (0.77s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL (0.66s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL (0.76s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX (0.79s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c (0.70s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_> (0.75s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS (0.77s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$< (0.70s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@ (0.76s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i (0.75s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable) (0.74s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe (0.77s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX: (0.78s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets) (0.80s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion (0.76s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS (0.54s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test (0.56s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS (0.53s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line (0.55s)
+=== RUN   TestARecipeBeginningWithAnEscapedDollarIsNotRefused
+--- PASS: TestARecipeBeginningWithAnEscapedDollarIsNotRefused (2.70s)
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== PAUSE TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== RUN   TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+=== PAUSE TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+=== CONT  TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+=== CONT  TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift
+    scripts_test.go:1784: makegate.py -- --dry-run contract-drift | 2 make process(es), none received [VERSION COMMIT CORE GOFLAGS]: [MAKE-ENV -q Makefile | planted: none MAKE-ENV --dry-run --no-print-directory | planted: none]
+=== NAME  TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe
+    scripts_test.go:1784: contract-drift-guard.py recipe | 2 make process(es), none received [VERSION COMMIT CORE GOFLAGS]: [MAKE-ENV -q Makefile | planted: none MAKE-ENV --dry-run --no-print-directory | planted: none]
+--- PASS: TestEnvironmentTakenVariablesNeverReachMake (0.08s)
+    --- PASS: TestEnvironmentTakenVariablesNeverReachMake/makegate.py_--_--dry-run_contract-drift (0.27s)
+    --- PASS: TestEnvironmentTakenVariablesNeverReachMake/contract-drift-guard.py_recipe (0.28s)
+PASS
+ok  	github.com/yegamble/vizra-search/scripts	58.562s
+=== RUN   TestEveryVendoredFileMatchesItsManifest
+--- PASS: TestEveryVendoredFileMatchesItsManifest (0.00s)
+=== RUN   TestNoDriftFromTheCanonicalContract
+--- PASS: TestNoDriftFromTheCanonicalContract (0.00s)
+=== RUN   TestTheContractStillDeclaresTheQ001Surface
+--- PASS: TestTheContractStillDeclaresTheQ001Surface (0.00s)
+=== RUN   TestEveryInternalOperationIsSecured
+--- PASS: TestEveryInternalOperationIsSecured (0.00s)
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/GET_/healthz_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/GET_/readyz_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/GET_/readyz_->_Service_Unavailable
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/GET_/version_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Bad_Request
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Unauthorized
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Request_Entity_Too_Large
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Service_Unavailable
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Bad_Request
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Unauthorized
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Request_Entity_Too_Large
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Service_Unavailable
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_OK
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Bad_Request
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Unauthorized
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Request_Entity_Too_Large
+=== RUN   TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Service_Unavailable
+--- PASS: TestResponseBodiesSatisfyTheContractSchemas (0.01s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/GET_/healthz_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/GET_/readyz_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/GET_/readyz_->_Service_Unavailable (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/GET_/version_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Bad_Request (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Unauthorized (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Request_Entity_Too_Large (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/search_->_Service_Unavailable (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Bad_Request (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Unauthorized (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Request_Entity_Too_Large (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/suggestions_->_Service_Unavailable (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_OK (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Bad_Request (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Unauthorized (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Request_Entity_Too_Large (0.00s)
+    --- PASS: TestResponseBodiesSatisfyTheContractSchemas/POST_/internal/v1/events_->_Service_Unavailable (0.00s)
+=== RUN   TestTheContractSchemasActuallyRejectDrift
+--- PASS: TestTheContractSchemasActuallyRejectDrift (0.01s)
+=== RUN   TestRejectionBodiesUseTheContractErrorShape
+=== RUN   TestRejectionBodiesUseTheContractErrorShape/unsigned
+=== RUN   TestRejectionBodiesUseTheContractErrorShape/malformed_body
+=== RUN   TestRejectionBodiesUseTheContractErrorShape/oversized
+--- PASS: TestRejectionBodiesUseTheContractErrorShape (0.00s)
+    --- PASS: TestRejectionBodiesUseTheContractErrorShape/unsigned (0.00s)
+    --- PASS: TestRejectionBodiesUseTheContractErrorShape/malformed_body (0.00s)
+    --- PASS: TestRejectionBodiesUseTheContractErrorShape/oversized (0.00s)
+=== RUN   TestTheContractsFixedNumbersMatchTheImplementation
+--- PASS: TestTheContractsFixedNumbersMatchTheImplementation (0.00s)
+=== RUN   TestTheVendoredVectorsAreUsable
+--- PASS: TestTheVendoredVectorsAreUsable (0.00s)
+=== RUN   TestASignatureForOneConcretePathDoesNotAuthenticateAnother
+--- PASS: TestASignatureForOneConcretePathDoesNotAuthenticateAnother (0.00s)
+=== RUN   TestTheVerifiedPathIsTheRequestPathNotTheRouteTemplate
+--- PASS: TestTheVerifiedPathIsTheRequestPathNotTheRouteTemplate (0.00s)
+=== RUN   TestASignedRequestWithAQueryStringIsRefused
+=== RUN   TestASignedRequestWithAQueryStringIsRefused/?x=1
+=== RUN   TestASignedRequestWithAQueryStringIsRefused/?
+=== RUN   TestASignedRequestWithAQueryStringIsRefused/?a=1&b=2
+=== RUN   TestASignedRequestWithAQueryStringIsRefused/?utm_source=evil
+--- PASS: TestASignedRequestWithAQueryStringIsRefused (0.00s)
+    --- PASS: TestASignedRequestWithAQueryStringIsRefused/?x=1 (0.00s)
+    --- PASS: TestASignedRequestWithAQueryStringIsRefused/? (0.00s)
+    --- PASS: TestASignedRequestWithAQueryStringIsRefused/?a=1&b=2 (0.00s)
+    --- PASS: TestASignedRequestWithAQueryStringIsRefused/?utm_source=evil (0.00s)
+=== RUN   TestAQueryStringIsRefusedBeforeVerification
+--- PASS: TestAQueryStringIsRefusedBeforeVerification (0.00s)
+=== RUN   TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes
+=== RUN   TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/search
+=== RUN   TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/suggestions
+=== RUN   TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/events
+--- PASS: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes (0.00s)
+    --- PASS: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/search (0.00s)
+    --- PASS: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/suggestions (0.00s)
+    --- PASS: TestAnUndeclaredLengthBodyAboveTheLimitIsRefusedAfterLimitPlusOneBytes//internal/v1/events (0.00s)
+=== RUN   TestAnUndeclaredLengthBodyExactlyAtTheLimitIsAccepted
+--- PASS: TestAnUndeclaredLengthBodyExactlyAtTheLimitIsAccepted (0.00s)
+=== RUN   TestADrainingServerStillRefusesAnUnsignedRequestFirst
+=== RUN   TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/search
+=== RUN   TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/suggestions
+=== RUN   TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/events
+--- PASS: TestADrainingServerStillRefusesAnUnsignedRequestFirst (0.00s)
+    --- PASS: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/search (0.00s)
+    --- PASS: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/suggestions (0.00s)
+    --- PASS: TestADrainingServerStillRefusesAnUnsignedRequestFirst//internal/v1/events (0.00s)
+=== RUN   TestADrainingServerAnswers503ToASignedRequest
+--- PASS: TestADrainingServerAnswers503ToASignedRequest (0.00s)
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody/wrong_key
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody/stale_timestamp
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody/query_string
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody/oversized
+=== RUN   TestTheRefusalPathNeverLogsTheRequestBody/unsigned
+--- PASS: TestTheRefusalPathNeverLogsTheRequestBody (0.00s)
+    --- PASS: TestTheRefusalPathNeverLogsTheRequestBody/wrong_key (0.00s)
+    --- PASS: TestTheRefusalPathNeverLogsTheRequestBody/stale_timestamp (0.00s)
+    --- PASS: TestTheRefusalPathNeverLogsTheRequestBody/query_string (0.00s)
+    --- PASS: TestTheRefusalPathNeverLogsTheRequestBody/oversized (0.00s)
+    --- PASS: TestTheRefusalPathNeverLogsTheRequestBody/unsigned (0.00s)
+=== RUN   TestIdenticalRequestsCanStillBeReplayedInsideTheWindowAtM0
+    hardening_test.go:364: M0 behaviour confirmed: an identical request replayed inside the window is accepted; the timestamp window is the whole replay bound
+--- PASS: TestIdenticalRequestsCanStillBeReplayedInsideTheWindowAtM0 (0.00s)
+=== RUN   TestTheContractDriftLaneIsGuardedFromOutsideGoTest
+--- PASS: TestTheContractDriftLaneIsGuardedFromOutsideGoTest (0.50s)
+=== RUN   TestTheContractDriftLaneCarriesNoTestSelectingFlag
+--- PASS: TestTheContractDriftLaneCarriesNoTestSelectingFlag (0.66s)
+=== RUN   TestTheContractDriftLaneRunsEveryPackageHoldingAVendoredFileGuard
+--- PASS: TestTheContractDriftLaneRunsEveryPackageHoldingAVendoredFileGuard (0.59s)
+=== RUN   TestTheLaneGuardAcceptsAWellFormedLane
+--- PASS: TestTheLaneGuardAcceptsAWellFormedLane (0.65s)
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_-run_regex_that_selects_no_guard
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/-skip
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/-short
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/-tags
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/-run_hidden_behind_a_make_variable
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_GOFLAGS_prefix_on_the_recipe_line
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/GOFLAGS_in_the_environment
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_duplicate_contract-drift_target_that_keeps_the_guard
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/go_test_moved_behind_a_wrapper_script
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/the_recipe_guard_step_removed
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/the_ran_step_removed
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_package_holding_a_vendored-file_guard_dropped_from_the_list
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_`-`_prefix_on_the_recipe_guard_step
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_`-`_prefix_on_the_ran_step
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/`||_true`_appended_to_the_recipe_guard_step
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/`||_true`_appended_to_the_ran_step
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/a_duplicate_target_that_REPLACES_the_recipe_without_the_guard
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/the_lane_defined_inside_a_make_conditional
+=== RUN   TestTheLaneGuardRefusesEveryKnownBypass/the_guard_step_replaced_by_something_that_is_not_the_guard
+--- PASS: TestTheLaneGuardRefusesEveryKnownBypass (11.54s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_-run_regex_that_selects_no_guard (0.72s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/-skip (0.58s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/-short (0.75s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/-tags (1.08s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/-run_hidden_behind_a_make_variable (0.72s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_GOFLAGS_prefix_on_the_recipe_line (0.75s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/GOFLAGS_in_the_environment (0.64s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_duplicate_contract-drift_target_that_keeps_the_guard (0.44s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/go_test_moved_behind_a_wrapper_script (0.61s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/the_recipe_guard_step_removed (0.71s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/the_ran_step_removed (0.52s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_package_holding_a_vendored-file_guard_dropped_from_the_list (0.59s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_`-`_prefix_on_the_recipe_guard_step (0.46s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_`-`_prefix_on_the_ran_step (0.45s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/`||_true`_appended_to_the_recipe_guard_step (0.45s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/`||_true`_appended_to_the_ran_step (0.47s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/a_duplicate_target_that_REPLACES_the_recipe_without_the_guard (0.54s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/the_lane_defined_inside_a_make_conditional (0.45s)
+    --- PASS: TestTheLaneGuardRefusesEveryKnownBypass/the_guard_step_replaced_by_something_that_is_not_the_guard (0.61s)
+=== RUN   TestThisRepositoryPassesItsOwnLaneGuard
+--- PASS: TestThisRepositoryPassesItsOwnLaneGuard (0.40s)
+=== RUN   TestTheLaneGuardIsAnchoredInTheWorkflow
+--- PASS: TestTheLaneGuardIsAnchoredInTheWorkflow (0.36s)
+=== RUN   TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile
+--- PASS: TestTheLaneGuardRefusesAFlagFromAnIncludedMakefile (0.45s)
+=== RUN   TestEveryEmittedStatusIsReachable
+--- PASS: TestEveryEmittedStatusIsReachable (0.00s)
+=== RUN   TestEveryNotEmittedStatusCarriesAReason
+--- PASS: TestEveryNotEmittedStatusCarriesAReason (0.00s)
+=== RUN   TestRoutesMatchTheRegisteredHandlers
+--- PASS: TestRoutesMatchTheRegisteredHandlers (0.00s)
+=== RUN   TestRoutesAreExactlyTheContractSurface
+--- PASS: TestRoutesAreExactlyTheContractSurface (0.00s)
+=== RUN   TestSignatureRemainsValidInsideTheWindow
+--- PASS: TestSignatureRemainsValidInsideTheWindow (0.00s)
+=== RUN   TestHealthzIsLivenessOnly
+--- PASS: TestHealthzIsLivenessOnly (0.00s)
+=== RUN   TestProbesRequireNoSignature
+--- PASS: TestProbesRequireNoSignature (0.00s)
+=== RUN   TestReadyzIsReadyWithNoComponents
+--- PASS: TestReadyzIsReadyWithNoComponents (0.00s)
+=== RUN   TestReadyzIsDrainAware
+--- PASS: TestReadyzIsDrainAware (0.00s)
+=== RUN   TestDrainingInternalCallsAreAFaultNotAnEmptyIndex
+--- PASS: TestDrainingInternalCallsAreAFaultNotAnEmptyIndex (0.00s)
+=== RUN   TestVersionReportsNoSearchSchemaVersion
+--- PASS: TestVersionReportsNoSearchSchemaVersion (0.00s)
+=== RUN   TestReadyzAlsoReportsNoSearchSchemaVersion
+--- PASS: TestReadyzAlsoReportsNoSearchSchemaVersion (0.00s)
+=== RUN   TestInternalEndpointsAnswerNotIndexed
+=== RUN   TestInternalEndpointsAnswerNotIndexed//internal/v1/search
+=== RUN   TestInternalEndpointsAnswerNotIndexed//internal/v1/suggestions
+=== RUN   TestInternalEndpointsAnswerNotIndexed//internal/v1/events
+--- PASS: TestInternalEndpointsAnswerNotIndexed (0.00s)
+    --- PASS: TestInternalEndpointsAnswerNotIndexed//internal/v1/search (0.00s)
+    --- PASS: TestInternalEndpointsAnswerNotIndexed//internal/v1/suggestions (0.00s)
+    --- PASS: TestInternalEndpointsAnswerNotIndexed//internal/v1/events (0.00s)
+=== RUN   TestSearchAndSuggestionsReturnEmptyCollections
+--- PASS: TestSearchAndSuggestionsReturnEmptyCollections (0.00s)
+=== RUN   TestEventsAcceptsNothingAndSaysSo
+--- PASS: TestEventsAcceptsNothingAndSaysSo (0.00s)
+=== RUN   TestInternalResponsesNeverLeakTheKey
+--- PASS: TestInternalResponsesNeverLeakTheKey (0.00s)
+=== RUN   TestUnsignedRequestsAreRejected
+=== RUN   TestUnsignedRequestsAreRejected//internal/v1/search
+=== RUN   TestUnsignedRequestsAreRejected//internal/v1/suggestions
+=== RUN   TestUnsignedRequestsAreRejected//internal/v1/events
+--- PASS: TestUnsignedRequestsAreRejected (0.00s)
+    --- PASS: TestUnsignedRequestsAreRejected//internal/v1/search (0.00s)
+    --- PASS: TestUnsignedRequestsAreRejected//internal/v1/suggestions (0.00s)
+    --- PASS: TestUnsignedRequestsAreRejected//internal/v1/events (0.00s)
+=== RUN   TestWronglySignedRequestsAreRejected
+=== RUN   TestWronglySignedRequestsAreRejected//internal/v1/search
+=== RUN   TestWronglySignedRequestsAreRejected//internal/v1/suggestions
+=== RUN   TestWronglySignedRequestsAreRejected//internal/v1/events
+--- PASS: TestWronglySignedRequestsAreRejected (0.00s)
+    --- PASS: TestWronglySignedRequestsAreRejected//internal/v1/search (0.00s)
+    --- PASS: TestWronglySignedRequestsAreRejected//internal/v1/suggestions (0.00s)
+    --- PASS: TestWronglySignedRequestsAreRejected//internal/v1/events (0.00s)
+=== RUN   TestStaleTimestampsAreRejected
+=== RUN   TestStaleTimestampsAreRejected//internal/v1/search
+=== RUN   TestStaleTimestampsAreRejected//internal/v1/suggestions
+=== RUN   TestStaleTimestampsAreRejected//internal/v1/events
+--- PASS: TestStaleTimestampsAreRejected (0.00s)
+    --- PASS: TestStaleTimestampsAreRejected//internal/v1/search (0.00s)
+    --- PASS: TestStaleTimestampsAreRejected//internal/v1/suggestions (0.00s)
+    --- PASS: TestStaleTimestampsAreRejected//internal/v1/events (0.00s)
+=== RUN   TestFutureTimestampsAreRejected
+--- PASS: TestFutureTimestampsAreRejected (0.00s)
+=== RUN   TestMissingNonceIsRejected
+--- PASS: TestMissingNonceIsRejected (0.00s)
+=== RUN   TestTamperedBodiesAreRejected
+=== RUN   TestTamperedBodiesAreRejected//internal/v1/search
+=== RUN   TestTamperedBodiesAreRejected//internal/v1/suggestions
+=== RUN   TestTamperedBodiesAreRejected//internal/v1/events
+--- PASS: TestTamperedBodiesAreRejected (0.00s)
+    --- PASS: TestTamperedBodiesAreRejected//internal/v1/search (0.00s)
+    --- PASS: TestTamperedBodiesAreRejected//internal/v1/suggestions (0.00s)
+    --- PASS: TestTamperedBodiesAreRejected//internal/v1/events (0.00s)
+=== RUN   TestASignatureForOneEndpointDoesNotOpenAnother
+--- PASS: TestASignatureForOneEndpointDoesNotOpenAnother (0.00s)
+=== RUN   TestRejectionsCarryNoResultShape
+--- PASS: TestRejectionsCarryNoResultShape (0.00s)
+=== RUN   TestMalformedAndIncompleteRequestsAre400
+=== RUN   TestMalformedAndIncompleteRequestsAre400/truncated_json
+=== RUN   TestMalformedAndIncompleteRequestsAre400/not_an_object
+=== RUN   TestMalformedAndIncompleteRequestsAre400/empty_body
+=== RUN   TestMalformedAndIncompleteRequestsAre400/missing_query
+=== RUN   TestMalformedAndIncompleteRequestsAre400/missing_viewer
+=== RUN   TestMalformedAndIncompleteRequestsAre400/missing_site
+=== RUN   TestMalformedAndIncompleteRequestsAre400/viewer_without_role
+=== RUN   TestMalformedAndIncompleteRequestsAre400/missing_prefix
+=== RUN   TestMalformedAndIncompleteRequestsAre400/empty_prefix
+=== RUN   TestMalformedAndIncompleteRequestsAre400/empty_event_batch
+=== RUN   TestMalformedAndIncompleteRequestsAre400/events_without_site
+=== RUN   TestMalformedAndIncompleteRequestsAre400/trailing_content
+--- PASS: TestMalformedAndIncompleteRequestsAre400 (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/truncated_json (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/not_an_object (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/empty_body (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/missing_query (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/missing_viewer (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/missing_site (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/viewer_without_role (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/missing_prefix (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/empty_prefix (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/empty_event_batch (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/events_without_site (0.00s)
+    --- PASS: TestMalformedAndIncompleteRequestsAre400/trailing_content (0.00s)
+=== RUN   TestOversizedBodiesAreRefused
+--- PASS: TestOversizedBodiesAreRefused (0.00s)
+=== RUN   TestAnOversizedBodyIsRefusedBeforeAuthentication
+--- PASS: TestAnOversizedBodyIsRefusedBeforeAuthentication (0.00s)
+=== RUN   TestADeclaredContentLengthAboveTheLimitIsRefusedWithoutAByteRead
+--- PASS: TestADeclaredContentLengthAboveTheLimitIsRefusedWithoutAByteRead (0.00s)
+=== RUN   TestBodyExactlyAtTheLimitIsAccepted
+--- PASS: TestBodyExactlyAtTheLimitIsAccepted (0.00s)
+=== RUN   TestWrongMethodsAreRefused
+--- PASS: TestWrongMethodsAreRefused (0.00s)
+=== RUN   TestUnknownPathsAre404
+--- PASS: TestUnknownPathsAre404 (0.00s)
+=== RUN   TestHandlersReceiveABoundedDeadline
+--- PASS: TestHandlersReceiveABoundedDeadline (0.00s)
+=== RUN   TestLogsNeverCarrySignatureMaterial
+--- PASS: TestLogsNeverCarrySignatureMaterial (0.00s)
+=== RUN   TestResponsesAreJSON
+--- PASS: TestResponsesAreJSON (0.00s)
+=== RUN   TestErrorHandlerRendersTheContractErrorShape
+--- PASS: TestErrorHandlerRendersTheContractErrorShape (0.00s)
+=== RUN   TestServerRefusesAnUnusableConfig
+--- PASS: TestServerRefusesAnUnusableConfig (0.00s)
+PASS
+ok  	github.com/yegamble/vizra-search/internal/httpapi	15.745s
+go test exit=0

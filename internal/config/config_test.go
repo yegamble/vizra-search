@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -345,19 +346,21 @@ func TestTheOldNameIsConsultedOnlyByTheRefusal(t *testing.T) {
 // refuse to boot — together with the probes that provoke it and the values
 // those probes supply.
 //
-// The table is exhaustive by construction:
-// TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses internal/config/config.go
-// and fails unless every `v.addf` call in it is accounted for here, and unless
-// every row here matches a call that exists. A refusal added to the loader
-// without a row is a red test, which is what makes the sentence "no refusal
-// message ever echoes a value" a property of the loader rather than of the
-// seven paths someone happened to think of.
+// The table is held to the loader mechanically:
+// TestEveryRefusalSiteInTheLoaderHasANoEchoRow parses every non-test .go file
+// of package config and fails unless every `addf` call in them is accounted for
+// here, and unless every row here matches a call that exists; and
+// TestNoRefusalBypassesTheNoEchoTable fails on the other ways this package could
+// build a refusal. A refusal added without a row is a red test, which is what
+// makes the sentence "no refusal message ever echoes a value" a property of the
+// loader rather than of the seven paths someone happened to think of. Both
+// tests say exactly what they cannot see.
 type refusalSite struct {
 	// format is a fragment of the addf FORMAT STRING, unique among them. It is
 	// how the AST guard pairs a row with the call sites it covers.
 	format string
-	// sites is how many addf calls share that format string. Three of the
-	// loader's messages are emitted from more than one place.
+	// sites is how many addf calls share that format string. Two of the
+	// loader's messages are emitted from more than one place (2 and 3 sites).
 	sites int
 	// rendered is a fragment of the MESSAGE as the operator sees it, asserted
 	// on every probe so a probe cannot silently provoke a different refusal.
@@ -612,16 +615,26 @@ func TestNoRefusalEchoesTheSuppliedValue(t *testing.T) {
 }
 
 // TestEveryRefusalSiteInTheLoaderHasANoEchoRow is what makes "every refusal
-// path" true rather than asserted. It parses internal/config/config.go, finds
-// every `v.addf` call — every way this loader can refuse to boot — and requires
-// the table above to account for all of them, by format string and by count.
+// path" true rather than asserted, within a reach this comment states exactly.
 //
-// A refusal added without a row is red. A row whose format string no longer
-// exists is red. A row that silently starts covering a second site is red.
+// It parses EVERY non-test .go file of package config — not config.go alone —
+// and finds every `addf` call in any of them, whatever the receiver. It then
+// requires the table above to account for all of them, by format string and by
+// count. A refusal added without a row is red, in config.go or in any other
+// file of the package. A row whose format string no longer exists is red. A row
+// that silently starts covering a second site is red.
+//
+// `addf` is how this loader refuses. TestNoRefusalBypassesTheNoEchoTable is the
+// other half: it makes the OTHER ways of refusing — a bare fmt.Errorf or
+// errors.New, a helper that writes the problem list itself, a custom error type —
+// red in this package, so that "every `addf` call" and "every refusal this
+// package constructs" are the same set. What neither test can see is stated
+// there.
 func TestEveryRefusalSiteInTheLoaderHasANoEchoRow(t *testing.T) {
-	found := addfFormatsIn(t, "config.go")
+	fset, files := loaderFiles(t)
+	found := addfFormatsIn(t, fset, files)
 	if len(found) == 0 {
-		t.Fatal("no v.addf calls found in config.go: the guard is not reading the loader")
+		t.Fatal("no addf calls found in package config: the guard is not reading the loader")
 	}
 
 	total := 0
@@ -640,7 +653,7 @@ func TestEveryRefusalSiteInTheLoaderHasANoEchoRow(t *testing.T) {
 			}
 		}
 		if len(hits) != 1 {
-			t.Fatalf("row %q matches %d refusal format strings in config.go, want exactly 1 (found: %v)",
+			t.Fatalf("row %q matches %d refusal format strings in package config, want exactly 1 (found: %v)",
 				site.format, len(hits), hits)
 		}
 		if matched[hits[0]] {
@@ -648,57 +661,234 @@ func TestEveryRefusalSiteInTheLoaderHasANoEchoRow(t *testing.T) {
 		}
 		matched[hits[0]] = true
 		if got := found[hits[0]]; got != site.sites {
-			t.Fatalf("row %q declares %d site(s) but config.go emits that message from %d",
+			t.Fatalf("row %q declares %d site(s) but package config emits that message from %d",
 				site.format, site.sites, got)
 		}
 	}
 
 	for format := range found {
 		if !matched[format] {
-			t.Fatalf("config.go can refuse with %q and no row in refusalSites() drives it; "+
+			t.Fatalf("package config can refuse with %q and no row in refusalSites() drives it; "+
 				"add a row (with a probe, or a written reason why its value cannot be a marker) "+
 				"so the no-echo property still covers every refusal", format)
 		}
 	}
 	if declared != total {
-		t.Fatalf("refusalSites() declares %d refusal sites, config.go has %d", declared, total)
+		t.Fatalf("refusalSites() declares %d refusal sites, package config has %d", declared, total)
 	}
 	t.Logf("no-echo coverage: %d refusal sites across %d distinct messages", total, len(found))
 }
 
-// addfFormatsIn returns every `v.addf` format string in a source file, mapped to
+// errorConstructorsAllowed are the ONLY error values package config builds
+// itself, keyed by constructor and constant format. None can carry an operator
+// value: the sentinel is a constant, the nil-lookup refusal fires only for a
+// programming error (a nil Lookup) and formats nothing supplied, and the
+// aggregator formats only the addf messages the table already covers.
+var errorConstructorsAllowed = map[string]string{
+	"errors.New invalid vizra-search configuration": "ErrInvalidConfig, the sentinel every refusal wraps",
+	"fmt.Errorf %w: nil environment lookup":         "LoadFrom(nil): a programming error, never an operator value",
+	"fmt.Errorf %w:\n  - %s":                        "(*validator).err, which joins the addf messages",
+}
+
+// TestNoRefusalBypassesTheNoEchoTable closes the three routes PR#4's verifier
+// used to echo a supplied value past the table with every lane green (VERIFY
+// round 3, A2–A4), over every non-test .go file of package config:
+//
+//   - a refusal built with fmt.Errorf, errors.New or errors.Join: refused unless
+//     it is one of errorConstructorsAllowed, by constructor AND constant format;
+//   - a new helper (`v.note(raw)`) that appends to the validator's problem list
+//     itself: `problems` may be touched only inside addf and err, and `addf` may
+//     only be CALLED — taking it as a value (`f := v.addf`) is refused, because
+//     the call through `f` would be invisible to the count above;
+//   - a custom error type: no method named Error may be declared in the package.
+//
+// A refusal in a second file of the package is covered by
+// TestEveryRefusalSiteInTheLoaderHasANoEchoRow, which reads every file.
+//
+// WHAT THIS DOES NOT SEE, stated rather than implied: an error value produced by
+// ANOTHER package and returned as-is (for example `return nil, err` from
+// strconv inside LoadFrom — strconv's own message quotes its input), a panic
+// carrying a value, and a log line. None of those is a constructor in this
+// package. They are review-only, under the CODEOWNERS entry on internal/config.
+func TestNoRefusalBypassesTheNoEchoTable(t *testing.T) {
+	fset, files := loaderFiles(t)
+	seen := map[string]int{}
+	for _, file := range files {
+		imports := importNames(file)
+		for _, decl := range file.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			if isFunc && fn.Name.Name == "Error" && fn.Recv != nil {
+				t.Errorf("%s: package config declares an Error() method on %s — a custom error type is a "+
+					"refusal route the no-echo table cannot count. Refuse through addf instead.",
+					fset.Position(fn.Pos()), exprString(fn.Recv.List[0].Type))
+			}
+			inside := ""
+			if isFunc && fn.Recv != nil && (fn.Name.Name == "addf" || fn.Name.Name == "err") {
+				inside = fn.Name.Name
+			}
+			ast.Inspect(decl, func(n ast.Node) bool {
+				switch e := n.(type) {
+				case *ast.CallExpr:
+					sel, ok := e.Fun.(*ast.SelectorExpr)
+					if !ok {
+						return true
+					}
+					pkg, ok := sel.X.(*ast.Ident)
+					if !ok {
+						return true
+					}
+					path := imports[pkg.Name]
+					var ctor string
+					switch {
+					case path == "fmt" && sel.Sel.Name == "Errorf":
+						ctor = "fmt.Errorf"
+					case path == "errors" && (sel.Sel.Name == "New" || sel.Sel.Name == "Join"):
+						ctor = "errors." + sel.Sel.Name
+					default:
+						return true
+					}
+					format := "<no constant format>"
+					if len(e.Args) > 0 {
+						if f, ok := constantString(e.Args[0]); ok {
+							format = f
+						}
+					}
+					key := ctor + " " + format
+					if _, ok := errorConstructorsAllowed[key]; !ok {
+						t.Errorf("%s: %s(%q) builds an error in package config outside the no-echo table. "+
+							"Refuse through v.addf, where the table accounts for the message; the only "+
+							"constructors allowed are %v.", fset.Position(e.Pos()), ctor, format, allowedKeys())
+					}
+					seen[key]++
+				case *ast.SelectorExpr:
+					if e.Sel.Name == "problems" && inside == "" {
+						t.Errorf("%s: the validator's problem list is touched outside addf/err — a helper "+
+							"that appends its own message is a refusal the table cannot count.",
+							fset.Position(e.Pos()))
+					}
+				}
+				return true
+			})
+			// `addf` as a value rather than a call.
+			calls := map[*ast.SelectorExpr]bool{}
+			ast.Inspect(decl, func(n ast.Node) bool {
+				if c, ok := n.(*ast.CallExpr); ok {
+					if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+						calls[sel] = true
+					}
+				}
+				return true
+			})
+			ast.Inspect(decl, func(n ast.Node) bool {
+				if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "addf" && !calls[sel] {
+					t.Errorf("%s: addf is used as a value, not called — calls made through that value "+
+						"are invisible to the refusal count.", fset.Position(sel.Pos()))
+				}
+				return true
+			})
+		}
+	}
+	for key := range errorConstructorsAllowed {
+		if seen[key] != 1 {
+			t.Errorf("the allowed constructor %q appears %d time(s) in package config, want exactly 1; "+
+				"an allowance nothing uses, or one used twice, is not what this list was reviewed as",
+				key, seen[key])
+		}
+	}
+}
+
+func allowedKeys() []string {
+	keys := make([]string, 0, len(errorConstructorsAllowed))
+	for k := range errorConstructorsAllowed {
+		keys = append(keys, strconv.Quote(k))
+	}
+	return keys
+}
+
+func exprString(e ast.Expr) string {
+	switch x := e.(type) {
+	case *ast.Ident:
+		return x.Name
+	case *ast.StarExpr:
+		return "*" + exprString(x.X)
+	default:
+		return fmt.Sprintf("%T", e)
+	}
+}
+
+// importNames maps the local name of each import in a file to its path.
+func importNames(file *ast.File) map[string]string {
+	out := map[string]string{}
+	for _, imp := range file.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			continue
+		}
+		name := path[strings.LastIndex(path, "/")+1:]
+		if imp.Name != nil {
+			name = imp.Name.Name
+		}
+		out[name] = path
+	}
+	return out
+}
+
+// loaderFiles parses every non-test .go file of package config. Reading only
+// config.go let a refusal moved to a second file of the package escape the
+// table with its value echoed (PR#4 VERIFY round 3, A4).
+func loaderFiles(t *testing.T) (*token.FileSet, map[string]*ast.File) {
+	t.Helper()
+	fset := token.NewFileSet()
+	matches, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]*ast.File{}
+	for _, path := range matches {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		files[path] = file
+	}
+	if _, ok := files["config.go"]; !ok {
+		t.Fatalf("config.go was not among the files read (%d files); the guard is not reading the loader", len(files))
+	}
+	return fset, files
+}
+
+// addfFormatsIn returns every `addf` format string in the given files, mapped to
 // the number of call sites that use it. Concatenated literals are folded; a
 // non-literal format string is a failure rather than a silent skip, because a
 // format the guard cannot read is a refusal it cannot account for.
-func addfFormatsIn(t *testing.T, path string) map[string]int {
+func addfFormatsIn(t *testing.T, fset *token.FileSet, files map[string]*ast.File) map[string]int {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", path, err)
-	}
-
 	formats := map[string]int{}
-	ast.Inspect(file, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "addf" {
+				return true
+			}
+			if len(call.Args) == 0 {
+				t.Fatalf("%s: addf call with no format argument", fset.Position(call.Pos()))
+			}
+			format, ok := constantString(call.Args[0])
+			if !ok {
+				t.Fatalf("%s: addf called with a format string the guard cannot read; keep refusal "+
+					"messages literal so they can be accounted for", fset.Position(call.Pos()))
+			}
+			formats[format]++
 			return true
-		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "addf" {
-			return true
-		}
-		if len(call.Args) == 0 {
-			t.Fatalf("%s: addf call with no format argument", fset.Position(call.Pos()))
-		}
-		format, ok := constantString(call.Args[0])
-		if !ok {
-			t.Fatalf("%s: addf called with a format string the guard cannot read; keep refusal "+
-				"messages literal so they can be accounted for", fset.Position(call.Pos()))
-		}
-		formats[format]++
-		return true
-	})
+		})
+	}
 	return formats
 }
 

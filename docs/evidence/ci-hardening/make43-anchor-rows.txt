@@ -1,0 +1,138 @@
+### environment
+GNU Make 4.3
+Python 3.12.3
+go version go1.22.2 linux/arm64
+aarch64
+
+### control
+c0   real Makefile, clean environment                               exit 0   GREEN ok (expected green) | make-integrity-guard: passed (9 gate target(s))
+
+### the anchor's environment (strict mode is selected by --workflow)
+e    env MAKEFLAGS=-i                                               exit 1   RED   ok (expected red) |   FAIL  the environment sets MAKEFLAGS='-i', and this is the WORKFLOW anchor.
+e    env MAKEFLAGS=                                                 exit 1   RED   ok (expected red) |   FAIL  the environment sets MAKEFLAGS='', and this is the WORKFLOW anchor.
+e    env GNUMAKEFLAGS=-ki                                           exit 1   RED   ok (expected red) |   FAIL  the environment sets GNUMAKEFLAGS='-ki', and this is the WORKFLOW anchor.
+e    env MFLAGS=-i                                                  exit 1   RED   ok (expected red) |   FAIL  the environment sets MFLAGS='-i', and this is the WORKFLOW anchor.
+e    env MAKELEVEL=1 MAKEFLAGS=-ki                                  exit 1   RED   ok (expected red) |   FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+e    env MAKELEVEL= MAKEFLAGS=--ign                                 exit 1   RED   ok (expected red) |   FAIL  the environment has MAKELEVEL='', and this is the WORKFLOW anchor.
+e    env MAKELEVEL=1 MAKEFLAGS=n                                    exit 1   RED   ok (expected red) |   FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+e    env MAKE_RESTARTS=1                                            exit 1   RED   ok (expected red) |   FAIL  the environment has MAKE_RESTARTS='1', and this is the WORKFLOW anchor.
+e    env MAKEOVERRIDES=SHELL=/usr/bin/true                          exit 1   RED   ok (expected red) |   FAIL  the environment has MAKEOVERRIDES='SHELL=/usr/bin/true', and this is the WORKFLOW anchor.
+e    env MAKECMDGOALS=ci                                            exit 1   RED   ok (expected red) |   FAIL  the environment has MAKECMDGOALS='ci', and this is the WORKFLOW anchor.
+e    env MAKEFILES=/tmp/x.mk                                        exit 1   RED   ok (expected red) |   FAIL  the environment sets MAKEFILES='/tmp/x.mk'.
+e    env BASH_ENV=/tmp/fn.sh                                        exit 1   RED   ok (expected red) |   FAIL  the environment sets BASH_ENV='/tmp/fn.sh'.
+e    env ENV=/tmp/fn.sh                                             exit 1   RED   ok (expected red) |   FAIL  the environment sets ENV='/tmp/fn.sh'.
+e    env SHELL=/usr/bin/true                                        exit 1   RED   ok (expected red) |   FAIL  the environment sets SHELL='/usr/bin/true', which is not a usable shell program.
+e    env VERSION=x                                                  exit 1   RED   ok (expected red) |   FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+e    env COMMIT=x                                                   exit 1   RED   ok (expected red) |   FAIL  the environment sets COMMIT='x', and this is the WORKFLOW anchor.
+e    env BUILD_TIME=x                                               exit 1   RED   ok (expected red) |   FAIL  the environment sets BUILD_TIME='x', and this is the WORKFLOW anchor.
+e    env IMAGE=x                                                    exit 1   RED   ok (expected red) |   FAIL  the environment sets IMAGE='x', and this is the WORKFLOW anchor.
+e    env CORE=/tmp/x                                                exit 1   RED   ok (expected red) |   FAIL  the environment sets CORE='/tmp/x', and this is the WORKFLOW anchor.
+e    env CORE_REMOTE=evil                                           exit 1   RED   ok (expected red) |   FAIL  the environment sets CORE_REMOTE='evil', and this is the WORKFLOW anchor.
+e    env GOFLAGS=-run=^$                                            exit 1   RED   ok (expected red) |   FAIL  the environment sets GOFLAGS='-run=^$', and this is the WORKFLOW anchor.
+e    env PATH=/tmp/stub:$PATH (a non-system make)                   exit 1   RED   ok (expected red) |   FAIL  `make` resolves to '/tmp/stub/make', which is not in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/sbin', '/sbin'].
+
+### Makefile mutations (each applied to a fresh copy; digest before -> after)
+     Makefile sha256 4b758bc3dff8 -> 50d697748dc3
+m1   SHELL := /usr/bin/true                                         exit 1   RED   ok (expected red) |   FAIL  Makefile:17 sets SHELL to something other than the approved value: `SHELL := /usr/bin/true`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 145b7f3b536f
+m2   MAKEFLAGS += -i                                                exit 1   RED   ok (expected red) |   FAIL  Makefile:19 assigns MAKEFLAGS: `MAKEFLAGS += -i`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 65f3ece10914
+m3   GNUMAKEFLAGS += -i                                             exit 1   RED   ok (expected red) |   FAIL  Makefile:19 assigns GNUMAKEFLAGS: `GNUMAKEFLAGS += -i`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 0ccfa219e817
+m4   .SHELLFLAGS := -c                                              exit 1   RED   ok (expected red) |   FAIL  Makefile:18 sets .SHELLFLAGS to something other than the approved value: `.SHELLFLAGS := -c`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 55fef1112f57
+m5   .ONESHELL:                                                     exit 1   RED   ok (expected red) |   FAIL  Makefile:19 declares `.ONESHELL`: `.ONESHELL:`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 9095de28daec
+m6   - prefix on the test recipe                                    exit 1   RED   ok (expected red) |   FAIL  Makefile:129 — gate target `test` has a recipe line prefixed `-`: `-go test -race -count=1 $(PKG)`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 498e6c7a24b9
+m7   || true on the test recipe                                     exit 1   RED   ok (expected red) |   FAIL  Makefile:129 — gate target `test` has a recipe line ending `|| true`: `go test -race -count=1 $(PKG) || true`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 5e0324856aa4
+m8   duplicate test target                                          exit 1   RED   ok (expected red) |   FAIL  gate target `test` is defined 2 times: Makefile:128, Makefile:222
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 5d7bb60bf0d4
+m9   test target inside ifndef                                      exit 1   RED   ok (expected red) |   FAIL  Makefile:129 defines the gate target `test` inside a make conditional.
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 2c57274464b2
+m10  $(shell) writes $GITHUB_ENV while being read                   exit 1   RED   ok (expected red) |   FAIL  Makefile:19 expands `$(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")`, which is neither a plain variable reference nor one of
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> ba136ed71515
+m11  a rule that remakes the Makefile                               exit 1   RED   ok (expected red) |   FAIL  Makefile:222 declares a rule for `Makefile`: `Makefile: FORCE ; @echo MAKEFLAGS=-i >> "$$GITHUB_ENV"`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 08d9fa882c58
+m12  include of a remade makefile                                   exit 1   RED   ok (expected red) |   FAIL  Makefile:19 is an include/load directive: `include gen.mk`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 67e592a4f10f
+m13  + recipe line                                                  exit 1   RED   ok (expected red) |   FAIL  Makefile:56 is a recipe line prefixed `+`: `+@echo MAKEFLAGS=-i >> "$$GITHUB_ENV"`
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+
+### MEASURED: the pre-flight removed, the command-file variables still stripped (n rows carry no expectation)
+     Makefile sha256 4b758bc3dff8 -> 2c57274464b2
+n10  $(shell) writes $GITHUB_ENV (no pre-flight)                    exit 0   GREEN measured | make-integrity-guard: passed (9 gate target(s))
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> ba136ed71515
+n11  a rule that remakes the Makefile (no pre-flight)               exit 1   RED   measured |   FAIL  `make -pn ci` failed (exit 2); the lane's real shape could not be established.
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> 08d9fa882c58
+n12  include of a remade makefile (no pre-flight)                   exit 1   RED   measured |   FAIL  `make -pn ci` failed (exit 2); the lane's real shape could not be established.
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+
+### THE HOLE REPRODUCED: the anchor as ported from core (no pre-flight, command-file variables not stripped) — expected GREEN with the env file written
+     Makefile sha256 4b758bc3dff8 -> 2c57274464b2
+p10  $(shell) writes $GITHUB_ENV (as ported)                        exit 0   GREEN ok (expected green) | make-integrity-guard: passed (9 gate target(s))
+     runner env file after the anchor: [MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i ]
+     restored byte-identical (4b758bc3dff8)
+     Makefile sha256 4b758bc3dff8 -> ba136ed71515
+p11  a rule that remakes the Makefile (as ported)                   exit 0   GREEN ok (expected green) | make-integrity-guard: passed (9 gate target(s))
+     runner env file after the anchor: [MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i ]
+     restored byte-identical (4b758bc3dff8)
+
+### stripping the variable alone is not enough: a glob finds the runner's file (pre-flight removed, stripping kept)
+     Makefile sha256 4b758bc3dff8 -> 021936f65251
+g10  $(shell) globs the runner dir (no pre-flight, stripped env)    exit 0   GREEN ok (expected green) | make-integrity-guard: passed (9 gate target(s))
+     runner env file after the anchor: [MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i ]
+     restored byte-identical (4b758bc3dff8)
+     /tmp/_runner_file_commands/set_env_x: [MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i MAKEFLAGS=-i ]
+     Makefile sha256 4b758bc3dff8 -> 021936f65251
+h10  the same glob, WITH the pre-flight                             exit 1   RED   ok (expected red) |   FAIL  Makefile:19 expands `$(shell for f in /tmp/_runner_file_commands/set_env_*; do echo MAKEFLAGS=-i >> $$f; done)`, which is neither a plain variable reference nor one of
+     runner env file after the anchor: []
+     restored byte-identical (4b758bc3dff8)
+     /tmp/_runner_file_commands/set_env_x: []
+
+### control after restores
+c1   real Makefile, clean environment                               exit 0   GREEN ok (expected green) | make-integrity-guard: passed (9 gate target(s))
+
+### what GNU Make 4.3 does with the workflow-line evasions (a Makefile whose ci recipe is 'exit 7')
+  make ci                                  exit=2
+  make -i ci                               exit=0
+  make -j -i ci                            exit=0
+  make -l -i ci                            exit=0
+  MAKEFLAGS=-i make ci                     exit=0
+  GNUMAKEFLAGS=-i make ci                  exit=0
+  M=make; $M -i ci                         exit=0
+  make(){ :; }; make ci                    exit=0
+  echo `make -i ci`                        exit=0
+  MAKELEVEL=1 MAKEFLAGS=-ki make ci        exit=0
+  MAKELEVEL=1 MAKEFLAGS=n make ci          exit=0

@@ -1,0 +1,151 @@
+# pinned-steps.yml — the DEFAULT-DENY allowlist for the steps that carry this
+# repository's gate. Read by scripts/ci-required-guard.py.
+#
+# Ported in DESIGN from vizra-core .github/pinned-steps.yml at
+# eeeea068a20118f7af721f024264603b436a1528 (core PR #9). The bodies are this
+# repository's own.
+#
+# WHY A LIST OF BYTES AND NOT A PARSER
+# ------------------------------------
+# vizra-core first refused a BLACKLIST of make flags and `env:` names by reading
+# each make step's `run:` as shell. Its verifier found thirteen spellings that
+# left the guard green (core docs/evidence/warroom/2026-09-21-vizra-core-pr9-
+# hardening-b1-VERIFY.md § 3b), among them:
+#
+#   make -j -i ci            `-i` eaten as -j's optional argument
+#   export MAKEFLAGS=-i      on the line above `make ci`, same `run:`
+#   M=make ; $M -i ci        make reached through a variable
+#   make(){ :; } ; make ci   a shell function shadowing make
+#   echo `make -i ci`        command substitution
+#   if: always() && false    the step never runs; the job stays green
+#   working-directory:       `-C` by another name
+#   shell: bash -c '{0}||true'  the exit status discarded
+#
+# and, in round two, an anchor step that ran the real guard and THEN wrote
+# MAKEFLAGS to $GITHUB_ENV for the next step.
+#
+# A blacklist over arbitrary shell cannot be complete. So a step in a checked
+# lane that mentions `make` at all must be BYTE-EQUAL to one of `make_steps`,
+# a step that mentions `go test` must be byte-equal to one of
+# `direct_test_steps`, and either may carry no key but `name`, `run` and `id`.
+# Comparison is byte-equality after trimming exactly one trailing newline (a
+# YAML block scalar keeps one).
+#
+# CHANGING THIS FILE
+# ------------------
+# Adding an entry widens what a required lane may run. It is a deliberate,
+# reviewed edit to a file whose only purpose is to be a gate. It is NOT
+# prevented; it is made visible. One invocation per entry.
+
+# ----------------------------------------------------------------------------
+# THE ANCHOR. The step IMMEDIATELY before every make step must be exactly this,
+# carrying no key but name/run/id, and a step anywhere in a checked lane that
+# names make-integrity-guard without being byte-equal to it is refused.
+#
+# `--workflow` is load-bearing: it selects the anchor's STRICT environment mode.
+# The mode is chosen by the invocation, never by the environment.
+# ----------------------------------------------------------------------------
+anchor_step: |
+  ./scripts/make-integrity-guard.sh --workflow
+
+# ----------------------------------------------------------------------------
+# MAKE STEPS. Exactly the make invocations CI uses. No flags, no variable
+# overrides, no chains, no redirection.
+# ----------------------------------------------------------------------------
+make_steps:
+  - |
+    make fmt-check
+  - |
+    make vet
+  - |
+    make echo-containment
+  - |
+    make build
+  - |
+    make contract-drift
+  - |
+    make test
+  - |
+    make tidy-check
+  - |
+    make vendor-contract-selftest
+
+# ----------------------------------------------------------------------------
+# DIRECT TEST STEPS. The second layer: whatever make did, a real failing test
+# still fails a required lane, and a suite that ran nothing, skipped something,
+# or lost a package is red.
+#
+# Every line is load-bearing, which is why the whole body is pinned:
+#   * GOFLAGS is refused because the go command reads it as extra flags, so a
+#     `$GITHUB_ENV` write of `GOFLAGS=-run=^$` would select nothing;
+#   * `|| rc=$?` records go test's exit code instead of letting `-e` stop the
+#     step before the report prints the counts;
+#   * `|| exit 1` on the report makes its verdict fail the step;
+#   * `exit "$rc"` LAST makes go test's own failure fail the step even if the
+#     report line were removed (core PR#9 VERIFY, FINDING 6: without it,
+#     deleting the report line left a planted t.Fatal exiting 0).
+# ----------------------------------------------------------------------------
+direct_test_steps:
+  - |
+    set -uo pipefail
+    if [ -n "${GOFLAGS+set}" ]; then
+      echo "::error::GOFLAGS is set in this step's environment; the go command reads it as extra flags. Refused, not passed."
+      exit 1
+    fi
+    rc=0
+    go test -count=1 -json ./... > unit-events.json || rc=$?
+    echo "$rc" > unit-exit.txt
+    echo "go test (unit) exited $rc"
+    python3 scripts/go-test-report.py \
+      --events unit-events.json --suite unit \
+      --floors scripts/test-floors.json --go-exit-file unit-exit.txt || exit 1
+    exit "$rc"
+
+# ----------------------------------------------------------------------------
+# REQUIRED INVOCATIONS — the POSITIVE half. Pinning a step's shape stops it
+# being turned into something else; it does not stop it being DELETED, or
+# replaced by a step that reaches make through an indirection no classifier
+# sees (`M=make; $M -i test`). So each job listed here must contain these
+# bodies, byte-equal, whatever else it contains. Keyed by the job's name.
+# Every pinned body above must be required by some job.
+# ----------------------------------------------------------------------------
+required_invocations:
+  fmt:
+    - |
+      make fmt-check
+  vet:
+    - |
+      make vet
+  echo-containment:
+    - |
+      make echo-containment
+  build:
+    - |
+      make build
+  contract-drift:
+    - |
+      make contract-drift
+  test:
+    - |
+      make test
+  test-noskip:
+    - |
+      set -uo pipefail
+      if [ -n "${GOFLAGS+set}" ]; then
+        echo "::error::GOFLAGS is set in this step's environment; the go command reads it as extra flags. Refused, not passed."
+        exit 1
+      fi
+      rc=0
+      go test -count=1 -json ./... > unit-events.json || rc=$?
+      echo "$rc" > unit-exit.txt
+      echo "go test (unit) exited $rc"
+      python3 scripts/go-test-report.py \
+        --events unit-events.json --suite unit \
+        --floors scripts/test-floors.json --go-exit-file unit-exit.txt || exit 1
+      exit "$rc"
+  tidy-check:
+    - |
+      make tidy-check
+  vendor-contract-selftest:
+    - |
+      make vendor-contract-selftest

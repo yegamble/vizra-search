@@ -1,0 +1,82 @@
+# Fix round 1, BEFORE: demo rows R11-R16 (planted inventory forms) against 617c6d9's inventory test
+# (scripts/ci-hardening-demo.py copied from this round into a detached 617c6d9 worktree; its scripts_test.go is 617c6d9's; nothing committed there).
+# Expected: every row NOT RED — 617c6d9's inventory misses these literal forms (FINDING 6, the star-import, FINDING 8).
+# cwd: the 617c6d9 worktree. go version go1.27.1 darwin/arm64; 2026-09-23T12:57:51Z; scripts_test.go sha256 7e30e9a36a8b6a131ff4a1ea40c033e32d74189cc6df9972b7443d247392b934 (= git show 617c6d9:scripts/scripts_test.go: 7e30e9a36a8b6a131ff4a1ea40c033e32d74189cc6df9972b7443d247392b934)
+
+=== R11 (item R) FINDING 6: a planted shell line `env -u X make ci` (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    scripts/planted-make-call.sh sha256 before (absent)
+    scripts/planted-make-call.sh sha256 after  ad3c55fe596f6bd8b1ae9974ec12639b098ed01561e494d9c30b38e50dde809e
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.372s
+              (declared reason not found: 'scripts/planted-make-call.sh:2 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.372s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared
+
+=== R12 (item R) FINDING 6: a planted shell line `sudo -u bob make ci` (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    scripts/planted-make-call.sh sha256 before (absent)
+    scripts/planted-make-call.sh sha256 after  00e855ef2b9e3e334e65327ee3587ac67d3693426505819e72f3495846cd5324
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.358s
+              (declared reason not found: 'scripts/planted-make-call.sh:2 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.358s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared
+
+=== R13 (item R) FINDING 6: a planted Go dot-import `Command("make", ...)` (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    internal/buildinfo/planted_dot_exec.go sha256 before (absent)
+    internal/buildinfo/planted_dot_exec.go sha256 after  70ef9086bcdb275e81720363651565c12d48479a87265b3bdb2477a636137c36
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.361s
+              (declared reason not found: 'internal/buildinfo/planted_dot_exec.go:5 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.361s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared
+
+=== R14 (item R) a planted Python `from subprocess import *` + run(["make"]) (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    scripts/planted_make_call.py sha256 before (absent)
+    scripts/planted_make_call.py sha256 after  fdea46358c0a5f589999b48112b3529bb568ad6d3f84491369af77c669b5a38e
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.354s
+              (declared reason not found: 'scripts/planted_make_call.py:3 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.354s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared
+
+=== R15 (item R) a planted Python `from os import *` + system("make ci") (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    scripts/planted_make_call.py sha256 before (absent)
+    scripts/planted_make_call.py sha256 after  4a65bbbcd84766df56c09c3d19d3167f772abe9ec50680df14698ad9413a719e
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.363s
+              (declared reason not found: 'scripts/planted_make_call.py:3 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.363s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared
+
+=== R16 (item R) FINDING 8: a planted Python argv list held in a variable (never run)
+    command: go test -count=1 -run TestEveryPlaceThatStartsMakeIsGated ./scripts/
+    scripts/planted_make_call.py sha256 before (absent)
+    scripts/planted_make_call.py sha256 after  41551c5118af56d29610fda4e762d45f77593b759b9d7ce46385680565900b02
+    MUTATED : exit 0 -> *** NOT RED AS DECLARED
+              ok  	github.com/yegamble/vizra-search/scripts	0.352s
+              (declared reason not found: 'scripts/planted_make_call.py:2 starts make outside')
+              | ok  	github.com/yegamble/vizra-search/scripts	0.352s
+    restored  sha256 (absent) (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 0/1 row(s) behaved as declared

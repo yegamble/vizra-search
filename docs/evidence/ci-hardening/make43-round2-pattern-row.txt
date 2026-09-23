@@ -1,0 +1,5 @@
+GNU Make 4.3
+Makefile sha256 e9d7c58edc93ed4e -> 7778e8085f7f3036 (re-pinned); last line: %: SHELL := /usr/bin/true
+anchor exit 1
+  FAIL  Makefile:231 assigns `SHELL` (`%: SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned at all, in any form (target-specific, pattern-specific, define, private, override).
+make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)

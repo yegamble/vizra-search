@@ -37,8 +37,10 @@ side turns the other red. **Do not edit the vendored copy** — see `AGENTS.md`.
 
 ```sh
 make run     # development mode on :8081 with the documented dev key
-make ci      # every required lane: fmt, vet, echo-containment, build,
-             # contract-drift, test -race, test-noskip, and nothing skipped
+make ci      # every required make lane: fmt, vet, echo-containment, build,
+             # contract-drift, test -race, test-noskip (every package at its
+             # executed-test floor, nothing skipped), tidy-check and
+             # vendor-contract-selftest
 make docker-build
 ```
 

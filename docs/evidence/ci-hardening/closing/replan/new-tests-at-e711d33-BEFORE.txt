@@ -1,0 +1,1430 @@
+# RED: this re-plan's NEW tests (scripts/scripts_test.go from the re-plan working tree) against e711d33's UNMODIFIED gate code
+# tree: git worktree at e711d336e147583a084252387f4a19697e5f8788, only scripts/scripts_test.go replaced; git status:  M scripts/scripts_test.go 
+# date: 2026-09-23T14:50:44Z; go version go1.27.1 darwin/arm64; GNU Make 3.81; python 3.9.6
+# command: go test -count=1 -v -run 'TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently|TestEveryMakefileReaderConsumesTheOneLineReader|TestTheAnchorReadsTheRecipeMakeReads|TestNamedMakefileConstructsAreRefusedBeforeMake|TestTheRealMakefileFitsTheGrammar' ./scripts/
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_-_prefix
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_-_prefix
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_beginning_with_$@
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_beginning_with_$@
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_+_prefix
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_+_prefix
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/two_targets_on_one_rule_line,_a_gate_target_second
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/two_targets_on_one_rule_line,_a_gate_target_second
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grouped_targets_&:
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grouped_targets_&:
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_special_target_that_is_not_the_first_word
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_special_target_that_is_not_the_first_word
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_target_that_is_an_expansion_($(I)ORE:)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_target_that_is_an_expansion_($(I)ORE:)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_that_starts_with_whitespace
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_that_starts_with_whitespace
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_continued_with_a_backslash
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_continued_with_a_backslash
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_global
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_global
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_target-specific
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_target-specific
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/define_with_a_computed_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/define_with_a_computed_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/$(call_eval,…)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/$(call_eval,…)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_holding_=_(-run=Foo)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_holding_=_(-run=Foo)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_with_a_prerequisite,_holding_X=1
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_with_a_prerequisite,_holding_X=1
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_echo_a=b
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_echo_a=b
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F10_a_non-TAB_line_inside_a_conditional_within_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F10_a_non-TAB_line_inside_a_conditional_within_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/a_conditional_within_a_recipe_(moved_from_the_reading_rows)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/a_conditional_within_a_recipe_(moved_from_the_reading_rows)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_an_inline_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_an_inline_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F11_override_rule_line_with_an_inline_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F11_override_rule_line_with_an_inline_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_a_TAB_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_a_TAB_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F11_undefine_rule_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F11_undefine_rule_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F11_load_rule_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F11_load_rule_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F12_call_with_a_partly_computed_function_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F12_call_with_a_partly_computed_function_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_include
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_include
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_define
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_define
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_export
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_export
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_vpath
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_vpath
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_conditional
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_conditional
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_second_colon
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_second_colon
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_double-colon_rule
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_double-colon_rule
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_pattern_rule
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_pattern_rule
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_special_target_(.SILENT)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_special_target_(.SILENT)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_+=_assignment
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_+=_assignment
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_TAB_line_outside_a_rule
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_TAB_line_outside_a_rule
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_#_inside_$(shell_…)
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_#_inside_$(shell_…)
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_substitution_reference_in_a_value
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_substitution_reference_in_a_value
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_function_in_a_value
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_function_in_a_value
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$X_in_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$X_in_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(shell_…)_in_a_recipe
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(shell_…)_in_a_recipe
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$V_in_a_value
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$V_in_a_value
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(origin_V)_in_a_value
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(origin_V)_in_a_value
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(value_V)_in_a_value
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(value_V)_in_a_value
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_ifdef_V
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_ifdef_V
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_comment_continued_into_a_rule_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_comment_continued_into_a_rule_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_rule_line_whose_trailing_comment_is_continued
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_rule_line_whose_trailing_comment_is_continued
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_lone_CR_inside_a_comment
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_lone_CR_inside_a_comment
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_CRLF_line_endings
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_CRLF_line_endings
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_NUL_inside_a_comment
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_NUL_inside_a_comment
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F14_an_NBSP-only_line
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F14_an_NBSP-only_line
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifdef_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifdef_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifndef_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifndef_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifeq_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifeq_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifneq_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifneq_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_else_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_else_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endif_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endif_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_include_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_include_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_-include_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_-include_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_sinclude_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_sinclude_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_define_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_define_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endef_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endef_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_export_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_export_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_unexport_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_unexport_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_override_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_override_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_private_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_private_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_undefine_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_undefine_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name
+=== RUN   TestNamedMakefileConstructsAreRefusedBeforeMake/F15_load_as_a_variable_name
+=== PAUSE TestNamedMakefileConstructsAreRefusedBeforeMake/F15_load_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_a_TAB_recipe
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_special_target_(.SILENT)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_comment_continued_into_a_rule_line
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endif_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_else_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifneq_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifeq_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifneq_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`ifneq`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_ifneq_as_a_v761733070/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** invalid syntax in conditional.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_else_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`else`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_else_as_a_va3392436821/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** extraneous `else'.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifeq_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`ifeq`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_ifeq_as_a_va1535112238/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** invalid syntax in conditional.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifndef_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifdef_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_an_NBSP-only_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endif_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`endif`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_endif_as_a_v66706743/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: Extraneous text after `endif' directive
+          FAIL    Makefile:231: *** extraneous `endif'.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_NUL_inside_a_comment
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_special_target_(.SILENT)
+    scripts_test.go:1833: grammar: a special target (.SILENT) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.SILENT:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_CRLF_line_endings
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_a_TAB_recipe
+    scripts_test.go:1833: F11 private rule line with a TAB recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `private` directive): `private inert-target:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe
+    scripts_test.go:1833: .RECIPEPREFIX := > with a > -true recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.RECIPEPREFIX := >`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_lone_CR_inside_a_comment
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_rule_line_whose_trailing_comment_is_continued
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifndef_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`ifndef`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_ifndef_as_a_1778976748/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** invalid syntax in conditional.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifdef_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`ifdef`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_ifdef_as_a_v3737723048/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** invalid syntax in conditional.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_override_rule_line_with_an_inline_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_an_NBSP-only_line
+    scripts_test.go:1827: exit 1; want "a non-ascii whitespace character (u+00a0)" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_an_NBSP-only511314680/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** missing separator.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_an_inline_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_rule_line_whose_trailing_comment_is_continued
+    scripts_test.go:1827: exit 1; want "a comment continued onto the next line" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_a_rule_line_3670957061/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  Makefile:231 is a rule line continued with a backslash (`test:`); write the rule on one line.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_CRLF_line_endings
+    scripts_test.go:1827: exit 1; want "a carriage return" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_CRLF_line_en317926949/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-target:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule.
+          FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a TAB line outside a rule): `true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_conditional_within_a_recipe_(moved_from_the_reading_rows)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F10_a_non-TAB_line_inside_a_conditional_within_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_an_inline_recipe
+    scripts_test.go:1833: F11 private rule line with an inline recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `private` directive): `private inert-target: ; -true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_echo_a=b
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_override_rule_line_with_an_inline_recipe
+    scripts_test.go:1833: F11 override rule line with an inline recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `override` directive): `override inert-target: ; -true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion
+    scripts_test.go:1833: recipe that begins with an expansion (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is a recipe line that BEGINS with an expansion (`$(Q)true`). What it expands to — possibly a `-` or `+` prefix — cannot be determined without running make. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_with_a_prerequisite,_holding_X=1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_holding_=_(-run=Foo)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F10_a_non-TAB_line_inside_a_conditional_within_a_recipe
+    scripts_test.go:1833: F10 a non-TAB line inside a conditional within a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is outside the Makefile grammar this gate allows (a conditional directive): `ifeq (a,b)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(call_eval,…)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_conditional_within_a_recipe_(moved_from_the_reading_rows)
+    scripts_test.go:1833: a conditional within a recipe (moved from the reading rows) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is outside the Makefile grammar this gate allows (a conditional directive): `ifndef VIZRA_NEVER_SET`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_with_a_computed_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_echo_a=b
+    scripts_test.go:1833: F9 inline recipe echo a=b (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: ; @echo a=b`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_holding_=_(-run=Foo)
+    scripts_test.go:1833: F9 inline recipe holding = (-run=Foo) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: ; -go test -run=Foo ./...`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_target-specific
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_global
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_with_a_prerequisite,_holding_X=1
+    scripts_test.go:1833: F9 inline recipe with a prerequisite, holding X=1 (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: dep ; -false X=1`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_continued_with_a_backslash
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(call_eval,…)
+    scripts_test.go:1833: $(call eval,…) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(call eval,INERT2 := 1)` (a function, a substitution reference or a computed name)): `INERT := $(call eval,INERT2 := 1)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_that_starts_with_whitespace
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_with_a_computed_name
+    scripts_test.go:1833: define with a computed name (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `define` directive): `define $(M)AKEFLAGS`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_target_that_is_an_expansion_($(I)ORE:)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_global
+    scripts_test.go:1833: a computed variable name, global (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an expansion outside an assignment value or a recipe): `$(M)AKEFLAGS += -i`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/a_special_target_that_is_not_the_first_word
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_target-specific
+    scripts_test.go:1833: a computed variable name, target-specific (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an expansion outside an assignment value or a recipe): `test: $(S)HELL = /bin/sh`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_continued_with_a_backslash
+    scripts_test.go:1833: a rule line continued with a backslash (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is a rule line continued with a backslash (`inert-target  :`); write the rule on one line. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grouped_targets_&:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/two_targets_on_one_rule_line,_a_gate_target_second
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_that_starts_with_whitespace
+    scripts_test.go:1833: a rule line that starts with whitespace (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (a line that starts with whitespace): `inert-target:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_target_that_is_an_expansion_($(I)ORE:)
+    scripts_test.go:1833: a rule target that is an expansion ($(I)ORE:) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an expansion outside an assignment value or a recipe): `$(I)ORE: test`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_+_prefix
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_beginning_with_$@
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grouped_targets_&:
+    scripts_test.go:1833: grouped targets &: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-a inert-b &:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_-_prefix
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/a_special_target_that_is_not_the_first_word
+    scripts_test.go:1833: a special target that is not the first word (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-target .IGNORE:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/two_targets_on_one_rule_line,_a_gate_target_second
+    scripts_test.go:1833: two targets on one rule line, a gate target second (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-target test:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_beginning_with_$@
+    scripts_test.go:1833: inline ; recipe beginning with $@ (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: ; $@x`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_+_prefix
+    scripts_test.go:1833: inline ; recipe with a + prefix (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: ; +true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_unexport_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable)
+    scripts_test.go:1833: recipe that begins with $X (a one-letter variable) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:233 is outside the Makefile grammar this gate allows (a recipe line using `$X` (only `$$`, `$(NAME)` and `${NAME}` are allowed)): `$Xtrue`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_load_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_comment_continued_into_a_rule_line
+    scripts_test.go:1827: exit 1; want "a comment continued onto the next line" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_a_comment_co1573653719/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 f4dac2dc147c… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          FAIL  gate target `test` is defined 2 times: Makefile:137, Makefile:231
+                make runs the LAST definition and REPLACES the earlier recipe. The lane must have one recipe.
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `ci`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `fmt-check`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `vet`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `echo-containment`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `build`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `contract-drift`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `test`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `tidy-check`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `vendor-contract-selftest`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: FAILED
+        A make-driven gate that can be turned into a no-op is not a gate. Fix the Makefile.
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$<
+    scripts_test.go:1833: recipe that begins with $< (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a recipe line using `$<` (only `$$`, `$(NAME)` and `${NAME}` are allowed)): `$<true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_undefine_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@
+    scripts_test.go:1833: recipe that begins with $@ (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a recipe line using `$@` (only `$$`, `$(NAME)` and `${NAME}` are allowed)): `$@-is-not-run`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_-_prefix
+    scripts_test.go:1833: inline ; recipe with a - prefix (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `inert-target: ; -true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_private_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_override_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_load_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`load`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_load_as_a_va3064917092/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  make would read :=, which has no entry in .github/pinned-makefiles.yml.
+          FAIL  make would read 1, which has no entry in .github/pinned-makefiles.yml.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_NUL_inside_a_comment
+    scripts_test.go:1827: exit 0; want "a nul byte" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_a_NUL_inside3660322049/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 12d3933afa6c… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_override_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`override`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_override_as_3816882312/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** empty variable name.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_lone_CR_inside_a_comment
+    scripts_test.go:1827: exit 1; want "a carriage return" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF14_a_lone_CR_in503444434/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 f162911c5306… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          FAIL  gate target `test` is defined 2 times: Makefile:137, Makefile:231
+                make runs the LAST definition and REPLACES the earlier recipe. The lane must have one recipe.
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `ci`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `fmt-check`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `vet`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `echo-containment`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `build`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `contract-drift`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `test`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `tidy-check`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          FAIL  make reports a DUPLICATE definition while resolving `vendor-contract-selftest`:
+                Makefile:232: warning: overriding commands for target `test'
+                Makefile:138: warning: ignoring old commands for target `test'
+                make runs the LAST definition. A reader — and any text-based check — sees the first, so a
+                duplicate can replace a whole gate recipe with `@true` and leave the file looking correct.
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: FAILED
+        A make-driven gate that can be turned into a no-op is not a gate. Fix the Makefile.
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c
+    scripts_test.go:1833: .SHELLFLAGS := -c (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `.SHELLFLAGS` (`.SHELLFLAGS := -c`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe
+    scripts_test.go:1833: $(MAKE) in a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a recipe line using `$(MAKE)`): `@echo $(MAKE) >/dev/null`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line
+    scripts_test.go:1833: + recipe line (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is a recipe line prefixed `+`, which make runs even under -n and -q: `+@true` | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…)
+    scripts_test.go:1833: $(eval …) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an expansion outside an assignment value or a recipe): `$(eval INERT := 1)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS
+    scripts_test.go:1833: define MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `define` directive): `define MAKEFLAGS`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS
+    scripts_test.go:1833: override .SHELLFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `override` directive): `override .SHELLFLAGS := -c`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL
+    scripts_test.go:1833: target-specific private SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `test: private SHELL = /bin/sh`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL
+    scripts_test.go:1833: pattern-specific SHELL (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `%: SHELL := /usr/bin/true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS
+    scripts_test.go:1833: target-specific MAKEFLAGS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `test: MAKEFLAGS += -i`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_export
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i
+    scripts_test.go:1833: MFLAGS = -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `MFLAGS` (`MFLAGS = -i`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i
+    scripts_test.go:1833: GNUMAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `GNUMAKEFLAGS += -i`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i
+    scripts_test.go:1833: MAKEFLAGS += -i (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `MAKEFLAGS += -i`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_pattern_rule
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_double-colon_rule
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_second_colon
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_export
+    scripts_test.go:1833: grammar: export (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `export` directive): `export INERT`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_conditional
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_double-colon_rule
+    scripts_test.go:1833: grammar: a double-colon rule (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-target:: a`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_vpath
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_pattern_rule
+    scripts_test.go:1833: grammar: a pattern rule (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `%.o: %.c`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$X_in_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_second_colon
+    scripts_test.go:1833: grammar: a second colon (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `inert-target: a: b`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_ifdef_V
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_unexport_as_a_variable_name
+    scripts_test.go:1827: exit 0; want "a directive keyword (`unexport`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_unexport_as_3141633348/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 912640c12493… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(value_V)_in_a_value
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_conditional
+    scripts_test.go:1833: grammar: a conditional (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (a conditional directive): `ifeq (a,b)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(origin_V)_in_a_value
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_vpath
+    scripts_test.go:1833: grammar: vpath (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `vpath` directive): `vpath %.c src`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$V_in_a_value
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$X_in_a_recipe
+    scripts_test.go:1833: grammar: $X in a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a recipe line using `$X` (only `$$`, `$(NAME)` and `${NAME}` are allowed)): `echo $X`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(shell_…)_in_a_recipe
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_ifdef_V
+    scripts_test.go:1833: grammar: ifdef V (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (a conditional directive): `ifdef VZ_M4_IFDEF`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name
+    scripts_test.go:1827: exit 0; want "a directive keyword (`vpath`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_vpath_as_a_v1688750742/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 aa41b627c023… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_undefine_as_a_variable_name
+    scripts_test.go:1827: exit 0; want "a directive keyword (`undefine`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_undefine_as_2535553452/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 3d65d699a3ab… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F12_call_with_a_partly_computed_function_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_define
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_include
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(value_V)_in_a_value
+    scripts_test.go:1833: grammar: $(value V) in a value (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(value VZ_M4_VALUE)` (a function, a substitution reference or a computed name)): `INERT := $(value VZ_M4_VALUE)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_#_inside_$(shell_…)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_private_as_a_variable_name
+    scripts_test.go:1827: exit 0; want "a directive keyword (`private`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_private_as_a3316833537/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          ok    make runs only on REVIEWED bytes: Makefile sha256 b08541eb2a1b… match .github/pinned-makefiles.yml; `make -q` (one invocation, every pinned file a goal) says none would be remade; make is /usr/bin/make. Those bytes run their own reviewed parse-time call(s) while read: Makefile:31 `GOFMT       := $(shell go env GOROOT)/bin/gofmt`; Makefile:33 `VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo `; Makefile:34 `COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)`; Makefile:35 `BUILD_TIME  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)`. What a reviewer approves together with a pin update is outside this check.
+          ok    MAKEFILE_LIST is exactly the pinned set: ['Makefile']
+          closure: 10 target(s); 1 reached through prerequisites (test-noskip)
+          ok    make read 1 makefile(s): Makefile
+          ok    the root Makefile pins SHELL and .SHELLFLAGS to the approved values, and nothing else assigns them
+          ok    gate target `ci` is defined exactly once (Makefile:51)
+          ok    gate target `fmt-check` is defined exactly once (Makefile:54)
+          ok    gate target `vet` is defined exactly once (Makefile:62)
+          ok    gate target `echo-containment` is defined exactly once (Makefile:66)
+          ok    gate target `build` is defined exactly once (Makefile:75)
+          ok    gate target `contract-drift` is defined exactly once (Makefile:131)
+          ok    gate target `test` is defined exactly once (Makefile:137)
+          ok    gate target `tidy-check` is defined exactly once (Makefile:155)
+          ok    gate target `vendor-contract-selftest` is defined exactly once (Makefile:196)
+          ok    gate target `test-noskip` is defined exactly once (Makefile:148)
+          ok    `ci`: make resolves SHELL to the approved /bin/bash
+          ok    `ci`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `ci`: `.ONESHELL:` is not in effect
+          ok    `ci`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `ci`: make reports no duplicate-definition override
+          ok    `ci`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `fmt-check`: make resolves SHELL to the approved /bin/bash
+          ok    `fmt-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `fmt-check`: `.ONESHELL:` is not in effect
+          ok    `fmt-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `fmt-check`: make reports no duplicate-definition override
+          ok    `fmt-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vet`: make resolves SHELL to the approved /bin/bash
+          ok    `vet`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vet`: `.ONESHELL:` is not in effect
+          ok    `vet`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vet`: make reports no duplicate-definition override
+          ok    `vet`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `echo-containment`: make resolves SHELL to the approved /bin/bash
+          ok    `echo-containment`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `echo-containment`: `.ONESHELL:` is not in effect
+          ok    `echo-containment`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `echo-containment`: make reports no duplicate-definition override
+          ok    `echo-containment`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `build`: make resolves SHELL to the approved /bin/bash
+          ok    `build`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `build`: `.ONESHELL:` is not in effect
+          ok    `build`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `build`: make reports no duplicate-definition override
+          ok    `build`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `contract-drift`: make resolves SHELL to the approved /bin/bash
+          ok    `contract-drift`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `contract-drift`: `.ONESHELL:` is not in effect
+          ok    `contract-drift`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `contract-drift`: make reports no duplicate-definition override
+          ok    `contract-drift`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `test`: make resolves SHELL to the approved /bin/bash
+          ok    `test`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `test`: `.ONESHELL:` is not in effect
+          ok    `test`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `test`: make reports no duplicate-definition override
+          ok    `test`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `tidy-check`: make resolves SHELL to the approved /bin/bash
+          ok    `tidy-check`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `tidy-check`: `.ONESHELL:` is not in effect
+          ok    `tidy-check`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `tidy-check`: make reports no duplicate-definition override
+          ok    `tidy-check`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `vendor-contract-selftest`: make resolves SHELL to the approved /bin/bash
+          ok    `vendor-contract-selftest`: make resolves .SHELLFLAGS to the approved '-eu -o pipefail -c'
+          ok    `vendor-contract-selftest`: `.ONESHELL:` is not in effect
+          ok    `vendor-contract-selftest`: MAKEFLAGS carries nothing beyond this guard's own -pn ('pn')
+          ok    `vendor-contract-selftest`: make reports no duplicate-definition override
+          ok    `vendor-contract-selftest`: no expanded command discards its exit status (the one contract-drift `ran` line excepted)
+          ok    `make -q Makefile` again at the end: still nothing would be remade
+        make-integrity-guard: passed (9 gate target(s); make ran 21 time(s), by /usr/bin/make, only on the pinned bytes of Makefile, which are unchanged)
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_function_in_a_value
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(origin_V)_in_a_value
+    scripts_test.go:1833: grammar: $(origin V) in a value (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(origin VZ_M4_ORIGIN)` (a function, a substitution reference or a computed name)): `INERT := $(origin VZ_M4_ORIGIN)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_substitution_reference_in_a_value
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$V_in_a_value
+    scripts_test.go:1833: grammar: $V in a value (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$Q` (only `$$`, `$(NAME)` and `${NAME}` are allowed)): `INERT := $Q`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_TAB_line_outside_a_rule
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_define
+    scripts_test.go:1833: grammar: define (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `define` directive): `define INERT`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(shell_…)_in_a_recipe
+    scripts_test.go:1833: grammar: $(shell …) in a recipe (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a recipe line using `$(shell true)` (a function, a substitution reference or a computed name)): `echo $(shell true)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F12_call_with_a_partly_computed_function_name
+    scripts_test.go:1833: F12 call with a partly computed function name (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(call ev$(A)al,x)` (a function, a substitution reference or a computed name)): `INERT := $(call ev$(A)al,x)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_include
+    scripts_test.go:1833: grammar: include (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `include` directive): `include inert.mk`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_#_inside_$(shell_…)
+    scripts_test.go:1833: grammar: a # inside $(shell …) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (a `#` inside `$(…)`, where whether it starts a comment is not left to the make version): `INERT := $(shell echo # x)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_function_in_a_value
+    scripts_test.go:1833: grammar: a function in a value (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(foreach f,a,b)` (a function, a substitution reference or a computed name)): `INERT := $(foreach f,a,b)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_substitution_reference_in_a_value
+    scripts_test.go:1833: grammar: a substitution reference in a value (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an assignment value using `$(PKG:a=b)` (a function, a substitution reference or a computed name)): `INERT := $(PKG:a=b)`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_TAB_line_outside_a_rule
+    scripts_test.go:1833: grammar: a TAB line outside a rule (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:232 is outside the Makefile grammar this gate allows (a TAB line outside a rule): `-true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS
+    scripts_test.go:1833: .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.EXTRA_PREREQS := nothing`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true
+    scripts_test.go:1833: SHELL := /usr/bin/true (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 assigns `SHELL` (`SHELL := /usr/bin/true`). SHELL and .SHELLFLAGS may appear only as ['.SHELLFLAGS := -eu -o pipefail -c', 'SHELL := /bin/bash']; MAKEFLAGS, GNUMAKEFLAGS, MFLAGS, .RECIPEPREFIX and .EXTRA_PREREQS may not be assigned in any literal form this reading matches (global, target- or pattern-specific, define, private, override). | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test
+    scripts_test.go:1833: .IGNORE: test (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.IGNORE: test`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_load_rule_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS
+    scripts_test.go:1833: target-specific .EXTRA_PREREQS (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `test: .EXTRA_PREREQS := nothing`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT:
+    scripts_test.go:1833: .DEFAULT: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (an inline `;` recipe or a `;` outside a recipe): `.DEFAULT: ; @true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_undefine_rule_line
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX:
+    scripts_test.go:1833: .POSIX: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.POSIX:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_+=_assignment
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION:
+    scripts_test.go:1833: .SECONDEXPANSION: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.SECONDEXPANSION:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_define_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL:
+    scripts_test.go:1833: .ONESHELL: (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.ONESHELL:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_export_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX
+    scripts_test.go:1833: define .RECIPEPREFIX (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `define` directive): `define .RECIPEPREFIX`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endef_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets)
+    scripts_test.go:1833: .IGNORE: (all targets) (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `.IGNORE:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_sinclude_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_>
+    scripts_test.go:1833: override .RECIPEPREFIX = > (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `override` directive): `override .RECIPEPREFIX = >`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_load_rule_line
+    scripts_test.go:1833: F11 load rule line (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `load` directive): `load inert-target: ; -true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_-include_as_a_variable_name
+=== CONT  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_include_as_a_variable_name
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F11_undefine_rule_line
+    scripts_test.go:1833: F11 undefine rule line (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `undefine` directive): `undefine inert-target: ; -true`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_define_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`define`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_define_as_a_2337395014/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** missing `endef', unterminated `define'.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_sinclude_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`sinclude`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_sinclude_as_3446520513/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  make would read :=, which has no entry in .github/pinned-makefiles.yml.
+          FAIL  make would read 1, which has no entry in .github/pinned-makefiles.yml.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_-include_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`-include`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_-include_as_2051287115/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  Makefile:231 is outside the Makefile grammar this gate allows (the `-include` directive): `-include := 1`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule.
+          FAIL  make would read :=, which has no entry in .github/pinned-makefiles.yml.
+          FAIL  make would read 1, which has no entry in .github/pinned-makefiles.yml.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_+=_assignment
+    scripts_test.go:1833: grammar: a += assignment (re-pinned) | anchor exit 1, 0 make processes: FAIL  Makefile:231 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `INERT += 1`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule. | ci-required-guard exit 1
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_include_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`include`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_include_as_a3159712005/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          FAIL  make would read :=, which has no entry in .github/pinned-makefiles.yml.
+          FAIL  make would read 1, which has no entry in .github/pinned-makefiles.yml.
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+        make-integrity-guard: FAILED — make was NOT invoked (0 make process(es) started)
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_export_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`export`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_export_as_a_3460468477/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** empty variable name.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+=== NAME  TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endef_as_a_variable_name
+    scripts_test.go:1827: exit 1; want "a directive keyword (`endef`) as a variable name" refused with 0 make processes started:
+        make-integrity-guard: /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/TestNamedMakefileConstructsAreRefusedBeforeMakeF15_endef_as_a_v1295047669/001
+          gate targets: ci, fmt-check, vet, echo-containment, build, contract-drift, test, tidy-check, vendor-contract-selftest
+          ok    [--workflow (strict)] MAKEFLAGS/GNUMAKEFLAGS/MFLAGS unset; MAKELEVEL/MAKE_RESTARTS/MAKEOVERRIDES/MAKECMDGOALS absent; MAKEFILES/BASH_ENV/ENV unset; SHELL is a real shell
+          ok    `make` resolves to /usr/bin/make (a regular file named make in an approved system directory), and every make this guard starts is started by that path. This does not inspect the program's CONTENT: a forwarding stub planted there by an earlier step is outside what this guard can see.
+          ok    [--workflow] none of the 7 variable(s) the makefiles take from the environment is set: ['BUILD_TIME', 'COMMIT', 'CORE', 'CORE_REMOTE', 'GOFLAGS', 'IMAGE', 'VERSION']
+          FAIL  make would REMAKE a pinned makefile before reading it (`make -q Makefile` exit 2). make remakes an out-of-date makefile even under -n — from a rule, or from a built-in implicit rule such as `% : %.sh` fed by a newer unpinned `Makefile.sh` — and then reads the NEW bytes. -q runs no ordinary recipe, so no rule remade it.
+          FAIL    Makefile:231: *** extraneous `endef'.  Stop.
+        make-integrity-guard: FAILED — only `make -q` ran (1 make process(es))
+--- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake (0.08s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifneq_as_a_variable_name (0.22s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_else_as_a_variable_name (0.22s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifeq_as_a_variable_name (0.22s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endif_as_a_variable_name (0.24s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_special_target_(.SILENT) (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_a_TAB_recipe (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.RECIPEPREFIX_:=_>_with_a_>_-true_recipe (0.34s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifndef_as_a_variable_name (0.18s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_ifdef_as_a_variable_name (0.21s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_an_NBSP-only_line (0.21s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_rule_line_whose_trailing_comment_is_continued (0.11s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_CRLF_line_endings (0.13s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F11_private_rule_line_with_an_inline_recipe (0.27s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F11_override_rule_line_with_an_inline_recipe (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_an_expansion (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F10_a_non-TAB_line_inside_a_conditional_within_a_recipe (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_conditional_within_a_recipe_(moved_from_the_reading_rows) (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_echo_a=b (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_holding_=_(-run=Foo) (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F9_inline_recipe_with_a_prerequisite,_holding_X=1 (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(call_eval,…) (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_with_a_computed_name (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_global (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_computed_variable_name,_target-specific (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_continued_with_a_backslash (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_target_that_is_an_expansion_($(I)ORE:) (0.27s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_rule_line_that_starts_with_whitespace (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grouped_targets_&: (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/a_special_target_that_is_not_the_first_word (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/two_targets_on_one_rule_line,_a_gate_target_second (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_beginning_with_$@ (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_+_prefix (0.35s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$X_(a_one-letter_variable) (0.51s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_comment_continued_into_a_rule_line (2.16s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$< (0.53s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/recipe_that_begins_with_$@ (0.54s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/inline_;_recipe_with_a_-_prefix (0.63s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_load_as_a_variable_name (0.21s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_NUL_inside_a_comment (2.26s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_override_as_a_variable_name (0.34s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F14_a_lone_CR_inside_a_comment (2.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SHELLFLAGS_:=_-c (0.41s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(MAKE)_in_a_recipe (0.40s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/+_recipe_line (0.37s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/$(eval_…) (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_MAKEFLAGS (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.SHELLFLAGS (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_private_SHELL (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/pattern-specific_SHELL (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_MAKEFLAGS (0.29s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/GNUMAKEFLAGS_+=_-i (0.68s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MFLAGS_=_-i (0.71s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/MAKEFLAGS_+=_-i (0.67s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_export (0.76s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_double-colon_rule (0.51s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_pattern_rule (0.58s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_second_colon (0.58s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_unexport_as_a_variable_name (2.84s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_conditional (0.55s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_vpath (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$X_in_a_recipe (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_ifdef_V (0.31s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_vpath_as_a_variable_name (2.66s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_undefine_as_a_variable_name (2.64s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(value_V)_in_a_value (0.32s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_private_as_a_variable_name (2.64s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(origin_V)_in_a_value (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$V_in_a_value (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_define (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_$(shell_…)_in_a_recipe (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F12_call_with_a_partly_computed_function_name (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_include (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_#_inside_$(shell_…) (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_function_in_a_value (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_substitution_reference_in_a_value (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_TAB_line_outside_a_rule (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.EXTRA_PREREQS (0.28s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/SHELL_:=_/usr/bin/true (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_test (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/target-specific_.EXTRA_PREREQS (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.DEFAULT: (0.35s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.POSIX: (0.42s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.SECONDEXPANSION: (0.34s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.ONESHELL: (0.30s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/define_.RECIPEPREFIX (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/.IGNORE:_(all_targets) (0.33s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/override_.RECIPEPREFIX_=_> (0.31s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F11_load_rule_line (0.32s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/F11_undefine_rule_line (0.29s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_define_as_a_variable_name (0.23s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_sinclude_as_a_variable_name (0.11s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_-include_as_a_variable_name (0.12s)
+    --- PASS: TestNamedMakefileConstructsAreRefusedBeforeMake/grammar:_a_+=_assignment (0.28s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_include_as_a_variable_name (0.12s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_export_as_a_variable_name (0.18s)
+    --- FAIL: TestNamedMakefileConstructsAreRefusedBeforeMake/F15_endef_as_a_variable_name (0.18s)
+=== RUN   TestTheRealMakefileFitsTheGrammar
+    scripts_test.go:1987: the real Makefile fits the grammar: map[assignment:15 blank/comment:133 phony:17 recipe:24 rule:17]; RECIPE_FUNCTIONS = []
+--- PASS: TestTheRealMakefileFitsTheGrammar (0.10s)
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_comment_continued_into_a_rule_line
+    scripts_test.go:2106: "test:\n\tgo test\n# note \\\ninert:\n\t-false\n": grammar_problems gave []; want a refusal naming "a comment continued onto the next line"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_rule_line_whose_trailing_comment_is_continued
+    scripts_test.go:2106: "test: # c \\\ninert:\n\t-false\n": grammar_problems gave []; want a refusal naming "a comment continued onto the next line"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_an_assignment_whose_trailing_comment_is_continued
+    scripts_test.go:2106: "INERT := 1 # c \\\ninert:\n\t-false\n": grammar_problems gave ["Makefile:3 is outside the Makefile grammar this gate allows (a TAB line outside a rule): `-false`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule."]; want a refusal naming "a comment continued onto the next line"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_lone_CR_inside_a_comment
+    scripts_test.go:2106: "test:\n\tgo test\n# note\rX := 1\n\t-false\n": grammar_problems gave []; want a refusal naming "a carriage return"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_CRLF_line_endings
+    scripts_test.go:2106: "test:\r\n\tgo test\r\n": grammar_problems gave ["Makefile:1 is outside the Makefile grammar this gate allows (not one of the allowed shapes): `test:`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule." "Makefile:2 is outside the Makefile grammar this gate allows (a TAB line outside a rule): `go test`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule."]; want a refusal naming "a carriage return"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_CRLF_after_a_comment's_trailing_backslash
+    scripts_test.go:2106: "test:\n\tgo test\n# note \\\r\ninert:\n\t-false\n": grammar_problems gave []; want a refusal naming "a carriage return"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_NUL_inside_a_comment
+    scripts_test.go:2106: "test:\n\tgo test\n# note\x00\ninert:\n\t-false\n": grammar_problems gave []; want a refusal naming "a nul byte"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_an_NBSP-only_line
+    scripts_test.go:2106: "test:\n\tgo test\n\u00a0\n\t-false\n": grammar_problems gave []; want a refusal naming "a non-ascii whitespace character (u+00a0)"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/blank_means_empty:_a_line_of_only_spaces
+    scripts_test.go:2106: "test:\n\tgo test\n   \n\t-false\n": grammar_problems gave []; want a refusal naming "only spaces or tabs"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/blank_means_empty:_a_TAB-only_line
+    scripts_test.go:2106: "test:\n\tgo test\n\t\n": grammar_problems gave []; want a refusal naming "only spaces or tabs"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/a_form_feed
+    scripts_test.go:2106: "INERT := 1\f\n": grammar_problems gave []; want a refusal naming "a control character (u+000c)"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/a_right-to-left_override_in_a_comment
+    scripts_test.go:2106: "# inert \u202e\n": grammar_problems gave []; want a refusal naming "an invisible format character (u+202e)"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_a_directive_keyword_as_a_rule_target
+    scripts_test.go:2106: "ifdef: inert\n": grammar_problems gave []; want a refusal naming "a directive keyword (`ifdef`) as a rule target"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifdef_as_a_variable_name
+    scripts_test.go:2106: "ifdef := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`ifdef`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifndef_as_a_variable_name
+    scripts_test.go:2106: "ifndef := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`ifndef`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifeq_as_a_variable_name
+    scripts_test.go:2106: "ifeq := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`ifeq`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifneq_as_a_variable_name
+    scripts_test.go:2106: "ifneq := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`ifneq`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_else_as_a_variable_name
+    scripts_test.go:2106: "else := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`else`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_endif_as_a_variable_name
+    scripts_test.go:2106: "endif := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`endif`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_include_as_a_variable_name
+    scripts_test.go:2106: "include := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`include`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_-include_as_a_variable_name
+    scripts_test.go:2106: "-include := 1\n": grammar_problems gave ["Makefile:1 is outside the Makefile grammar this gate allows (the `-include` directive): `-include := 1`. Every line must be blank or a comment, `NAME := | ?= | = value`, `.PHONY: names`, a single-target rule `name: prerequisites`, or a TAB recipe line of a rule."]; want a refusal naming "a directive keyword (`-include`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_sinclude_as_a_variable_name
+    scripts_test.go:2106: "sinclude := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`sinclude`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_define_as_a_variable_name
+    scripts_test.go:2106: "define := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`define`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_endef_as_a_variable_name
+    scripts_test.go:2106: "endef := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`endef`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_export_as_a_variable_name
+    scripts_test.go:2106: "export := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`export`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_unexport_as_a_variable_name
+    scripts_test.go:2106: "unexport := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`unexport`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_override_as_a_variable_name
+    scripts_test.go:2106: "override := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`override`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_private_as_a_variable_name
+    scripts_test.go:2106: "private := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`private`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_undefine_as_a_variable_name
+    scripts_test.go:2106: "undefine := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`undefine`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_vpath_as_a_variable_name
+    scripts_test.go:2106: "vpath := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`vpath`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_load_as_a_variable_name
+    scripts_test.go:2106: "load := 1\n": grammar_problems gave []; want a refusal naming "a directive keyword (`load`) as a variable name"
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_comment_line_that_is_not_continued,_between_recipe_lines
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_an_EVEN_run_of_backslashes_ending_a_comment_(not_a_continuation)
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_continued_assignment_whose_comment_is_on_its_last_line
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_continued_recipe_line
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_recipe_line_holding_#_and_a_continuation_(make_hands_it_to_the_shell)
+=== RUN   TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_an_empty_line_inside_a_recipe
+--- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently (0.09s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_comment_continued_into_a_rule_line (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_rule_line_whose_trailing_comment_is_continued (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_an_assignment_whose_trailing_comment_is_continued (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_lone_CR_inside_a_comment (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_CRLF_line_endings (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_CRLF_after_a_comment's_trailing_backslash (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_a_NUL_inside_a_comment (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F14_an_NBSP-only_line (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/blank_means_empty:_a_line_of_only_spaces (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/blank_means_empty:_a_TAB-only_line (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/a_form_feed (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/a_right-to-left_override_in_a_comment (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_a_directive_keyword_as_a_rule_target (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifdef_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifndef_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifeq_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_ifneq_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_else_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_endif_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_include_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_-include_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_sinclude_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_define_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_endef_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_export_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_unexport_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_override_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_private_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_undefine_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_vpath_as_a_variable_name (0.00s)
+    --- FAIL: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/F15_load_as_a_variable_name (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_comment_line_that_is_not_continued,_between_recipe_lines (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_an_EVEN_run_of_backslashes_ending_a_comment_(not_a_continuation) (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_continued_assignment_whose_comment_is_on_its_last_line (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_continued_recipe_line (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_a_recipe_line_holding_#_and_a_continuation_(make_hands_it_to_the_shell) (0.00s)
+    --- PASS: TestTheGrammarRefusesEveryLineReadersCouldSplitDifferently/control:_an_empty_line_inside_a_recipe (0.00s)
+=== RUN   TestEveryMakefileReaderConsumesTheOneLineReader
+    scripts_test.go:2316: the reader probe did not run: exit 1
+        Traceback (most recent call last):
+          File "<string>", line 38, in <module>
+        AttributeError: module 'ci_required_guard' has no attribute 'mg'
+--- FAIL: TestEveryMakefileReaderConsumesTheOneLineReader (0.13s)
+=== RUN   TestTheAnchorReadsTheRecipeMakeReads
+    scripts_test.go:2414: exit 1
+        Traceback (most recent call last):
+          File "<string>", line 11, in <module>
+        AttributeError: module 'makegate' has no attribute 'makefile_lines'
+--- FAIL: TestTheAnchorReadsTheRecipeMakeReads (0.09s)
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	6.645s
+FAIL
+# exit: 1

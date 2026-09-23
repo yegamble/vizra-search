@@ -1,0 +1,52 @@
+# RED: the new TestTheOneReaderSourceCheckRefusesAPlantedReader appended to 854a337's scripts_test.go (its probe's file-level SOURCE check looks only for split("
+")), gate code unmodified
+# tree: detached worktree at 854a3376f005dc7cca3358d9b815205616f7b2fb; git status:  M scripts/scripts_test.go ; 2026-09-23T15:42:02Z; go version go1.27.1 darwin/arm64; python 3.9.6
+# command: go test -count=1 -v -run TestTheOneReaderSourceCheckRefusesAPlantedReader ./scripts/
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/read_text_+_split_in_the_anchor
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/read_text_+_split_in_the_anchor
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/open_+_iterate_in_contract-drift-guard
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/open_+_iterate_in_contract-drift-guard
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/a_multi-line_regex_over_the_Makefile_in_ci-required-guard
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/a_multi-line_regex_over_the_Makefile_in_ci-required-guard
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/an_inline_(?m)_flag_in_ci-required-guard
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/an_inline_(?m)_flag_in_ci-required-guard
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/read_bytes_+_decode_in_makegate
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/read_bytes_+_decode_in_makegate
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/splitlines_in_makegate
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/splitlines_in_makegate
+=== RUN   TestTheOneReaderSourceCheckRefusesAPlantedReader/an_aliased_open_in_the_anchor
+=== PAUSE TestTheOneReaderSourceCheckRefusesAPlantedReader/an_aliased_open_in_the_anchor
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/read_text_+_split_in_the_anchor
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/read_bytes_+_decode_in_makegate
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/an_aliased_open_in_the_anchor
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/splitlines_in_makegate
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/open_+_iterate_in_contract-drift-guard
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/a_multi-line_regex_over_the_Makefile_in_ci-required-guard
+=== CONT  TestTheOneReaderSourceCheckRefusesAPlantedReader/an_inline_(?m)_flag_in_ci-required-guard
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/an_aliased_open_in_the_anchor
+    scripts_test.go:2492: planted "\n\n_planted_open = open\n" in scripts/make-integrity-guard.py; the SOURCE check reported [], want "make-integrity-guard.py: <module> uses open"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/open_+_iterate_in_contract-drift-guard
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(path):\n    with open(path) as fh:\n        return [line for line in fh]\n" in scripts/contract-drift-guard.py; the SOURCE check reported [], want "contract-drift-guard.py: _planted_reader uses open"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/read_text_+_split_in_the_anchor
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(root):\n    return (root / \"Makefile\").read_text().split(\"\\n\")\n" in scripts/make-integrity-guard.py; the SOURCE check reported ["make-integrity-guard.py splits text on a newline itself"], want "make-integrity-guard.py: _planted_reader uses read_text"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/an_inline_(?m)_flag_in_ci-required-guard
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(text):\n    return re.findall(r\"(?m)^test:\", text)\n" in scripts/ci-required-guard.py; the SOURCE check reported [], want "ci-required-guard.py: _planted_reader uses re.m"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/splitlines_in_makegate
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(text):\n    return text.splitlines()\n" in scripts/makegate.py; the SOURCE check reported [], want "makegate.py: _planted_reader uses splitlines"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/read_bytes_+_decode_in_makegate
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(path):\n    return Path(path).read_bytes().decode()\n" in scripts/makegate.py; the SOURCE check reported [], want "makegate.py: _planted_reader uses decode"
+=== NAME  TestTheOneReaderSourceCheckRefusesAPlantedReader/a_multi-line_regex_over_the_Makefile_in_ci-required-guard
+    scripts_test.go:2492: planted "\n\ndef _planted_reader(text):\n    return re.findall(r\"^test:\", text, re.M)\n" in scripts/ci-required-guard.py; the SOURCE check reported [], want "ci-required-guard.py: _planted_reader uses re.m"
+--- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader (0.07s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/an_aliased_open_in_the_anchor (0.55s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/open_+_iterate_in_contract-drift-guard (0.56s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/read_text_+_split_in_the_anchor (0.59s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/an_inline_(?m)_flag_in_ci-required-guard (0.59s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/splitlines_in_makegate (0.60s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/read_bytes_+_decode_in_makegate (0.60s)
+    --- FAIL: TestTheOneReaderSourceCheckRefusesAPlantedReader/a_multi-line_regex_over_the_Makefile_in_ci-required-guard (0.60s)
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	0.911s
+FAIL
+# exit: 1

@@ -1,5 +1,9 @@
 /bin/
 .test-report.json
+.test-events.json
+.test-exit.txt
 .contract-drift-report.json
 .go.mod.bak
 .go.sum.bak
+unit-events.json
+unit-exit.txt

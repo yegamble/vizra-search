@@ -56,7 +56,14 @@ jobs:
           set -euo pipefail
           echo "evaluating $HEAD_SHA"
 
-          required="$(grep -vE '^\s*(#|$)' .github/required-checks.txt | tr -d '\r')"
+          # `|| true`: grep exits 1 when it selects nothing, and under `set -e`
+          # that would end this step with no output. The guard step above
+          # already refuses an empty manifest by name; this is belt and braces.
+          required="$(grep -vE '^\s*(#|$)' .github/required-checks.txt | tr -d '\r' || true)"
+          if [ -z "$required" ]; then
+            echo "ci-required: .github/required-checks.txt lists no checks; nothing to aggregate is a failure"
+            exit 1
+          fi
 
           # Poll the check runs on this SHA until every required one has a
           # conclusion, or the timeout expires. A check that never appears is

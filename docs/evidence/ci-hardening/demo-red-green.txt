@@ -1,0 +1,351 @@
+ci-hardening-demo: 36 row(s); tree = HEAD 3ea410304bdc6d937df750c40be0e8e7485505dc + working-tree changes
+  GNU Make 3.81; go version go1.27.1 darwin/arm64; python 3.9.6
+
+=== 1a (item 1) workflow: make -i test
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  4f0b04031db40b834115e81dbdb12791b246a2bb86b9bc338ad213e61c16d1ca
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1b (item 1) workflow: MAKEFLAGS=-i make test
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  d84a0df7b271926353f3a9aa6dc18a1419fb5a1b0b0bca94eb9bf7a7ead6f119
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1c (item 1) workflow: M=make; $M -i test
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  4b509336a2c4de4cb51bc36ee7f612045ef5cdac21375b2fa8b42595d6abcd77
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1d (item 1) workflow: a shell function named make
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  77043ee0780817fad68d9d4ef27bed631d38e42b3e5b4fb6abec77d4935993ab
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) step 'make test' mentions `make` but its `run:` is not byte-equal to any entry in .github/pinned-steps.yml make_steps.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1e (item 1) workflow: if: always() && false
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  f2ea0eb04e8b35dd44125e5327c44d13ac8377e29ec1f21dd4d939366abd363b
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['if'].
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1f (item 1) workflow: working-directory:
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  e734502ca0d17f74f7e8776c76aab9184721e9dd5eb423ef4ad9e467499e4c3d
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) make step 'make test' carries ['working-directory'].
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1g (item 1) workflow: anchor deleted
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  edcc0f219e12df92f06fb304c5736abd3bf7f33455cb5b2cc036d798e4389d56
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) make step 'make test' is not IMMEDIATELY preceded by the pinned make-integrity-guard anchor; the step before it is 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1h (item 1) workflow: compound anchor writes $GITHUB_ENV
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  71e74b41276a27167bb52d8a64f3c45977937aeeb9a2415f5d41a0213af281e4
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) step 'refuse a neutered Makefile or make environment (anchor)' names make-integrity-guard but its `run:` is not byte-equal to the pinned anchor './scripts/make-integrity-guard.sh --work
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1i (item 1) workflow: job env MAKELEVEL
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  7a2ed90d449eef1de46c177351e754bc5de88a425eb075d5bfc5685421f2bec5
+    MUTATED : exit 1 -> RED as declared
+              FAIL  checked lane 'test' (ci.yml) job-level env sets MAKELEVEL: '1', and this job runs make or `go test`.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1j (item 1) workflow: duplicate run key
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  7b18a30b26768f84755d4dd9409b4e29ab6c9b815c9efc0ff345d023c1aeefd7
+    MUTATED : exit 1 -> RED as declared
+              FAIL  /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/ci-hardening-demo-e61feleq/.github/workflows/ci.yml is refused by the strict YAML reader: duplicate key 'run' (first at line 156); the guard refuses to guess
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1k (item 1) Makefile: MAKEFLAGS += -i
+    command: python3 scripts/make-integrity-guard.py --workflow
+    Makefile sha256 before 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54
+    Makefile sha256 after  145b7f3b536fa06c518d430ac4cc7d3ffb6edecb3b3c6b4fa1d79f27d02bbcf8
+    MUTATED : exit 1 -> RED as declared
+              FAIL  Makefile:19 assigns MAKEFLAGS: `MAKEFLAGS += -i`
+    restored  sha256 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1l (item 1) Makefile: SHELL := /usr/bin/true
+    command: python3 scripts/make-integrity-guard.py --workflow
+    Makefile sha256 before 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54
+    Makefile sha256 after  50d697748dc31878dd52064e213d7fce0bf2d17e7d517ea496f5f62d0ea21e64
+    MUTATED : exit 1 -> RED as declared
+              FAIL  Makefile:17 sets SHELL to something other than the approved value: `SHELL := /usr/bin/true`
+    restored  sha256 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1m (item 1) Makefile: $(shell) writes $GITHUB_ENV while being read
+    command: python3 scripts/make-integrity-guard.py --workflow
+    Makefile sha256 before 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54
+    Makefile sha256 after  2c57274464b2e4e827c341f9521526976f899444ccb2410be1fa5020bd9f4ac8
+    MUTATED : exit 1 -> RED as declared
+              FAIL  Makefile:19 expands `$(shell echo MAKEFLAGS=-i >> "$$GITHUB_ENV")`, which is neither a plain variable reference nor one of
+    restored  sha256 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1n (item 1) env: MAKELEVEL=1 MAKEFLAGS=-ki (strictness is not the environment's)
+    command: python3 scripts/make-integrity-guard.py --workflow
+    environment: {'MAKELEVEL': '1', 'MAKEFLAGS': '-ki'}  (no file mutated)
+    MUTATED : exit 1 -> RED as declared
+              FAIL  the environment has MAKELEVEL='1', and this is the WORKFLOW anchor.
+    RESTORED: exit 0 -> GREEN
+
+=== 1o (item 1) env: VERSION=x (a Makefile ?= variable)
+    command: python3 scripts/make-integrity-guard.py --workflow
+    environment: {'VERSION': 'x'}  (no file mutated)
+    MUTATED : exit 1 -> RED as declared
+              FAIL  the environment sets VERSION='x', and this is the WORKFLOW anchor.
+    RESTORED: exit 0 -> GREEN
+
+=== 1p (item 1) implementation: adjacency check disabled
+    command: go test -count=1 -run TestCIRequiredGuardRefusesEveryEvasion/anchor ./scripts/
+    scripts/ci-required-guard.py sha256 before ba834126b3251c792d2311cf200dfae0e019880d65705093b44c9569d2145cfd
+    scripts/ci-required-guard.py sha256 after  2e7a7c3cd863e9ab083cecac70ff711e8ddca9337972e567b5747f691169b48d
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestCIRequiredGuardRefusesEveryEvasion (0.38s)
+    restored  sha256 ba834126b3251c792d2311cf200dfae0e019880d65705093b44c9569d2145cfd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 1q (item 1) implementation: parse-time pre-flight removed
+    command: go test -count=1 -run TestTheAnchorExecutesNothingWhileReadingTheMakefile ./scripts/
+    scripts/make-integrity-guard.py sha256 before ef29fdaf12a71f5c558d2fdef45ee5f552a4c1652449f802a1bbdcf176bccaff
+    scripts/make-integrity-guard.py sha256 after  8eac093b04f181d7b4a7cff42683ad85c467ee790352d86f30ed7476cf665715
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestTheAnchorExecutesNothingWhileReadingTheMakefile (0.28s)
+    restored  sha256 ef29fdaf12a71f5c558d2fdef45ee5f552a4c1652449f802a1bbdcf176bccaff (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 2a (item 2) a planted t.Skip, through the pinned direct body
+    command: the pinned direct_test_steps body, bash --noprofile --norc -eo pipefail
+    internal/buildinfo/buildinfo_test.go sha256 before d5cd86c48dc5f3a0ef72b7f4aa65ef855ab53f8f4bb46f3f41a50ac3348d26dc
+    internal/buildinfo/buildinfo_test.go sha256 after  8cd92f839eeb2bd362411c2ac5cd97139bf766f1655ce4ac7298bf7adc8665f4
+    MUTATED : exit 1 -> RED as declared
+              failed:                 0
+    restored  sha256 d5cd86c48dc5f3a0ef72b7f4aa65ef855ab53f8f4bb46f3f41a50ac3348d26dc (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 2b (item 2) a package emptied, through the pinned direct body
+    command: the pinned direct_test_steps body, bash --noprofile --norc -eo pipefail
+    internal/buildinfo/buildinfo_test.go sha256 before d5cd86c48dc5f3a0ef72b7f4aa65ef855ab53f8f4bb46f3f41a50ac3348d26dc
+    internal/buildinfo/buildinfo_test.go sha256 after  (absent)
+    MUTATED : exit 1 -> RED as declared
+              failed:                 0
+    restored  sha256 d5cd86c48dc5f3a0ef72b7f4aa65ef855ab53f8f4bb46f3f41a50ac3348d26dc (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 2c (item 2) implementation: the skip refusal disabled
+    command: go test -count=1 -run TestGoTestReport|TestTheDirectStepCannotSwallowGoTestsExit ./scripts/
+    scripts/go-test-report.py sha256 before 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323
+    scripts/go-test-report.py sha256 after  b9dd4e8f3847d22dc717831b368cf2ae8d0910d75070d9c0e1c8488aaaea5eb3
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestGoTestReport (0.15s)
+    restored  sha256 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 2d (item 2) implementation: the unfloored-package refusal disabled
+    command: go test -count=1 -run TestGoTestReport ./scripts/
+    scripts/go-test-report.py sha256 before 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323
+    scripts/go-test-report.py sha256 after  ee1e08d4b7abaed60a32a10103fbe4546891d9efd4ddccb2c60a30be7c816a93
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestGoTestReport (0.24s)
+    restored  sha256 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 2e (item 2) implementation: the per-package floor check disabled
+    command: go test -count=1 -run TestGoTestReport ./scripts/
+    scripts/go-test-report.py sha256 before 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323
+    scripts/go-test-report.py sha256 after  6c28d68597e5fdd64b23d3c8e30c8c4338f419bd40d09ce4970ddb27716530fc
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestGoTestReport (0.15s)
+    restored  sha256 7b2f3a4abb8ab6b7b73f8c4160c7ef88153a2dd1a1e8235e4e99baca7ad1a323 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 3a (item 3) implementation: the loud manifest read reverted to the silent one
+    command: go test -count=1 -run TestTheShellGuardFailsLoudlyOnAnEmptiedManifest ./scripts/
+    scripts/ci-required-guard.sh sha256 before 6d98539bae92acd4a127dc4a047a79d0480dde478c968680cd1c6749f44d4ad7
+    scripts/ci-required-guard.sh sha256 after  af24e3f84653928f0d28da58a9428986dc2e989218064beb9511db8d88ce0c13
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestTheShellGuardFailsLoudlyOnAnEmptiedManifest (0.22s)
+    restored  sha256 6d98539bae92acd4a127dc4a047a79d0480dde478c968680cd1c6749f44d4ad7 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 4a (item 4) manifest: vendor-contract-selftest removed
+    command: bash scripts/ci-required-guard.sh
+    .github/required-checks.txt sha256 before e4e780654704fbb725bb4a4b9c9547969e66b0c191d7feb7e2bceda37beed2a1
+    .github/required-checks.txt sha256 after  ffcf17e96b40be99385c7d0339b1a54c545d750cd3c5ffd8f9afd3a5691f5fc2
+    MUTATED : exit 1 -> RED as declared
+              FAIL  required lane 'vendor-contract-selftest' is MISSING from required-checks.txt.
+    restored  sha256 e4e780654704fbb725bb4a4b9c9547969e66b0c191d7feb7e2bceda37beed2a1 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 4b (item 4) Makefile: vendor-contract-selftest dropped from ci:
+    command: bash scripts/ci-required-guard.sh
+    Makefile sha256 before 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54
+    Makefile sha256 after  b5117be3fd8c0ab3763121361d3460dbe519d86c9be3749a3982372da609f5e9
+    MUTATED : exit 1 -> RED as declared
+              FAIL  the Makefile's `ci:` and the required lanes disagree.
+    restored  sha256 4b758bc3dff82109e6093453615ca11962cd1bba157dbc9fe3cdf32709fdbb54 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 4c (item 4) workflow: the vendor-contract-selftest job renamed away
+    command: bash scripts/ci-required-guard.sh
+    .github/workflows/ci.yml sha256 before 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd
+    .github/workflows/ci.yml sha256 after  c5e1bc72a4c0c24b80fb5bc9350a154cabb6e12f901f3b68d5063341ec42e245
+    MUTATED : exit 1 -> RED as declared
+              FAIL  required check 'vendor-contract-selftest' matches no job in /private/var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/ci-hardening-demo-e61feleq/.github/workflows.
+    restored  sha256 4b28d108baa12be441c34a7a0ca63c819a8e3abe950aaaaabfe7c02cd5d398dd (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 4d (item 4) implementation: the shallow-clone refusal removed (what the lane catches)
+    command: make vendor-contract-selftest
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  130f7c1e0a7e86714fb8f9d42a4fc03557e74d0cb10bf9222c6cfc9860c7c9de
+    MUTATED : exit 2 -> RED as declared
+              vendor-contract-selftest: FAIL: shallow clone: expected a refusal, got exit 0
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 5a (item 5) implementation: parse_remote_url back to parts[-2:]
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  c3ccec8a3b616bfac7432dbe7323edd72545ebda55f64020d5189b4982ebf866
+    MUTATED : exit 1 -> RED as declared
+              vendor-contract-selftest: FAIL: foreign origin, 4-segment path: expected a refusal, got exit 0
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 5b (item 5) implementation: the source_ref_tip shape check removed
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  571ccfb69b5d4a31cb556b151ce50f91e502cb1780a93bf9d44927452f1e28ec
+    MUTATED : exit 1 -> RED as declared
+              vendor-contract-selftest: FAIL: forged tip: a refname: --check ACCEPTED a forged source_ref_tip 'refs/remotes/origin/evil'
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 5c (item 5) implementation: the with-core tip checks removed
+    command: python3 scripts/vendor-contract-selftest.py
+    scripts/vendor-contract.py sha256 before b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2
+    scripts/vendor-contract.py sha256 after  1463bb3b6dd3a2e7a506f872c3931e042dbc134f301d2c54a1c9d6a100e6c37c
+    MUTATED : exit 1 -> *** NOT RED AS DECLARED
+              vendor-contract-selftest: FAIL: forged tip: no such commit: --check --core /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-mf5tyc4v/core-tip-absent ACCEPTED a forged source_ref_tip 'deadbeefdead
+              (declared reason not found: 'forged tip: a commit off the ref: --check --core accepted a forged source_ref_tip')
+              |       | vendor-contract: OK — every vendored file matches the manifest and core's bytes.
+              |       | 
+              |       | --- forged ---
+              |       | manifest source_repository : yegamble/vizra-core
+              |       | manifest source_ref        : refs/remotes/origin/main
+              |       | manifest source_ref_tip    : c3ebf41a208a7a61138f2eb2e6e70b3fdc538766
+              |       | manifest source_commit     : 15593906485d37fd0f8a53e97ff93e4648b0d0b8
+              |       | 
+              |       | api/search-internal.openapi.yaml   sha256=45de7adf603dca4e400a6f4fb6f44014a2a9cb4ef6d7d073e7ed434087d4e8f2 bytes=45     OK
+              |       | api/search-hmac-testvectors.json   sha256=4c98533a30ab3c0da09419867b29bfeeb70aebe535f2871b117ecda3fd1c44c6 bytes=82     OK
+              |       | 
+              |       | core remote origin : https://github.com/yegamble/vizra-core.git   [measured]
+              |       | resolved ref       : refs/remotes/origin/main (tip 15593906485d37fd0f8a53e97ff93e4648b0d0b8)
+              |       | commit this script would pin : 15593906485d37fd0f8a53e97ff93e4648b0d0b8
+              |       | 
+              |       | vendor-contract: OK — every vendored file matches the manifest and core's bytes.
+              |   happy path accepted                OK  (exit 0)
+              | 
+              | vendor-contract-selftest: FAIL: forged tip: no such commit: --check --core /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-mf5tyc4v/core-tip-absent ACCEPTED a forged source_ref_tip 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
+              | vendor-contract-selftest: FAIL: forged tip: no such commit: the refusal does not say 'source_ref_tip deadbeefdeadbeefdeadbeefdeadbeefdeadbeef is not a commit'
+              | vendor-contract-selftest: FAIL: forged tip: a commit off the ref: --check --core /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-mf5tyc4v/core-tip-off-ref ACCEPTED a forged source_ref_tip '0dc91c9227f4aa05b4ec27a206c8b47a845eff02'
+              | vendor-contract-selftest: FAIL: forged tip: a commit off the ref: the refusal does not say 'source_ref_tip 0dc91c9227f4aa05b4ec27a206c8b47a845eff02 is NOT on refs/remotes/origin/main'
+              | vendor-contract-selftest: FAIL: forged tip: older than the commit: --check --core /var/folders/f0/7491x4mn6r90h50q54n7bs440000gn/T/vendor-contract-selftest-mf5tyc4v/core-tip-before ACCEPTED a forged source_ref_tip 'c3ebf41a208a7a61138f2eb2e6e70b3fdc538766'
+              | vendor-contract-selftest: FAIL: forged tip: older than the commit: the refusal does not say 'is not contained in source_ref_tip c3ebf41a208a7a61138f2eb2e6e70b3fdc538766'
+              | vendor-contract-selftest: 6 failure(s)
+    restored  sha256 b9e4c186c972ab454aa096e408f67a4499a1fa5be6911149f665930503411da2 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 6a (item 6) a stray os.Getenv in Config.String()
+    command: go test -count=1 -run TestNothingOutsideTheSeamReadsTheProcessEnvironment ./internal/config/
+    internal/config/config.go sha256 before a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9
+    internal/config/config.go sha256 after  c7e3965257bfbe2bf9f14fbb5888117193c045970eb008d5e4689029ca9bf864
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestNothingOutsideTheSeamReadsTheProcessEnvironment (0.06s)
+    restored  sha256 a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 6b (item 6) os.LookupEnv taken as a value in main.go
+    command: go test -count=1 -run TestNothingOutsideTheSeamReadsTheProcessEnvironment ./internal/config/
+    cmd/vizra-search/main.go sha256 before 52dbfe136d25105c137ffece01505e94ceb140d62ba398a1b6fd3115202ea9d9
+    cmd/vizra-search/main.go sha256 after  88c710fe72f7851a047fe694b93f40c7894e075c4c20051ad966f274cefe668f
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestNothingOutsideTheSeamReadsTheProcessEnvironment (0.04s)
+    restored  sha256 52dbfe136d25105c137ffece01505e94ceb140d62ba398a1b6fd3115202ea9d9 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 7a (item 7) A2: a refusal via fmt.Errorf that echoes the value
+    command: go test -count=1 -run TestNoRefusalBypassesTheNoEchoTable ./internal/config/
+    internal/config/config.go sha256 before a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9
+    internal/config/config.go sha256 after  a4cca447cd362f4022b00c909b2e0b063210dae1aa84a736d2ed7c7d79a81b3d
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestNoRefusalBypassesTheNoEchoTable (0.00s)
+    restored  sha256 a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 7b (item 7) A3: a new helper that appends its own message
+    command: go test -count=1 -run TestNoRefusalBypassesTheNoEchoTable ./internal/config/
+    internal/config/config.go sha256 before a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9
+    internal/config/config.go sha256 after  18ef8f49ec68e3428f2b7a5f15ea06de6acaf722dd34be23ad4fdf332f918eab
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestNoRefusalBypassesTheNoEchoTable (0.00s)
+    restored  sha256 a8d9a8b9beb8b40af1d43ba0fa1bd751d564a7848b90ef32d0012b71d90025c9 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 7c (item 7) A4: an addf refusal in a second file, echoing the value
+    command: go test -count=1 -run TestEveryRefusalSiteInTheLoaderHasANoEchoRow ./internal/config/
+    internal/config/env.go sha256 before 82592f6c686c66e9f416d80aa715795a897b8b65ce9e9ef121872ab2f1617fe6
+    internal/config/env.go sha256 after  79d5bbc7d17f9b2e2e00e53e2d68bfb20e8844acef69637b8f4f0adeefe8801f
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestEveryRefusalSiteInTheLoaderHasANoEchoRow (0.00s)
+    restored  sha256 82592f6c686c66e9f416d80aa715795a897b8b65ce9e9ef121872ab2f1617fe6 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+=== 7d (item 7) a custom error type
+    command: go test -count=1 -run TestNoRefusalBypassesTheNoEchoTable ./internal/config/
+    internal/config/env.go sha256 before 82592f6c686c66e9f416d80aa715795a897b8b65ce9e9ef121872ab2f1617fe6
+    internal/config/env.go sha256 after  e41e91fdbdd7549165e25cfeac428d87c9e16e13c8f26318a16cf2f2ef8ce0fa
+    MUTATED : exit 1 -> RED as declared
+              --- FAIL: TestNoRefusalBypassesTheNoEchoTable (0.00s)
+    restored  sha256 82592f6c686c66e9f416d80aa715795a897b8b65ce9e9ef121872ab2f1617fe6 (byte-identical)
+    RESTORED: exit 0 -> GREEN
+
+ci-hardening-demo: 35/36 row(s) behaved as declared
+EXIT=1

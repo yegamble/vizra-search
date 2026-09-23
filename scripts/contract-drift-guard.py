@@ -70,22 +70,14 @@ place, and each turns a required check red:
 
 What they do NOT stop, stated rather than implied:
 
-  - a Makefile-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i`. Either is
-    ONE line, and either makes every recipe in this repository a no-op —
-    `contract-drift`, `test` and `test-noskip` alike. Measured at this commit
-    with a vendored file edited in place: `make contract-drift`, `make test` and
-    `make test-noskip` all exit 0. No check written inside a Makefile can
-    prevent that, and no CI lane catches it today, because the workflows invoke
-    `make test` and `make test-noskip` rather than `go test`: the only command
-    that goes red is a direct `go test ./internal/httpapi/`, which nothing in CI
-    runs. (`resolved_recipe` drops a `MAKEFLAGS` inherited from the ENVIRONMENT;
-    this is the in-file assignment, which it cannot drop.) The exposure is
-    generic to any make-driven gate, is equally true of `main`, and is not new
-    here — what is new is that it is written down. Closing it is queued as a
-    cross-repo hardening item: an out-of-make check that refuses a `SHELL`,
-    `.SHELLFLAGS` or `MAKEFLAGS` override anywhere in the Makefile, plus one
-    required lane that runs `go test` without make. Until that lands, the only
-    backstop is human review of the Makefile diff;
+  - a Makefile-level `SHELL := /usr/bin/true` or `MAKEFLAGS += -i` used to be
+    listed here: ONE line that no-ops every recipe in this repository, with no
+    CI lane to catch it. It is now refused by name BEFORE `make contract-drift`
+    runs, by the pinned `./scripts/make-integrity-guard.sh --workflow` anchor
+    step in `.github/workflows/ci.yml`, from outside make — and the `test-noskip`
+    lane runs every package, the drift guards included, without a make step. See
+    AGENTS.md § "The make lanes cannot be silenced". Nothing in THIS program
+    changed; it still cannot see such a line from inside the recipe;
   - editing `.github/workflows/ci.yml` as well removes reading 2. That is a
     second file and a second diff, and `ci-required` goes red while the step is
     missing — but `ci-required-guard.sh` is itself checked out from the PR under
@@ -147,21 +139,46 @@ def fail(msg):
 # --------------------------------------------------------------- resolution --
 
 
+_MAKEGATE = None
+
+
+def _makegate():
+    """scripts/makegate.py, loaded ONCE from beside this file: the one way this repository starts make, and
+    the ONE makefile line reader (makefile_lines) that check_makefile_text reads the Makefile through."""
+    global _MAKEGATE
+    if _MAKEGATE is None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("makegate", os.path.join(os.path.dirname(os.path.abspath(__file__)), "makegate.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _MAKEGATE = mod
+    return _MAKEGATE
+
+
 def resolved_recipe():
     """Return (commands, stderr) for what make would actually run for the lane.
 
     `make --dry-run` prints the commands after expanding variables, applying
     includes, and resolving duplicate-target overrides — i.e. what will really
     execute, not what the Makefile text looks like.
+
+    It is NOT read-only: make evaluates a makefile while reading it and remakes
+    an out-of-date one even under --dry-run. So it runs only through
+    scripts/makegate.py — pinned bytes, a clean environment, the checked `make`,
+    and a `make -q` remake probe first — and this step runs BEFORE the workflow
+    anchor in the contract-drift job, so it must not be the unguarded one
+    (PR #5 security re-review, R-1).
     """
-    env = {k: v for k, v in os.environ.items() if k not in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL")}
-    proc = subprocess.run(
-        ["make", "--dry-run", "--no-print-directory", LANE],
-        cwd=REPO_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    mg = _makegate()
+    try:
+        gate = mg.open_gate(REPO_ROOT)
+        proc = gate.run(["--dry-run", "--no-print-directory", LANE])
+    except mg.GateRefused as err:
+        fail(
+            "the Makefile gate refused to run `make --dry-run %s` (%s):\n%s"
+            % (LANE, err.invoked, indent("\n".join(err.problems)))
+        )
     if proc.returncode != 0:
         fail(
             "`make --dry-run %s` failed (exit %d), so the lane's real recipe could not be\n"
@@ -198,40 +215,18 @@ def indent(text, prefix="    "):
 # the lane would still exit 0. These checks therefore read the file.
 
 
-def logical_recipe_lines(lines, start):
-    """Collect one target's recipe from Makefile text, joining continuations.
-
-    Returns a list of (first_physical_line_number, joined_text_without_tab).
-    """
-    recipe, i = [], start
-    while i < len(lines):
-        line = lines[i]
-        if line.strip() == "" or line.lstrip().startswith("#"):
-            i += 1
-            continue
-        if not line.startswith("\t"):
-            break
-        first, body = i, line[1:]
-        while body.rstrip().endswith("\\") and i + 1 < len(lines):
-            i += 1
-            body = body.rstrip()[:-1] + " " + lines[i].lstrip("\t")
-        recipe.append((first + 1, body.strip()))
-        i += 1
-    return recipe
-
-
 def check_makefile_text():
     """Refuse lane definitions whose text disarms a guard step."""
-    path = os.path.join(REPO_ROOT, MAKEFILE)
+    mg = _makegate()
     try:
-        with open(path, "r", encoding="utf-8") as handle:
-            text = handle.read()
-    except OSError as err:
+        # makegate's ONE line reader over its ONE decoding (no universal newlines), so this reading and the
+        # grammar agree on where every line starts and ends (PR #5 FINDING 14).
+        lines = mg.read_makefile_lines(os.path.join(REPO_ROOT, MAKEFILE))
+    except (OSError, UnicodeDecodeError) as err:
         fail("cannot read %s: %s" % (MAKEFILE, err))
-    lines = text.split("\n")
 
     target_re = re.compile(r"^%s\s*:" % re.escape(LANE))
-    targets = [i for i, ln in enumerate(lines) if target_re.match(ln)]
+    targets = [i for i, rec in enumerate(lines) if not rec.tab and target_re.match(rec.raw)]
     if not targets:
         fail("%s declares no `%s` target" % (MAKEFILE, LANE))
     if len(targets) > 1:
@@ -240,14 +235,14 @@ def check_makefile_text():
             "  make runs the LAST definition, which REPLACES the earlier recipe — guard steps\n"
             "  included — so a duplicate can remove this check before it ever runs. The lane\n"
             "  must have exactly one recipe."
-            % (MAKEFILE, LANE, len(targets), ", ".join(str(t + 1) for t in targets))
+            % (MAKEFILE, LANE, len(targets), ", ".join(str(lines[t].n) for t in targets))
         )
 
     # A lane defined inside a make conditional can be swapped out by setting a
     # variable, with the recipe a reader sees never executing.
     depth = 0
-    for i, ln in enumerate(lines[: targets[0]]):
-        head = ln.strip().split(" ")[0]
+    for rec in lines[: targets[0]]:
+        head = rec.raw.strip().split(" ")[0]
         if head in MAKE_CONDITIONALS:
             depth += 1
         elif head == "endif":
@@ -256,10 +251,10 @@ def check_makefile_text():
         fail(
             "the `%s` target at %s:%d is defined inside a make conditional, so which recipe\n"
             "  runs depends on a variable. The lane must be unconditional."
-            % (LANE, MAKEFILE, targets[0] + 1)
+            % (LANE, MAKEFILE, lines[targets[0]].n)
         )
 
-    recipe = logical_recipe_lines(lines, targets[0] + 1)
+    recipe = mg.recipe_lines(lines, targets[0] + 1)
     if not recipe:
         fail("the `%s` target in %s has an empty recipe" % (LANE, MAKEFILE))
 
