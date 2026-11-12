@@ -12,11 +12,11 @@
 # that terminates HMAC-authenticated HTTP on a private network.
 
 # Digest-pinned build stage (ADR-001: pin the build, not only the version).
-# This is the OCI image index for docker.io/library/golang:1.27.1-bookworm,
-# resolved from the registry on 2026-09-20; the index covers linux/amd64 and
+# This is the OCI image index for docker.io/library/golang:1.27.4-bookworm,
+# resolved from the registry on 2026-11-12; the index covers linux/amd64 and
 # linux/arm64 (among others), so the same digest builds natively on the amd64
 # CI runner and on an Apple-Silicon developer machine.
-FROM golang@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 AS build
+FROM golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS build
 
 ARG VERSION=unknown
 ARG COMMIT=unknown

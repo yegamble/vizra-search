@@ -275,7 +275,7 @@ const (
 	makeTest   = "        run: make test\n"
 	testJob    = "  test:\n    name: test\n    runs-on: ubuntu-24.04\n"
 	noskipJob  = "  test-noskip:\n    name: test-noskip\n    runs-on: ubuntu-24.04\n"
-	goVersion  = "  GO_VERSION: \"1.27.1\"\n"
+	goVersion  = "  GO_VERSION: \"1.27.4\"\n"
 	directGoTL = "          go test -count=1 -json ./... > unit-events.json || rc=$?\n"
 )
 

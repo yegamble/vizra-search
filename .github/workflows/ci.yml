@@ -44,9 +44,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The toolchain directive in go.mod pins 1.27.1; this keeps the runner's
+  # The toolchain directive in go.mod pins 1.27.4; this keeps the runner's
   # preinstalled Go from silently deciding the version.
-  GO_VERSION: "1.27.1"
+  GO_VERSION: "1.27.4"
 
 jobs:
   fmt:
