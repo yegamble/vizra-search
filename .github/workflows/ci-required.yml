@@ -44,6 +44,10 @@ jobs:
           python3 -c 'import yaml; print("PyYAML", yaml.__version__)'
 
       - name: guard the manifest and the workflows
+        env:
+          # The tombstone check compares the manifest with the one at the base;
+          # the guard fetches this SHA (depth 1) if the shallow checkout lacks it.
+          CI_REQUIRED_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: ./scripts/ci-required-guard.sh
 
       - name: every required check succeeded on this SHA

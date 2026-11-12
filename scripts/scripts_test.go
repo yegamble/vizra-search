@@ -2357,6 +2357,8 @@ NAMED_READS = {
         ("check_makefile_pins", "read_text"): ".github/pinned-makefiles.yml",
         ("main", "read_text"): ".github/required-checks.txt",
         ("main", "splitlines"): ".github/required-checks.txt",
+        ("read_manifest", "read_text"): ".github/required-checks.txt (head and merge-base copies)",
+        ("read_manifest", "splitlines"): ".github/required-checks.txt (head and merge-base copies)",
     },
     "contract-drift-guard.py": {
         ("resolved_recipe", "splitlines"): "make --dry-run's stdout",
@@ -2568,5 +2570,85 @@ func TestTheOneReaderSourceCheckRefusesAPlantedReader(t *testing.T) {
 			}
 			t.Logf("%s | refused: %s", p.name, got.Source[0])
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// VZ-CI-001 — retiring a lane needs a tombstone (compared with the base manifest)
+// ---------------------------------------------------------------------------
+
+func TestRemovingAManifestLaneNeedsATombstone(t *testing.T) {
+	requirePython(t)
+	const tomb = "# tombstone: docker-build retired 2026-11-12 because folded into vet\n"
+	cases := []struct {
+		name, old, new, want string
+	}{
+		{"line deleted, no tombstone", "\ndocker-build\n", "\n", "removed from the manifest without a tombstone"},
+		{"line commented out, no tombstone", "\ndocker-build\n", "\n# docker-build\n", "removed from the manifest without a tombstone"},
+		{"tombstone with no reason", "\ndocker-build\n", "\n# tombstone: docker-build retired 2026-11-12 because\n", "malformed tombstone"},
+		{"tombstone with no date", "\ndocker-build\n", "\n# tombstone: docker-build because folded into vet\n", "malformed tombstone"},
+		{"tombstone for a lane that never existed", "\ndocker-build\n", "\ndocker-build\n# tombstone: no-such-lane retired 2026-11-12 because typo\n", "never existed"},
+		{"tombstone for a lane still required", "\ndocker-build\n", "\ndocker-build\n" + tomb, "still required"},
+		{"tombstone for a floor lane", "\ntest\n", "\n# tombstone: test retired 2026-11-12 because reasons\n", "floor lane"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := copyTree(t)
+			mf := filepath.Join(dir, manifest)
+			orig, err := os.ReadFile(mf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			base := filepath.Join(t.TempDir(), "base.txt")
+			if err := os.WriteFile(base, orig, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			guard := func() (string, int) {
+				return run(t, dir, cleanEnv(), "python3", filepath.Join(dir, "scripts", "ci-required-guard.py"), "--base-manifest", base)
+			}
+			if out, code := guard(); code != 0 {
+				t.Fatalf("green baseline is red:\n%s", out)
+			}
+			if strings.Count(string(orig), tc.old) != 1 {
+				t.Fatalf("mutation anchor %q not unique", tc.old)
+			}
+			if err := os.WriteFile(mf, []byte(strings.Replace(string(orig), tc.old, tc.new, 1)), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			out, code := guard()
+			if code == 0 || !strings.Contains(out, tc.want) {
+				t.Fatalf("%s: exit %d, want red with %q:\n%s", tc.name, code, tc.want, out)
+			}
+			t.Logf("%s | RED exit %d: %s", tc.name, code, tc.want)
+		})
+	}
+	// A valid tombstone retires a non-floor lane: green. (Scratch fixture, not a real retirement.)
+	t.Run("valid tombstone retires the lane", func(t *testing.T) {
+		dir := copyTree(t)
+		mf := filepath.Join(dir, manifest)
+		orig, _ := os.ReadFile(mf)
+		base := filepath.Join(t.TempDir(), "base.txt")
+		_ = os.WriteFile(base, orig, 0o644)
+		_ = os.WriteFile(mf, []byte(strings.Replace(string(orig), "\ndocker-build\n", "\n"+tomb, 1)), 0o644)
+		out, code := run(t, dir, cleanEnv(), "python3", filepath.Join(dir, "scripts", "ci-required-guard.py"), "--base-manifest", base)
+		if code != 0 || !strings.Contains(out, "retired by tombstone: ['docker-build']") {
+			t.Fatalf("valid tombstone not accepted (exit %d):\n%s", code, out)
+		}
+	})
+}
+
+// The shell guard must fail CLOSED when it cannot read the base manifest.
+func TestTheShellGuardFailsClosedWithoutABaseManifest(t *testing.T) {
+	requirePython(t)
+	dir := copyTree(t) // not a git repository: no base can be found
+	out, code := run(t, dir, cleanEnv("CI_REQUIRED_BASE_SHA="), "bash", filepath.Join(dir, "scripts", "ci-required-guard.sh"))
+	if code == 0 || !strings.Contains(out, "BASE MANIFEST UNAVAILABLE") {
+		t.Fatalf("exit %d, want fail-closed BASE MANIFEST UNAVAILABLE:\n%s", code, out)
+	}
+	out, code = run(t, dir, cleanEnv("CI_REQUIRED_BASE_SHA=0123456789012345678901234567890123456789"), "bash", filepath.Join(dir, "scripts", "ci-required-guard.sh"))
+	if code == 0 || !strings.Contains(out, "BASE MANIFEST UNAVAILABLE") {
+		t.Fatalf("stale/unknown base SHA: exit %d, want BASE MANIFEST UNAVAILABLE:\n%s", code, out)
 	}
 }
