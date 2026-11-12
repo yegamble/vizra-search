@@ -34,3 +34,4 @@ test-noskip
 tidy-check
 govulncheck
 vendor-contract-selftest
+docker-build
