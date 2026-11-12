@@ -1,0 +1,45 @@
+# Red/green against controlled mutations of the REAL tree, 2026-11-12T18:18:15Z, go version go1.27.4 darwin/arm64, base 8d0c293a111277c49f12c6cd641c8c9967e0bbd4
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # GREEN baseline
+ok  	github.com/yegamble/vizra-search/scripts	0.244s
+exit=0
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # RED: go.sum deleted
+# github.com/yegamble/vizra-search/scripts
+scripts/scripts_test.go:23:2: missing go.sum entry for module providing package gopkg.in/yaml.v3 (imported by github.com/yegamble/vizra-search/scripts); to add:
+	go get -t github.com/yegamble/vizra-search/scripts
+FAIL	github.com/yegamble/vizra-search/scripts [setup failed]
+FAIL
+exit=1
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # GREEN restored
+ok  	github.com/yegamble/vizra-search/scripts	0.230s
+exit=0
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # RED: toolchain go1.27.3
+--- FAIL: TestStackPinsRealTreePasses (0.00s)
+    stackpins_test.go:224: real tree must satisfy ADR-001 pins:
+          go.mod `toolchain` line is go1.27.3, want go1.27.4 (ADR-001)
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	0.319s
+FAIL
+exit=1
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # GREEN restored
+ok  	github.com/yegamble/vizra-search/scripts	0.274s
+exit=0
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # RED: one setup-go go-version 1.26
+--- FAIL: TestStackPinsRealTreePasses (0.00s)
+    stackpins_test.go:224: real tree must satisfy ADR-001 pins:
+          ci.yml job fmt: setup-go go-version "1.26"; want exactly 1.27.4 (ADR-001)
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	0.759s
+FAIL
+exit=1
+
+$ go test -count=1 -run TestStackPinsRealTreePasses ./scripts/   # GREEN restored
+ok  	github.com/yegamble/vizra-search/scripts	0.243s
+exit=0
+
+?? docs/evidence/found-001-004-pins/
+?? scripts/stackpins_test.go
