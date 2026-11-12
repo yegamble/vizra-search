@@ -16,7 +16,7 @@
 # resolved from the registry on 2026-11-12; the index covers linux/amd64 and
 # linux/arm64 (among others), so the same digest builds natively on the amd64
 # CI runner and on an Apple-Silicon developer machine.
-FROM golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS build
+FROM golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS build
 
 ARG VERSION=unknown
 ARG COMMIT=unknown

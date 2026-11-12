@@ -1,0 +1,20 @@
+# govulncheck lane red/green on a scratch module (/tmp/search-pins-vuln.8CLQ), 2026-11-12T18:19:29Z; go.mod toolchain go1.27.4 -> go version go1.26.2 darwin/arm64
+require golang.org/x/text v0.3.5
+$ govulncheck -version
+Go: go1.27.4
+Scanner: govulncheck@v1.8.0
+DB: https://vuln.go.dev
+DB updated: 2026-11-11 02:51:11 +0000 UTC
+$ govulncheck ./...   # RED: golang.org/x/text v0.3.5 (vulnerable), language.ParseAcceptLanguage called
+Vulnerability #1: GO-2022-1059
+    Found in: golang.org/x/text@v0.3.5
+    Fixed in: golang.org/x/text@v0.3.8
+Vulnerability #2: GO-2021-0113
+    Found in: golang.org/x/text@v0.3.5
+    Fixed in: golang.org/x/text@v0.3.7
+Your code is affected by 2 vulnerabilities from 1 module.
+exit=3
+require golang.org/x/text v0.44.0
+$ govulncheck ./...   # GREEN: x/text v0.44.0
+No vulnerabilities found.
+exit=0
