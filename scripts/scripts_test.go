@@ -458,7 +458,14 @@ func TestTheShellGuardFailsLoudlyOnAnEmptiedManifest(t *testing.T) {
 func TestTheShellGuardPassesOnTheRealTree(t *testing.T) {
 	requirePython(t)
 	root := repoRoot(t)
-	out, code := run(t, root, cleanEnv(), "bash", filepath.Join(root, "scripts", "ci-required-guard.sh"))
+	// The base is supplied explicitly (HEAD): a shallow CI checkout has no
+	// origin/main, and the guard fails CLOSED without a base by design
+	// (TestTheShellGuardFailsClosedWithoutABaseManifest).
+	head, hc := run(t, root, cleanEnv(), "git", "rev-parse", "HEAD")
+	if hc != 0 {
+		t.Fatalf("git rev-parse HEAD: %s", head)
+	}
+	out, code := run(t, root, cleanEnv("CI_REQUIRED_BASE_SHA="+strings.TrimSpace(head)), "bash", filepath.Join(root, "scripts", "ci-required-guard.sh"))
 	if code != 0 {
 		t.Fatalf("ci-required-guard.sh fails on the real tree:\n%s", out)
 	}
