@@ -1,0 +1,114 @@
+=== RUN   TestStackPinsRealTreePasses
+--- PASS: TestStackPinsRealTreePasses (0.01s)
+=== RUN   TestStackPinsMutationsFail
+=== RUN   TestStackPinsMutationsFail/baseline_copy_passes
+    stackpins_test.go:369: findings:
+=== RUN   TestStackPinsMutationsFail/go.sum_deleted
+    stackpins_test.go:369: findings:
+        go.sum is missing or empty: the lockfile must be committed
+=== RUN   TestStackPinsMutationsFail/go.sum_emptied
+    stackpins_test.go:369: findings:
+        go.sum is missing or empty: the lockfile must be committed
+=== RUN   TestStackPinsMutationsFail/toolchain_changed
+    stackpins_test.go:369: findings:
+        go.mod `toolchain` line is go1.27.3, want go1.27.4 (ADR-001)
+=== RUN   TestStackPinsMutationsFail/toolchain_removed
+    stackpins_test.go:369: findings:
+        go.mod `toolchain` line is absent, want go1.27.4 (ADR-001)
+=== RUN   TestStackPinsMutationsFail/go_line_changed
+    stackpins_test.go:369: findings:
+        go.mod `go` line is [go 1.25.0
+         1.25.0], want 1.26.0
+=== RUN   TestStackPinsMutationsFail/setup-go_go-version_1.26_(one_step)
+    stackpins_test.go:369: findings:
+        ci.yml job fmt: setup-go go-version "1.26"; want exactly 1.27.4 (ADR-001)
+=== RUN   TestStackPinsMutationsFail/workflow_GO_VERSION_env_drifted
+    stackpins_test.go:369: findings:
+        ci.yml job build: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job contract-drift: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job echo-containment: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job fmt: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job govulncheck: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job test-noskip: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job test: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job tidy-check: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job vendor-contract-selftest: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+        ci.yml job vet: setup-go go-version "1.26.0"; want exactly 1.27.4 (ADR-001)
+=== RUN   TestStackPinsMutationsFail/GO_VERSION_env_removed
+    stackpins_test.go:369: findings:
+        ci.yml job build: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job contract-drift: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job echo-containment: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job fmt: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job govulncheck: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job test-noskip: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job test: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job tidy-check: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job vendor-contract-selftest: setup-go go-version ${{ env.GO_VERSION }} is undefined
+        ci.yml job vet: setup-go go-version ${{ env.GO_VERSION }} is undefined
+=== RUN   TestStackPinsMutationsFail/setup-go_reads_another_file
+    stackpins_test.go:369: findings:
+        ci.yml job fmt: setup-go reads go-version-file ".go-version"; want go.mod or go-version 1.27.4
+=== RUN   TestStackPinsMutationsFail/setup-go_version_source_removed
+    stackpins_test.go:369: findings:
+        ci.yml job fmt: setup-go must set exactly one of go-version / go-version-file
+=== RUN   TestStackPinsMutationsFail/setup-go_stable
+    stackpins_test.go:369: findings:
+        ci.yml job fmt: setup-go go-version "stable"; want exactly 1.27.4 (ADR-001)
+=== RUN   TestStackPinsMutationsFail/setup-go_check-latest_true
+    stackpins_test.go:369: findings:
+        ci.yml job fmt: setup-go check-latest: true can drift off the pin
+=== RUN   TestStackPinsMutationsFail/echo_below_ADR_floor
+    stackpins_test.go:369: findings:
+        github.com/labstack/echo/v5 is v5.4.3, ADR-001 row says echo/v5 >= v5.4.4
+=== RUN   TestStackPinsMutationsFail/go-redis_off_ADR_minor
+    stackpins_test.go:369: findings:
+        github.com/redis/go-redis/v9 is v9.21.0, ADR-001 row says go-redis/v9 v9.22.x
+=== RUN   TestStackPinsMutationsFail/unclassified_direct_dependency
+    stackpins_test.go:369: findings:
+        github.com/example/unpinned v0.1.0 is a direct dependency with no ADR-001 row and is not in adrUnlisted
+=== RUN   TestStackPinsMutationsFail/Dockerfile_FROM_build_line_only_->_golang:1.26_(verifier_F-1)
+    stackpins_test.go:369: findings:
+        Dockerfile build stage image "golang:1.26" is not golang:1.27.4-<variant>@sha256:<digest>
+=== RUN   TestStackPinsMutationsFail/Dockerfile_FROM_build_line_keeps_digest,_tag_1.26
+    stackpins_test.go:369: findings:
+        Dockerfile build stage image "golang:1.26-bookworm@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is not golang:1.27.4-<variant>@sha256:<digest>
+=== RUN   TestStackPinsMutationsFail/Dockerfile_FROM_build_line_digest_only,_no_tag
+    stackpins_test.go:369: findings:
+        Dockerfile build stage image "golang@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is not golang:1.27.4-<variant>@sha256:<digest>
+=== RUN   TestStackPinsMutationsFail/Dockerfile_FROM_build_line_tag_without_digest
+    stackpins_test.go:369: findings:
+        Dockerfile build stage image "golang:1.27.4-bookworm" is not golang:1.27.4-<variant>@sha256:<digest>
+=== RUN   TestStackPinsMutationsFail/Dockerfile_build_stage_removed
+    stackpins_test.go:369: findings:
+        Dockerfile build stage: want exactly one `FROM ... AS build`, found 0
+=== RUN   TestStackPinsMutationsFail/Dockerfile_comment_only_changes_(FROM_intact)_stays_green
+    stackpins_test.go:369: findings:
+=== RUN   TestStackPinsMutationsFail/Dockerfile_--platform_flag_on_pinned_FROM_stays_green
+    stackpins_test.go:369: findings:
+--- PASS: TestStackPinsMutationsFail (0.23s)
+    --- PASS: TestStackPinsMutationsFail/baseline_copy_passes (0.01s)
+    --- PASS: TestStackPinsMutationsFail/go.sum_deleted (0.01s)
+    --- PASS: TestStackPinsMutationsFail/go.sum_emptied (0.01s)
+    --- PASS: TestStackPinsMutationsFail/toolchain_changed (0.01s)
+    --- PASS: TestStackPinsMutationsFail/toolchain_removed (0.01s)
+    --- PASS: TestStackPinsMutationsFail/go_line_changed (0.02s)
+    --- PASS: TestStackPinsMutationsFail/setup-go_go-version_1.26_(one_step) (0.02s)
+    --- PASS: TestStackPinsMutationsFail/workflow_GO_VERSION_env_drifted (0.01s)
+    --- PASS: TestStackPinsMutationsFail/GO_VERSION_env_removed (0.01s)
+    --- PASS: TestStackPinsMutationsFail/setup-go_reads_another_file (0.01s)
+    --- PASS: TestStackPinsMutationsFail/setup-go_version_source_removed (0.01s)
+    --- PASS: TestStackPinsMutationsFail/setup-go_stable (0.01s)
+    --- PASS: TestStackPinsMutationsFail/setup-go_check-latest_true (0.01s)
+    --- PASS: TestStackPinsMutationsFail/echo_below_ADR_floor (0.01s)
+    --- PASS: TestStackPinsMutationsFail/go-redis_off_ADR_minor (0.01s)
+    --- PASS: TestStackPinsMutationsFail/unclassified_direct_dependency (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_FROM_build_line_only_->_golang:1.26_(verifier_F-1) (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_FROM_build_line_keeps_digest,_tag_1.26 (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_FROM_build_line_digest_only,_no_tag (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_FROM_build_line_tag_without_digest (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_build_stage_removed (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_comment_only_changes_(FROM_intact)_stays_green (0.01s)
+    --- PASS: TestStackPinsMutationsFail/Dockerfile_--platform_flag_on_pinned_FROM_stays_green (0.02s)
+PASS
+ok  	github.com/yegamble/vizra-search/scripts	1.133s

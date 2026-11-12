@@ -1,0 +1,18 @@
+# HEAD-pre-commit tree with fix; reproducer adapted to the new tag+digest FROM line
+$ sed -i "" "s|^FROM golang:1.27.4-bookworm@sha256:[0-9a-f]* AS build|FROM golang:1.26 AS build|" Dockerfile
+19:FROM golang:1.26 AS build
+47:FROM scratch
+--- FAIL: TestStackPinsRealTreePasses (0.00s)
+    stackpins_test.go:277: real tree must satisfy ADR-001 pins:
+          Dockerfile build stage image "golang:1.26" is not golang:1.27.4-<variant>@sha256:<digest>
+FAIL
+FAIL	github.com/yegamble/vizra-search/scripts	0.464s
+FAIL
+exit=1
+$ restored
+ok  	github.com/yegamble/vizra-search/scripts	0.671s
+exit=0
+$ docker buildx imagetools inspect golang:1.27.4-bookworm | head -3
+Name:      docker.io/library/golang:1.27.4-bookworm
+MediaType: application/vnd.oci.image.index.v1+json
+Digest:    sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea

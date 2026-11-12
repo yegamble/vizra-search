@@ -172,11 +172,44 @@ func checkStackPins(root string) []string {
 	}
 	// Dockerfile build stage is digest-pinned to the ADR toolchain image.
 	if df, err := os.ReadFile(filepath.Join(root, "Dockerfile")); err == nil {
-		if !strings.Contains(string(df), "golang:"+pinToolchain+"-") {
-			errs = append(errs, "Dockerfile build stage does not name golang:"+pinToolchain+"-* beside its digest")
-		}
+		errs = append(errs, checkDockerBuildStage(string(df))...)
 	}
 	sort.Strings(errs)
+	return errs
+}
+
+// dockerPinnedGoRe is the only accepted build-stage image: the ADR toolchain
+// tag (so the Go version is readable) plus the image-index digest (so the
+// bytes are pinned), e.g. golang:1.27.4-bookworm@sha256:<64 hex>.
+var dockerPinnedGoRe = regexp.MustCompile(`^(?:docker\.io/)?(?:library/)?golang:` +
+	regexp.QuoteMeta(pinToolchain) + `-[a-z0-9][a-z0-9.]*@sha256:[0-9a-f]{64}$`)
+
+// checkDockerBuildStage parses FROM instructions (comments and other lines
+// ignored, --flags skipped) and requires the stage named "build" to exist,
+// be unique, and use the pinned Go image.
+func checkDockerBuildStage(df string) []string {
+	var errs []string
+	builds := 0
+	for _, line := range strings.Split(df, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 0 || !strings.EqualFold(f[0], "FROM") {
+			continue
+		}
+		args := f[1:]
+		for len(args) > 0 && strings.HasPrefix(args[0], "--") {
+			args = args[1:]
+		}
+		if len(args) != 3 || !strings.EqualFold(args[1], "AS") || !strings.EqualFold(args[2], "build") {
+			continue
+		}
+		builds++
+		if !dockerPinnedGoRe.MatchString(args[0]) {
+			errs = append(errs, fmt.Sprintf("Dockerfile build stage image %q is not golang:%s-<variant>@sha256:<digest>", args[0], pinToolchain))
+		}
+	}
+	if builds != 1 {
+		errs = append(errs, fmt.Sprintf("Dockerfile build stage: want exactly one `FROM ... AS build`, found %d", builds))
+	}
 	return errs
 }
 
@@ -203,6 +236,26 @@ func copyPinInputs(t *testing.T) string {
 		}
 	}
 	return dst
+}
+
+// dockerBuildFROMRe matches the whole `FROM ... AS build` line of the real
+// Dockerfile, whatever its current image reference.
+var dockerBuildFROMRe = regexp.MustCompile(`(?mi)^FROM\s.*\sAS\s+build\s*$`)
+
+func mutateBuildFROM(t *testing.T, dir, repl string) {
+	t.Helper()
+	path := filepath.Join(dir, "Dockerfile")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(dockerBuildFROMRe.FindAllIndex(b, -1)) != 1 {
+		t.Fatalf("%s: want exactly one FROM ... AS build line; mutation would be vacuous", path)
+	}
+	out := dockerBuildFROMRe.ReplaceAllLiteralString(string(b), repl)
+	if err := os.WriteFile(path, []byte(out), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func mutateFile(t *testing.T, path, old, repl string) {
@@ -283,9 +336,29 @@ func TestStackPinsMutationsFail(t *testing.T) {
 		{"unclassified direct dependency", func(t *testing.T, dir string) {
 			mutateFile(t, filepath.Join(dir, "go.mod"), "gopkg.in/yaml.v3 v3.0.1", "gopkg.in/yaml.v3 v3.0.1\n\tgithub.com/example/unpinned v0.1.0")
 		}, "no ADR-001 row"},
-		{"Dockerfile build image off pin", func(t *testing.T, dir string) {
-			mutateFile(t, filepath.Join(dir, "Dockerfile"), "golang:1.27.4-bookworm", "golang:1.26.0-bookworm")
+		{"Dockerfile FROM build line only -> golang:1.26 (verifier F-1)", func(t *testing.T, dir string) {
+			mutateBuildFROM(t, dir, "FROM golang:1.26 AS build")
 		}, "Dockerfile build stage"},
+		{"Dockerfile FROM build line keeps digest, tag 1.26", func(t *testing.T, dir string) {
+			mutateBuildFROM(t, dir, "FROM golang:1.26-bookworm@sha256:"+strings.Repeat("a", 64)+" AS build")
+		}, "Dockerfile build stage"},
+		{"Dockerfile FROM build line digest only, no tag", func(t *testing.T, dir string) {
+			mutateBuildFROM(t, dir, "FROM golang@sha256:"+strings.Repeat("a", 64)+" AS build")
+		}, "Dockerfile build stage"},
+		{"Dockerfile FROM build line tag without digest", func(t *testing.T, dir string) {
+			mutateBuildFROM(t, dir, "FROM golang:1.27.4-bookworm AS build")
+		}, "Dockerfile build stage"},
+		{"Dockerfile build stage removed", func(t *testing.T, dir string) {
+			mutateBuildFROM(t, dir, "FROM golang:1.27.4-bookworm@sha256:"+strings.Repeat("a", 64)+" AS builder")
+		}, "Dockerfile build stage"},
+		{"Dockerfile comment only changes (FROM intact) stays green", func(t *testing.T, dir string) {
+			mutateFile(t, filepath.Join(dir, "Dockerfile"), "golang:1.27.4-bookworm,", "golang:1.26.0-bookworm,")
+		}, ""},
+		{"Dockerfile --platform flag on pinned FROM stays green", func(t *testing.T, dir string) {
+			b, _ := os.ReadFile(filepath.Join(dir, "Dockerfile"))
+			m := dockerBuildFROMRe.FindString(string(b))
+			mutateBuildFROM(t, dir, strings.Replace(m, "FROM ", "FROM --platform=$BUILDPLATFORM ", 1))
+		}, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
